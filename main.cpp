@@ -2,9 +2,8 @@
 #include <alps/params.hpp>
 
 
-#include "Hamiltonian.h"
+#include <Hamiltonian.h>
 #include <SzCombination.h>
-#include <CRSStorage.h>
 #include <fortranbinding.h>
 
 
@@ -18,7 +17,7 @@ void define_parameters(alps::params &p) {
 }
 
 
-int main(int argc, const char ** argv) {
+int main(unsigned int argc, const char ** argv) {
   alps::params params(argc, argv);
   define_parameters(params);
   Hamiltonian<double, SzCombination, CRSStorage<double> > ham(1000, 10000, params);
