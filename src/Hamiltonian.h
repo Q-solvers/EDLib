@@ -9,10 +9,11 @@
 #include <alps/params.hpp>
 #include <type_traits>
 
+#include <CRSStorage.h>
 #include "Combination.h"
 #include "Sector.h"
 
-template<typename prec, class Comb=Combination>
+template<typename prec, class Comb=Combination, class Storage=CRSStorage<double> >
 class Hamiltonian {
   static_assert(std::is_base_of<Combination, Comb>::value, "Comb should extend Combinatorics");
 public:
@@ -22,9 +23,7 @@ public:
    * \param [in] max_dim - the maximum dimension of Hamiltonian matrix
    */
   Hamiltonian(size_t max_size, size_t max_dim, alps::params& p) :
-    values(max_size, prec(0.0)),
-    col_ind(max_size, 0),
-    row_ptr(max_dim+1),
+    storage(max_size, max_dim, p),
     combination(p),
     Eps(p["NS"], std::vector<double>(p["SPIN"], 0.0)),
     t(p["NS"], std::vector<double>(p["NS"], 0.0)),
@@ -39,8 +38,8 @@ public:
    */
   void fill(Sector& sector) {
     combination.init(sector);
+    storage.reset();
     int i =0;
-    int vind = 0;
     long long k1, k2;
     int isign1, isign2;
     prec xtemp;
@@ -52,25 +51,17 @@ public:
         xtemp += U[im]* checkState(nst, im)* checkState(nst, im + Ns);
 
       }
-      row_ptr[i] = vind;
-      col_ind[vind] = i + 1;
-      values[vind] = xtemp;
-      vind++;
+      storage.addDiagonal(i, xtemp);
       for(int ii = 0; ii< Ns; ++ii) {
         for(int jj = 0; jj< Ns; ++jj) {
-          if(ii!=jj) {
-            if (checkState(nst, ii)) {
-              if (!checkState(nst, jj)) {
-                a(ii + 1, nst, k1, isign1);
-                adag(jj + 1, k1, k2, isign2);
-                hopping(i, nst, k2, isign1 * isign2, ii, jj, vind, sector);
-              }
-            }
-            if (checkState(nst, ii+Ns)) {
-              if (!checkState(nst, jj+Ns)) {
-                a(ii +Ns + 1, nst, k1, isign1);
-                adag(jj +Ns + 1, k1, k2, isign2);
-                hopping(i, nst, k2, isign1 * isign2, ii, jj, vind, sector);
+          for(int spin = 0; spin< ms; ++spin) {
+            if (ii != jj) {
+              if (checkState(nst, ii + ms * Ns)) {
+                if (!checkState(nst, jj + ms * Ns)) {
+                  a(ii + 1, nst, k1, isign1);
+                  adag(jj + 1, k1, k2, isign2);
+                  hopping(i, nst, k2, isign1 * isign2 * t[ii][jj], sector);
+                }
               }
             }
           }
@@ -93,9 +84,7 @@ public:
 
 private:
   // CSR format Hamiltonian matrix storage
-  std::vector<prec> values;
-  std::vector<int> row_ptr;
-  std::vector<int> col_ind;
+  Storage storage;
   Comb combination;
 
   /**
@@ -131,33 +120,12 @@ private:
    * \param i - current index
    * \param nst - curent state
    * \param k - state to hop between
-   * \param sign - fermionic sign
-   * \param ii - first site
-   * \param jj - second site
-   * \param vind - current CRS index
+   * \param v - hopping value
    * \param sector - current conservation law sector
    */
-  void inline hopping(const int& i, const long long& nst, const long long& k, int sign, const int& ii, const int& jj, int & vind, const Sector& sector) {
+  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v, const Sector& sector) {
     int k_index = combination.ninv_value(k, Ns, sector) - 1;
-    int findedstate = 0;
-    bool hasstate = false;
-    // check that there is no any data on the k state
-    for (int iii = row_ptr[i]; iii <= vind; iii++) {
-      if (col_ind[iii] == (k_index + 1)) {
-        hasstate = true;
-        findedstate = iii;
-        break;
-      }
-    }
-    // if there is data add value
-    if (hasstate) {
-      values[findedstate] += t[ii][jj] * sign;
-    } else {
-    // create new element in CRS arrays
-      col_ind[vind] = k_index + 1;
-      values[vind] = t[ii][jj] * sign;
-      vind++;
-    }
+    storage.addElement(i, k_index, v);
   }
 
   void inline a(const int& i,const long long& jold,long long &k,int &isign) {

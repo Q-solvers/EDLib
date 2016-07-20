@@ -19,9 +19,11 @@ set(extlibs
     )
 
 include_directories(${Hubbard_SOURCE_DIR}/src)
+include_directories(${Hubbard_SOURCE_DIR}/lib)
 include_directories(${Hubbard_SOURCE_DIR}/test)
 
 add_subdirectory(src)
+add_subdirectory(lib)
 add_subdirectory(test)
 
 enable_testing()
