@@ -17,14 +17,14 @@ void define_parameters(alps::params &p) {
 }
 
 
-int main(unsigned int argc, const char ** argv) {
+int main(int argc, const char ** argv) {
   alps::params params(argc, argv);
   define_parameters(params);
   Hamiltonian<double, SzCombination, CRSStorage<double> > ham(1000, 10000, params);
-  int nloc = 1;
+  int nloc = 10;
   std::vector<double> vout(10, 0.0);
   std::vector<double> eout(1, 0.0);
-  int ncv = 1;
+  int ncv = 4;
   double Hstate0 = 0.0;
   int nev = 1;
   int ierr = 0;
