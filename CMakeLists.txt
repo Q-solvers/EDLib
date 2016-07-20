@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.3)
-project(Hubbard)
+project(Hubbard C CXX Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-find_package(ALPSCore COMPONENTS mc params REQUIRED)
+find_package(ALPSCore COMPONENTS params REQUIRED)
 find_package(ARPACK)
+find_package(BLAS)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
@@ -16,6 +17,8 @@ set(extlibs
     ${MPI_CXX_LIBRARIES}
     ${Boost_LIBRARIES}
     ${ALPSCore_LIBRARIES}
+    ${ARPACK_LIB}
+    ${BLAS_LIBRARIES}
     )
 
 include_directories(${Hubbard_SOURCE_DIR}/src)
@@ -33,4 +36,4 @@ set(SOURCE_FILES main.cpp)
 
 add_executable(Hubbard ${SOURCE_FILES})
 
-target_link_libraries(Hubbard hubbard-lib ${extlibs})
+target_link_libraries(Hubbard common-lib hubbard-lib ${extlibs})
