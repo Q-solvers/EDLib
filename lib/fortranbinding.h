@@ -12,7 +12,11 @@
 extern "C" {
 
 void darnoldi_(int* nloc2,double* vout,double *eout, int*ncv,double* Hstate0, int*nev,int*ierr,int*info);
-
+void dseupd_(int *rvec, char *All, int *select, double *d, double *z, int *ldz, double *sigma, char *bmat,
+        int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv,
+        int *iparam, int *ipntr, double *workd, double *workl, int *lworkl, int *ierr);
+void dsaupd_(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv,
+        double *v, int *ldv, int *iparam, int *ipntr, double *workd, double *workl, int *lworkl, int *info);
 };
 #endif
 
