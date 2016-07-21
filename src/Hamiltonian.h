@@ -10,12 +10,11 @@
 #include <type_traits>
 
 #include <CRSStorage.h>
-#include "Combination.h"
-#include "Sector.h"
+#include "Simmetry.h"
 
-template<typename prec, class Comb=Combination, class Storage=CRSStorage<double> >
+template<typename prec, class Comb=Simmetry, class Storage=CRSStorage<double> >
 class Hamiltonian {
-  static_assert(std::is_base_of<Combination, Comb>::value, "Comb should extend Combinatorics");
+  static_assert(std::is_base_of<Simmetry, Comb>::value, "Comb should extend Combinatorics");
 public:
   /*
    * Allocate space for Hamiltonian matrix
@@ -25,26 +24,26 @@ public:
   Hamiltonian(size_t max_size, size_t max_dim, alps::params& p) :
     storage(max_size, max_dim, p),
     combination(p),
-    Eps(p["NS"], std::vector<double>(p["SPIN"], 0.0)),
-    t(p["NS"], std::vector<double>(p["NS"], 0.0)),
-    U(p["NS"], 0.0),
-    Ns(p["NS"]),
-    ms(p["SPIN"]),
+    Eps(p["NSITES"], std::vector<double>(p["NSPINS"], 0.0)),
+    t(p["NSITES"], std::vector<double>(p["NSITES"], 0.0)),
+    U(p["NSITES"], 0.0),
+    Ns(p["NSITES"]),
+    ms(p["NSPINS"]),
     Ip(Ns * ms)
   {};
 
   /**
    * fill current sector
    */
-  void fill(Sector& sector) {
-    combination.init(sector);
+  void fill() {
+    combination.init();
     storage.reset();
     int i =0;
     long long k1, k2;
     int isign1, isign2;
     prec xtemp;
-    while (combination.next_combination()) {
-      long long nst = combination.combination();
+    while (combination.next_state()) {
+      long long nst = combination.state();
       for(int im = 0;im < Ns;++im){
         xtemp += (Eps[im][0]      - xmu) * checkState(nst, im)
                + (Eps[im][ms - 1] - xmu) * checkState(nst, im + Ns);
@@ -60,7 +59,7 @@ public:
                 if (!checkState(nst, jj + ms * Ns)) {
                   a(ii + 1, nst, k1, isign1);
                   adag(jj + 1, k1, k2, isign2);
-                  hopping(i, nst, k2, isign1 * isign2 * t[ii][jj], sector);
+                  hopping(i, nst, k2, isign1 * isign2 * t[ii][jj]);
                 }
               }
             }
@@ -74,8 +73,8 @@ public:
    * result will be stored in evals and evecs
    */
   void diag() {
-    for(auto &sector : combination.next_sector()) {
-      fill(sector);
+    while(combination.next_sector()) {
+      fill();
       /**
        * perform ARPACK call
        */
@@ -123,8 +122,8 @@ private:
    * \param v - hopping value
    * \param sector - current conservation law sector
    */
-  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v, const Sector& sector) {
-    int k_index = combination.ninv_value(k, Ns, sector) - 1;
+  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v) {
+    int k_index = combination.index(k) - 1;
     storage.addElement(i, k_index, v);
   }
 
