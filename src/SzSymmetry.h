@@ -96,27 +96,6 @@ public:
     return true;
   }
 
-private:
-  class Sector {
-    friend class SzSymmetry;
-  protected:
-    Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
-    bool operator<(Sector s) {
-      return _size< s._size;
-    }
-
-  public:
-    int nup() const {return _nup;}
-
-    int ndown() const {return _ndown;}
-
-    size_t size() const {return _size;}
-
-  private:
-    int _nup;
-    int _ndown;
-    size_t _size;
-  };
 
   /**
    * Calculate n2!/n1!
@@ -139,6 +118,29 @@ private:
     }
     return variation(k + 1, n) / variation(1, n - k);
   }
+
+private:
+  class Sector {
+    friend class SzSymmetry;
+  protected:
+    Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
+    bool operator<(Sector s) {
+      return _size< s._size;
+    }
+
+  public:
+    int nup() const {return _nup;}
+
+    int ndown() const {return _ndown;}
+
+    size_t size() const {return _size;}
+
+  private:
+    int _nup;
+    int _ndown;
+    size_t _size;
+  };
+
 
   /**
    *

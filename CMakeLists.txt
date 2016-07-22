@@ -10,6 +10,11 @@ find_package(BLAS)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
 
+
+include(EnableGtests)
+UseGtest()
+include_directories(${GTEST_INCLUDE_DIR})
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
 
 
@@ -31,6 +36,7 @@ add_subdirectory(test)
 
 enable_testing()
 
+add_test(SzSymmetryTest SzSymmetryTest)
 
 set(SOURCE_FILES main.cpp)
 
