@@ -2,4 +2,4 @@
 // Created by iskakoff on 19/07/16.
 //
 
-#include "SzSimmetry.h"
+#include "Symmetry.h"

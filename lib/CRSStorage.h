@@ -13,8 +13,9 @@
 
 template<typename prec>
 class CRSStorage: public Storage<prec> {
+  using Storage<prec>::n;
 public:
-  CRSStorage(size_t max_size, size_t max_dim, alps::params & p): _vind(0), _max_size(max_size), _max_dim(max_dim) {
+  CRSStorage(size_t max_size, size_t max_dim, alps::params & p):  Storage<prec>(max_dim), _vind(0), _max_size(max_size), _max_dim(max_dim) {
     // init what you need from parameters
   };
 
@@ -23,6 +24,7 @@ public:
     row_ptr.assign(_max_dim+1, 0);
     col_ind.assign(_max_size, 0);
     values.assign(_max_size, prec(0.0));
+    n()= 0;
   }
 
   void inline addDiagonal(const int &i, prec v) {
@@ -30,6 +32,7 @@ public:
     col_ind[_vind] = i + 1;
     values[_vind] = v;
     _vind++;
+    n()++;
   }
 
   /**
@@ -60,7 +63,7 @@ public:
   /**
    * Simple Compressed-Row-Storage Matrix-Vector product
    */
-  virtual void av(const typename std::vector<prec>::const_iterator & v, typename std::vector<prec>::iterator & w, int n) override {
+  virtual void av(prec* v, prec* w, int n) override {
     for (int i = 0; i < n; ++i) {
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
         w[i] = w[i] + values[j] * v[col_ind[j]-1];

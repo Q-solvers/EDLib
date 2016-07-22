@@ -10,11 +10,11 @@
 #include <type_traits>
 
 #include <CRSStorage.h>
-#include "Simmetry.h"
+#include "Symmetry.h"
 
-template<typename prec, class Comb=Simmetry, class Storage=CRSStorage<double> >
+template<typename prec, class Comb=Symmetry, class Storage=CRSStorage<double> >
 class Hamiltonian {
-  static_assert(std::is_base_of<Simmetry, Comb>::value, "Comb should extend Combinatorics");
+  static_assert(std::is_base_of<Symmetry, Comb>::value, "Comb should extend Combinatorics");
 public:
   /*
    * Allocate space for Hamiltonian matrix
@@ -78,6 +78,7 @@ public:
       /**
        * perform ARPACK call
        */
+      storage.diag();
     }
   }
 

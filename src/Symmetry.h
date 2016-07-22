@@ -8,12 +8,18 @@
 #include <alps/params.hpp>
 
 /**
- * Base class for simmetries
+ *  TODO: decide do we really need this abstract class or should we remove it and just make specification for Symmetry
+ *  The profit of this class is clear specification of methods.
+ *  But compiler will never see it because we specify symmetry as a template parameter
+ *  Therefore it gives us a virtual methods overhead.
  */
-class Simmetry {
+/**
+ * Base class for symmetries
+ */
+class Symmetry {
 public:
-  Simmetry(alps::params& p){};
-  virtual ~Simmetry(){};
+  Symmetry(alps::params& p){};
+  virtual ~Symmetry(){};
   virtual bool next_state() = 0;
   virtual long long state() = 0;
   virtual int index(long long combination) = 0;
