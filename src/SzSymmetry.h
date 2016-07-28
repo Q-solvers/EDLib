@@ -56,10 +56,24 @@ public:
       }
       for(int j = 0; j<= _Ns;++j) {
         c_n_k[i][j] = C_n_k_i(i, j);
-        _sectors.push(SzSymmetry::Sector(i, j, (size_t) (C_n_k_i(_Ns, i) * C_n_k_i(_Ns, j))));
       }
     }
-
+    if(p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
+      std::vector<std::vector<int> > sectors;
+      std::string input = p["INPUT_FILE"];
+      alps::hdf5::archive input_file(input, "r");
+      input_file>>alps::make_pvp("sectors/values", sectors);
+      input_file.close();
+      for(auto& sector : sectors) {
+        _sectors.push(SzSymmetry::Sector(sector[0], sector[1], (size_t) (C_n_k_i(_Ns, sector[0]) * C_n_k_i(_Ns, sector[1]))));
+      }
+    } else {
+      for(int i = 0; i<=_Ns;++i) {
+        for(int j = 0; j<= _Ns;++j) {
+          _sectors.push(SzSymmetry::Sector(i, j, (size_t) (C_n_k_i(_Ns, i) * C_n_k_i(_Ns, j))));
+        }
+      }
+    }
   };
   virtual ~SzSymmetry() {};
 

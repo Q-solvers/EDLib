@@ -16,6 +16,7 @@ void define_parameters(alps::params &p) {
   p.define<int>("NSPINS", 2, "Number of spins");
   p.define<int>("arpack.NEV", 2, "Number of eigenvalues to find");
   p.define<int>("arpack.NCV", "Number of convergent values");
+  p.define<bool>("arpack.SECTOR", "Read symmetry sectors from file");
   p.define<size_t>("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
   p.define<size_t>("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
   p.define<std::string>("INPUT_FILE", "input.h5", "File with initial data");
