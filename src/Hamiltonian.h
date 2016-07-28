@@ -32,8 +32,7 @@ public:
     U(p["NSITES"], 0.0),
     Ns(p["NSITES"]),
     ms(p["NSPINS"]),
-    Ip(Ns * ms),
-    _max_dim(p["MAX_DIM"]){
+    Ip(Ns * ms) {
     std::string input = p["INPUT_FILE"];
     alps::hdf5::archive input_data(input.c_str(), "r");
     input_data>>alps::make_pvp("BETA", _beta);
@@ -53,7 +52,7 @@ public:
    */
   void fill() {
     symmetry.init();
-    storage.reset();
+    storage.reset(symmetry.sector().size());
     int i =0;
     long long k1, k2;
     int isign1, isign2;
@@ -99,12 +98,6 @@ public:
    */
   void diag() {
     while(symmetry.next_sector()) {
-      size_t sector_size = symmetry.sector().size();
-      if(sector_size>_max_dim) {
-        std::stringstream s;
-        s<<"Current sector request more memory than allocated. Increase MAX_DIM parameter. Requested "<<sector_size<<", allocated "<<_max_dim<<".";
-        throw std::runtime_error(s.str().c_str());
-      }
       fill();
       /**
        * perform ARPACK call
@@ -156,7 +149,6 @@ private:
   int Ns;
   int ms;
   int Ip;
-  size_t _max_dim;
 
   /**
    * Check that im state is occupated

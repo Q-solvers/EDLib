@@ -12,17 +12,22 @@
 template<typename prec>
 class Storage {
 public:
-  Storage(alps::params &p) : nev(p["NEV"]) {
-    v.reserve(size_t(p["MAX_DIM"]));
-    resid.reserve(size_t(p["MAX_DIM"]));
-    workd.reserve(3*size_t(p["MAX_DIM"]));
-    if(p.exists("NCV")) {
-      ncv = p["NCV"];
+  Storage(alps::params &p) : nev(p["arpack.NEV"]) {
+    v.reserve(size_t(p["storage.MAX_DIM"]));
+    resid.reserve(size_t(p["storage.MAX_DIM"]));
+    workd.reserve(3*size_t(p["storage.MAX_DIM"]));
+    if(p.exists("arpack.NCV")) {
+      ncv = p["arpack.NCV"];
     } else{
       ncv = 2 * nev + 3;
     }
   }
 
+  /**
+   * For matrix size equals to 1 we do not need to perform diagonalization.
+   * Eigenvalue = A(0,0)
+   * Eigenvector = [1.0]
+   */
   virtual void zero_eigenapair() = 0;
 
   /**

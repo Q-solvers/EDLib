@@ -13,14 +13,17 @@ template <typename prec, class Symmetry=Symmetry>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  SOCRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["MAX_SIZE"]),
-                                   _max_dim(p["MAX_DIM"]), symmetry(p),
+  SOCRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+                                   _max_dim(p["storage.MAX_DIM"]), symmetry(p),
                                    _Ns(p["NSITES"]), _Ip(2*_Ns), _ms(p["NSPINS"]) {
     /** init what you need from parameters*/
     std::string input = p["INPUT_FILE"];
     alps::hdf5::archive input_data(input.c_str(), "r");
     input_data>>alps::make_pvp("hopping/values", t);
     input_data.close();
+    col_ind.assign(_max_size, 0);
+    signs.assign(_max_size, 0);
+    dvalues.assign(_max_dim, prec(0.0));
   };
 
   virtual void av(prec *v, prec *w, int n) override {
@@ -49,14 +52,16 @@ public:
     }
   }
 
-  void reset(){
+  void reset(size_t sector_size){
+    if(sector_size>_max_dim) {
+      std::stringstream s;
+      s<<"Current sector request more memory than allocated. Increase MAX_DIM parameter. Requested "<<sector_size<<", allocated "<<_max_dim<<".";
+      throw std::runtime_error(s.str().c_str());
+    }
     symmetry.next_sector();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
-    col_ind.assign(_max_size, 0);
-    signs.assign(_max_size, 0);
-    dvalues.assign(_max_dim, prec(0.0));
     n()= 0;
   }
 
@@ -74,13 +79,14 @@ public:
     int findedstate = 0;
     bool hasstate = false;
     // check that there is no any data on the k state
-    for (int iii = _vind_start; iii <= _vind; iii++) {
+    for (int iii = _vind_start; iii < _vind; iii++) {
       if (col_ind[iii] == (j + 1)) {
         throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }
     }
     // create new element in CRS arrays
     col_ind[_vind] = j + 1;
+    signs[_vind_byte] &= ~(1ll << _vind_bit);
     signs[_vind_byte] |= sign<0 ? 1ll<<_vind_bit:0;
     ++_vind_bit;
     ++_vind;
@@ -94,6 +100,7 @@ public:
   }
 
   void endMatrix() {
+    // Nothing to do
   }
 
   virtual void zero_eigenapair() override {

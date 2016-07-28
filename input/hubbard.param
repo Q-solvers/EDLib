@@ -1,0 +1,10 @@
+NSITES=8
+NSPINS=2
+INPUT_FILE=input.h5
+
+[storage]
+MAX_DIM=5000
+MAX_SIZE=70000
+
+[arpack]
+NEV=2
