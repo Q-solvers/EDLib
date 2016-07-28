@@ -38,6 +38,7 @@ public:
     input_data>>alps::make_pvp("BETA", _beta);
     input_data>>alps::make_pvp("hopping/values", t);
     input_data>>alps::make_pvp("interaction/values", U);
+    input_data.close();
     for(int i = 0; i< Ns; ++i ) {
       // HARDCODED Half-filling
       Eps[i][0] = Eps[i][1] = -U[i]/2.0;

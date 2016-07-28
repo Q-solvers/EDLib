@@ -32,8 +32,8 @@ public:
     row_ptr[i] = _vind;
     col_ind[_vind] = i + 1;
     values[_vind] = v;
-    _vind++;
-    n()++;
+    ++_vind;
+    ++n();
   }
 
   /**
@@ -43,7 +43,7 @@ public:
     int findedstate = 0;
     bool hasstate = false;
     // check that there is no any data on the k state
-    for (int iii = row_ptr[i]; iii <= _vind; iii++) {
+    for (int iii = row_ptr[i]; iii <= _vind; ++iii) {
       if (col_ind[iii] == (j + 1)) {
         hasstate = true;
         findedstate = iii;
@@ -57,7 +57,7 @@ public:
       // create new element in CRS arrays
       col_ind[_vind] = j + 1;
       values[_vind] = t;
-      _vind++;
+      ++_vind;
     }
   }
 
