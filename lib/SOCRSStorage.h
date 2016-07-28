@@ -82,9 +82,6 @@ public:
       }
     }
     // create new element in CRS arrays
-//    vind_bit = vind_bit + 1;
-//    vind_byte = vind_byte + vind_bit/8;
-//    vind_bit = modulo(vind_bit, 8);
     col_ind[_vind] = j + 1;
     signs[_vind_byte] |= sign<0 ? 1ll<<_vind_bit:0;
     ++_vind_bit;
@@ -99,7 +96,6 @@ public:
   }
 
   void endMatrix() {
-//    row_ptr[n()] = _vind;
   }
 
   virtual void zero_eigenapair() override {
@@ -108,16 +104,18 @@ public:
     Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));
   }
 private:
-  //
+  // System symmetry to walk through all states
   Symmetry symmetry;
-  //
+  // Internal storage structure
   std::vector<prec> dvalues;
   std::vector<size_t> col_ind;
   std::vector<char> signs;
 
+  // the maximum sizes of all the objects
   size_t _max_size;
   size_t _max_dim;
 
+  // internal indicies
   size_t _vind;
   size_t _vind_start;
   size_t _vind_bit;
