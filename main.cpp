@@ -26,6 +26,9 @@ void define_parameters(alps::params &p) {
 int main(int argc, const char ** argv) {
   alps::params params(argc, argv);
   define_parameters(params);
+  if(params.help_requested(std::cout)) {
+    exit(0);
+  }
   Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry> > ham(params);
 //  Hamiltonian<double, SzSymmetry, CRSStorage<double> > ham(100000, 100000, params);
   ham.diag();
