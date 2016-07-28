@@ -37,9 +37,7 @@ public:
           if(ii!=jj && std::abs(t[ii][jj])) {
             for(int ispin = 0; ispin<_ms ; ++ispin) {
               int test = checkState(nst, ii + ispin * _Ns) * (1 - checkState(nst, jj + ispin * _Ns));
-              if(test) {
-                w[i] += test * t[ii][jj] * (1- 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
-              }
+              w[i] += test * t[ii][jj] * (1- 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
               _vind_bit+=test;
               _vind_byte+=_vind_bit/sizeof(char);
               _vind_bit%= sizeof(char);
