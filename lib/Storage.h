@@ -52,9 +52,9 @@ public:
     iparam[0] = ishfts;
     iparam[2] = maxitr;
     iparam[6] = mode;
-    v.resize(n*ncv);
-    resid.resize(n);
-    workd.resize(3*n);
+    v.resize(size_t(n)*ncv);
+    resid.resize(size_t(n));
+    workd.resize(3*size_t(n));
     workl.resize(lworkl);
     do {
       saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0],&ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0],&lworkl, &info);

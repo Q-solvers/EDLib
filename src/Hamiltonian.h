@@ -81,7 +81,7 @@ public:
                 if (!checkState(nst, jj + spin * Ns)) {
                   a(ii + spin * Ns + 1, nst, k1, isign1);
                   adag(jj + spin * Ns + 1, k1, k2, isign2);
-                  hopping(i, nst, k2, isign1 * isign2 * t[ii][jj]);
+                  hopping(i, nst, k2, -isign1 * isign2 * t[ii][jj]);
                 }
               }
             }

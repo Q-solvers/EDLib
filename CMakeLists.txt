@@ -15,7 +15,7 @@ include(EnableGtests)
 UseGtest()
 include_directories(${GTEST_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -O3 -DNDEBUG")
 
 
 set(extlibs
