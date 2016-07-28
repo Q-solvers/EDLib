@@ -12,10 +12,15 @@
 template<typename prec>
 class Storage {
 public:
-  Storage(size_t max_dim, alps::params &p) : nev(p["NEV"]) {
-    v.reserve(max_dim);
-    resid.reserve(max_dim);
-    workd.reserve(3*max_dim);
+  Storage(alps::params &p) : nev(p["NEV"]) {
+    v.reserve(size_t(p["MAX_DIM"]));
+    resid.reserve(size_t(p["MAX_DIM"]));
+    workd.reserve(3*size_t(p["MAX_DIM"]));
+    if(p.exists("NCV")) {
+      ncv = p["NCV"];
+    } else{
+      ncv = 2 * nev + 3;
+    }
   }
 
   virtual void zero_eigenapair() = 0;
@@ -33,7 +38,6 @@ public:
     char which[3] = "SA";
     double sigma = 0.0;
     char bmat[2] = "I";
-    int ncv = 2*nev+3;
     int lworkl = ncv*(ncv+8);
     double tol = 1e-14;
     int info = 0;
@@ -125,6 +129,7 @@ private:
   // TODO: should set _n before diagonalize
   int _n;
   int nev;
+  int ncv;
   std::vector<prec> v;
   std::vector<prec> resid;
   std::vector<prec> workd;

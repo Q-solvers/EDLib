@@ -13,10 +13,9 @@ template <typename prec, class Symmetry=Symmetry>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  SOCRSStorage(size_t max_size, size_t max_dim, alps::params & p):  Storage<prec>(max_dim, p),
-                                                                    _vind(0), _max_size(max_size),
-                                                                    _max_dim(max_dim), symmetry(p),
-                                                                    _Ns(p["NSITES"]), _Ip(2*_Ns), _ms(p["NSPINS"]) {
+  SOCRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["MAX_SIZE"]),
+                                   _max_dim(p["MAX_DIM"]), symmetry(p),
+                                   _Ns(p["NSITES"]), _Ip(2*_Ns), _ms(p["NSPINS"]) {
     /** init what you need from parameters*/
     std::string input = p["INPUT_FILE"];
     alps::hdf5::archive input_data(input.c_str(), "r");
@@ -92,6 +91,11 @@ public:
     ++_vind;
     _vind_byte += _vind_bit/sizeof(char);
     _vind_bit%=sizeof(char);
+    if(_vind>_max_size || _vind_byte>_max_size) {
+      std::stringstream s;
+      s<<"Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested "<<_vind<<", allocated "<<_max_size<<".";
+      throw std::runtime_error(s.str().c_str());
+    }
   }
 
   void endMatrix() {

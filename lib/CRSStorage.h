@@ -16,7 +16,7 @@ template<typename prec>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  CRSStorage(size_t max_size, size_t max_dim, alps::params & p):  Storage<prec>(max_dim, p), _vind(0), _max_size(max_size), _max_dim(max_dim) {
+  CRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["MAX_SIZE"]), _max_dim(p["MAX_DIM"]) {
     // init what you need from parameters
   };
 
@@ -58,6 +58,11 @@ public:
       col_ind[_vind] = j + 1;
       values[_vind] = t;
       ++_vind;
+      if(_vind>_max_size) {
+        std::stringstream s;
+        s<<"Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested "<<_vind<<", allocated "<<_max_size<<".";
+        throw std::runtime_error(s.str().c_str());
+      }
     }
   }
 
