@@ -7,27 +7,33 @@
 
 #include "fortranbinding.h"
 #include <iostream>
+#include <alps/params.hpp>
 
 template<typename prec>
 class Storage {
 public:
-  Storage(size_t max_dim) {
+  Storage(size_t max_dim, alps::params &p) : nev(p["NEV"]) {
     v.reserve(max_dim);
     resid.reserve(max_dim);
     workd.reserve(3*max_dim);
   }
+
+  virtual void zero_eigenapair() = 0;
+
   /**
-   * Diagonalize current Hamiltonian
-   */
-  void diag() {
+     * Diagonalize current Hamiltonian
+     */
+  int diag() {
     int ido = 0;
     int n = _n;
+    if(n == 1) {
+      zero_eigenapair();
+      return 0;
+    }
     char which[3] = "SA";
     double sigma = 0.0;
     char bmat[2] = "I";
-    // TODO: move to parameters
-    int nev = 2;
-    int ncv = std::max(2*nev, 10);
+    int ncv = 2*nev+3;
     int lworkl = ncv*(ncv+8);
     double tol = 1e-14;
     int info = 0;
@@ -42,7 +48,7 @@ public:
     iparam[0] = ishfts;
     iparam[2] = maxitr;
     iparam[6] = mode;
-    v.resize(n);
+    v.resize(n*ncv);
     resid.resize(n);
     workd.resize(3*n);
     workl.resize(lworkl);
@@ -57,7 +63,7 @@ public:
       std::cout<<"' Error with _saupd, info = '  "<<info<<std::endl;
       std::cout<<"' Check documentation in _saupd '  "<<iparam[4]<<std::endl;
       std::cout<<"' '"<<std::endl;
-      return;
+      return info;
     }
     int rvec = 1;
     char howmny[2] = "A";
@@ -70,12 +76,32 @@ public:
       std::cout<<"' Error with _seupd, info = '  "<<info<<std::endl;
       std::cout<<"' Check the documentation of _seupd. '"<<std::endl;
       std::cout<<"' '"<<std::endl;
-      return;
+      return info;
     }
     // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
-    for(auto ev : evals) {
-      std::cout<<ev<<std::endl;
+    int nconv = iparam[4];
+    evecs.assign(nconv, std::vector<prec>(n, prec(0.0)));
+    for(int i = 0; i<nconv; ++i){
+      int offset = i*n;
+      std::memcpy(&evecs[i][0], &v[offset], n*sizeof(prec));
     }
+    return 0;
+  }
+
+  const std::vector<prec> & eigenvalues() const {
+    return evals;
+  }
+
+  const std::vector<std::vector<prec> > & eigenvectors() const {
+    return evecs;
+  }
+
+  std::vector<prec> & eigenvalues() {
+    return evals;
+  }
+
+  std::vector<std::vector<prec> > & eigenvectors() {
+    return evecs;
   }
 
   /**
@@ -98,6 +124,7 @@ protected:
 private:
   // TODO: should set _n before diagonalize
   int _n;
+  int nev;
   std::vector<prec> v;
   std::vector<prec> resid;
   std::vector<prec> workd;
@@ -106,7 +133,6 @@ private:
   std::vector<prec> evals;
   std::vector<std::vector<prec> > evecs;
 };
-
 
 template<>
 void Storage<double>::saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv, int *iparam, int *ipntr,

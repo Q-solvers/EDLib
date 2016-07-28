@@ -16,6 +16,30 @@
  */
 class SzSymmetry: public Symmetry {
 public:
+  class Sector {
+    friend class SzSymmetry;
+  protected:
+    Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
+    bool operator<(Sector s) {
+      return _size< s._size;
+    }
+
+  public:
+    int nup() const {return _nup;}
+
+    int ndown() const {return _ndown;}
+
+    size_t size() const {return _size;}
+
+    void print() {
+      std::cout<<_nup<<" "<<_ndown;
+    }
+
+  private:
+    int _nup;
+    int _ndown;
+    size_t _size;
+  };
 
   SzSymmetry(alps::params& p): Symmetry(p), _state(0), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
                                c_n_k(_Ns+1, std::vector<int>(_Ns+1, 0)), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
@@ -96,6 +120,9 @@ public:
     return true;
   }
 
+  const SzSymmetry::Sector& sector() {
+    return _current_sector;
+  }
 
   /**
    * Calculate n2!/n1!
@@ -120,27 +147,6 @@ public:
   }
 
 private:
-  class Sector {
-    friend class SzSymmetry;
-  protected:
-    Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
-    bool operator<(Sector s) {
-      return _size< s._size;
-    }
-
-  public:
-    int nup() const {return _nup;}
-
-    int ndown() const {return _ndown;}
-
-    size_t size() const {return _size;}
-
-  private:
-    int _nup;
-    int _ndown;
-    size_t _size;
-  };
-
 
   /**
    *

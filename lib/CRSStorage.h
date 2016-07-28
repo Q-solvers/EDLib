@@ -8,6 +8,7 @@
 
 #include <vector>
 #include <alps/params.hpp>
+#include <iomanip>
 #include "fortranbinding.h"
 #include "Storage.h"
 
@@ -15,7 +16,7 @@ template<typename prec>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  CRSStorage(size_t max_size, size_t max_dim, alps::params & p):  Storage<prec>(max_dim), _vind(0), _max_size(max_size), _max_dim(max_dim) {
+  CRSStorage(size_t max_size, size_t max_dim, alps::params & p):  Storage<prec>(max_dim, p), _vind(0), _max_size(max_size), _max_dim(max_dim) {
     // init what you need from parameters
   };
 
@@ -65,11 +66,47 @@ public:
    */
   virtual void av(prec* v, prec* w, int n) override {
     for (int i = 0; i < n; ++i) {
+      w[i] = 0.0;
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
         w[i] = w[i] + values[j] * v[col_ind[j]-1];
       }
     }
   }
+
+  void endMatrix() {
+    row_ptr[n()] = _vind;
+  }
+
+  void print() {
+    std::cout<< std::setprecision(2)<<std::fixed;
+    std::cout<<"[";
+    for(int i = 0; i<n(); ++i) {
+      std::cout<<"[";
+      for(int j = 0; j<n(); ++j) {
+        bool f = true;
+        for(int k = row_ptr[i]; k<row_ptr[i+1]; ++k) {
+          if((col_ind[k]-1) == j) {
+            std::cout<<std::setw(6)<<values[k]<<(j==n()-1? "" : ", ");
+            f = false;
+          } /*else {
+            std::cout<<"0.0 ";
+          }*/
+        }
+        if(f) {
+          std::cout<<std::setw(6)<<0.0<<(j==n()-1? "" : ", ");
+        }
+      }
+      std::cout<<"]"<<(i==n()-1? "" : ", \n");
+    }
+    std::cout<<"]"<<std::endl;
+  }
+
+  virtual void zero_eigenapair() override {
+    Storage<prec>::eigenvalues().resize(1);
+    Storage<prec>::eigenvalues()[0] = values[0];
+    Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));
+  }
+
 
 private:
   std::vector<prec> values;
@@ -79,7 +116,7 @@ private:
   size_t _max_dim;
 
 
-  int _vind;
+  size_t _vind;
 };
 
 

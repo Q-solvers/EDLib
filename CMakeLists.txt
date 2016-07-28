@@ -3,7 +3,7 @@ project(Hubbard C CXX Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-find_package(ALPSCore COMPONENTS params REQUIRED)
+find_package(ALPSCore COMPONENTS params hdf5 REQUIRED)
 find_package(ARPACK)
 find_package(BLAS)
 
@@ -21,6 +21,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11")
 set(extlibs
     ${MPI_CXX_LIBRARIES}
     ${Boost_LIBRARIES}
+    ${HDF5_LIBRARIES}
     ${ALPSCore_LIBRARIES}
     ${ARPACK_LIB}
     ${BLAS_LIBRARIES}
