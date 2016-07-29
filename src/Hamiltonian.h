@@ -13,8 +13,9 @@
 #include <fstream>
 #include "Symmetry.h"
 #include "EigenPair.h"
+#include "HubbardModel.h"
 
-template<typename prec, class Symmetry=Symmetry, class Storage=CRSStorage<double> >
+template<typename prec, class Symmetry=Symmetry, class Storage=CRSStorage<double>, class Model=HubbardModel<double> >
 class Hamiltonian {
   static_assert(std::is_base_of<Symmetry, Symmetry>::value, "Symmetry should extend base Symmetry class");
 public:
@@ -27,6 +28,7 @@ public:
   Hamiltonian(alps::params& p) :
     storage(p),
     symmetry(p),
+    model(p),
     Eps(p["NSITES"], std::vector<double>(p["NSPINS"], 0.0)),
     t(p["NSITES"], std::vector<double>(p["NSITES"], 0.0)),
     U(p["NSITES"], 0.0),
@@ -54,37 +56,18 @@ public:
     symmetry.init();
     storage.reset(symmetry.sector().size());
     int i =0;
-    long long k1, k2;
-    int isign1, isign2;
-    prec xtemp;
+    long long k;
+    int isign;
     while (symmetry.next_state()) {
-      xtemp = 0.0;
       long long nst = symmetry.state();
       // Compute diagonal element for current i state
-      for(int im = 0;im < Ns;++im){
-        xtemp += (Eps[im][0]      - xmu) * checkState(nst, im)
-               + (Eps[im][ms - 1] - xmu) * checkState(nst, im + Ns);
-        xtemp += U[im]* checkState(nst, im)* checkState(nst, im + Ns);
 
-      }
-      storage.addDiagonal(i, xtemp);
+      storage.addDiagonal(i, model.diagonal(nst));
       // non-diagonal terms calculation
-      for(int ii = 0; ii< Ns; ++ii) {
-        for(int jj = 0; jj< Ns; ++jj) {
-          for(int spin = 0; spin< ms; ++spin) {
-            // check that ii site is not equal to jj site and that there is non-zero hopping between these lattice sites
-            if (ii != jj && std::abs(t[ii][jj])>1e-10) {
-              // check if we can anihilate particle with spin=spin on ii lattice site
-              if (checkState(nst, ii + spin * Ns)) {
-                // check if we can create particle with spin=spin on jj lattice site
-                if (!checkState(nst, jj + spin * Ns)) {
-                  a(ii + spin * Ns + 1, nst, k1, isign1);
-                  adag(jj + spin * Ns + 1, k1, k2, isign2);
-                  hopping(i, nst, k2, -isign1 * isign2 * t[ii][jj]);
-                }
-              }
-            }
-          }
+      for(auto & state: model.states()) {
+        if(model.valid(state, nst)) {
+          model.set(state, nst, k, isign);
+          hopping(i, nst, k, isign * state.value());
         }
       }
       i++;
@@ -141,6 +124,9 @@ private:
    * ms - number of spins
    * Ip - maximum total number of electrons ms*Ns
    */
+
+  Model model;
+
   double xmu;
   double _beta;
   std::vector<std::vector<double> > Eps;
@@ -150,17 +136,6 @@ private:
   int ms;
   int Ip;
 
-  /**
-   * Check that im state is occupated
-   *
-   * \param nst - current state
-   * \param im - state to check
-   *
-   * \return 0 if state is empty, 1 - otherwise
-   */
-  int inline checkState(const long long& nst, const int& im) {
-    return (int) ((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
-  }
 
   /**
    * \param i - current index
@@ -174,37 +149,6 @@ private:
     storage.addElement(i, k_index, v);
   }
 
-  /**
-   * Anihilate particle
-   * \param i [in] - site to anihilate particle
-   * \param jold [in] - current state
-   * \param k [out] - resulting state
-   * \param isign [out] - fermionic sign
-   */
-  void inline a(const int& i,const long long& jold,long long &k,int &isign) {
-    long long sign=0;
-    for(int ll=0; ll<i-1; ll++) {
-      sign+= ((jold&(1ll<<(Ip-ll-1)))!=0) ? 1 : 0;
-    }
-    isign = (sign % 2) == 0 ? 1 : -1;
-    k=jold-(1ll<<(Ip-i));
-  }
-
-  /**
-   * Create particle
-   * \param i [in] - site to create particle
-   * \param jold [in] - current state
-   * \param k [out] - resulting state
-   * \param isign [out] - fermionic sign
-   */
-  void inline adag(const int& i, const long long &jold, long long& k, int& isign) {
-    long long sign=0;
-    for(int ll=0; ll<i-1; ll++) {
-      sign+= ((jold&(1ll<<(Ip-ll-1)))!=0) ? 1 : 0;
-    }
-    isign = (sign % 2) == 0 ? 1 : -1;
-    k = jold + (1ll << (Ip - i));
-  }
 };
 
 #endif //HUBBARD_HAMILTONIAN_H

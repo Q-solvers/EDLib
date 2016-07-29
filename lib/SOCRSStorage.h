@@ -6,27 +6,23 @@
 #define HUBBARD_SOCRSSTORAGE_H
 
 #include <vector>
-#include <Symmetry.h>
 #include "Storage.h"
 
-template <typename prec, class Symmetry=Symmetry>
+template <typename prec, class Symmetry, class Model>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
   SOCRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
-                                   _max_dim(p["storage.MAX_DIM"]), symmetry(p),
-                                   _Ns(p["NSITES"]), _Ip(2*_Ns), _ms(p["NSPINS"]) {
+                                   _max_dim(p["storage.MAX_DIM"]), symmetry(p), model(p) {
     /** init what you need from parameters*/
-    std::string input = p["INPUT_FILE"];
-    alps::hdf5::archive input_data(input.c_str(), "r");
-    input_data>>alps::make_pvp("hopping/values", t);
-    input_data.close();
     col_ind.assign(_max_size, 0);
     signs.assign(_max_size, 0);
     dvalues.assign(_max_dim, prec(0.0));
   };
 
   virtual void av(prec *v, prec *w, int n) override {
+    long long k;
+    int isign;
     symmetry.init();
     _vind = 0;
     _vind_byte = 0;
@@ -35,19 +31,13 @@ public:
       symmetry.next_state();
       long long nst = symmetry.state();
       w[i] = dvalues[i] * v[i];
-      for(int ii = 0; ii< _Ns; ++ii) {
-        for(int jj = 0; jj< _Ns; ++jj) {
-          if(ii!=jj && std::abs(t[ii][jj])) {
-            for(int ispin = 0; ispin<_ms ; ++ispin) {
-              int test = checkState(nst, ii + ispin * _Ns) * (1 - checkState(nst, jj + ispin * _Ns));
-              w[i] += test * t[ii][jj] * (1- 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
-              _vind_bit+=test;
-              _vind_byte+=_vind_bit/sizeof(char);
-              _vind_bit%= sizeof(char);
-              _vind+= test;
-            }
-          }
-        }
+      for(auto & state: model.states()) {
+        int test = model.valid(state, nst);
+        w[i] += test * state.value() * (1- 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
+        _vind_bit+=test;
+        _vind_byte+=_vind_bit/sizeof(char);
+        _vind_bit%= sizeof(char);
+        _vind+= test;
       }
     }
   }
@@ -127,16 +117,8 @@ private:
   size_t _vind_byte;
 
   // Hubbard model parameters
-  int _Ns;
-  int _Ip;
-  int _ms;
+  Model model;
 
-  std::vector<std::vector<prec> > t;
-
-  // TODO: think about dependency of Hamiltonian
-  int inline checkState(const long long& nst, const int& im) {
-    return (int) ((nst & (1ll << (_Ip - 1 - im))) >> (_Ip - 1 - im));
-  }
 };
 
 

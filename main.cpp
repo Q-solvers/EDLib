@@ -29,7 +29,7 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry> > ham(params);
+  Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > ham(params);
 //  Hamiltonian<double, SzSymmetry, CRSStorage<double> > ham(100000, 100000, params);
   ham.diag();
   return 0;
