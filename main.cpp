@@ -5,6 +5,7 @@
 #include <Hamiltonian.h>
 #include <SzSymmetry.h>
 #include <SOCRSStorage.h>
+#include <HubbardModel.h>
 
 
 /**

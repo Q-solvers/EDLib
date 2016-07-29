@@ -9,13 +9,11 @@
 #include <alps/params.hpp>
 #include <type_traits>
 
-#include <CRSStorage.h>
 #include <fstream>
 #include "Symmetry.h"
 #include "EigenPair.h"
-#include "HubbardModel.h"
 
-template<typename prec, class Symmetry=Symmetry, class Storage=CRSStorage<double>, class Model=HubbardModel<double> >
+template<typename prec, class Symmetry, class Storage, class Model>
 class Hamiltonian {
   static_assert(std::is_base_of<Symmetry, Symmetry>::value, "Symmetry should extend base Symmetry class");
 public:
@@ -41,8 +39,8 @@ public:
     symmetry.init();
     storage.reset(symmetry.sector().size());
     int i =0;
-    long long k;
-    int isign;
+    long long k = 0;
+    int isign = 0;
     while (symmetry.next_state()) {
       long long nst = symmetry.state();
       // Compute diagonal element for current i state
@@ -77,7 +75,6 @@ public:
         const std::vector<prec>& evals = storage.eigenvalues();
         const std::vector<std::vector<prec> >& evecs = storage.eigenvectors();
         for(int i = 0; i<evals.size(); ++i) {
-//          std::vector<prec> evec(evecs[i]);
           eigenpairs.push_back(EigenPair<prec, typename Symmetry::Sector>(evals[i], evecs[i], symmetry.sector()));
         }
       }
