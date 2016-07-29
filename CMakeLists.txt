@@ -6,6 +6,7 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 find_package(ALPSCore COMPONENTS params hdf5 REQUIRED)
 find_package(ARPACK)
 find_package(BLAS)
+find_package(LAPACK)
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
@@ -26,6 +27,7 @@ set(extlibs
     ${ALPSCore_LIBRARIES}
     ${ARPACK_LIB}
     ${BLAS_LIBRARIES}
+    ${LAPACK_LIBRARIES}
     )
 
 include_directories(${Hubbard_SOURCE_DIR}/src)
