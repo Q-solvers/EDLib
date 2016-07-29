@@ -39,7 +39,7 @@ public:
     input_data>>alps::make_pvp("interaction/values", U);
     input_data.close();
     for(int i = 0; i< _Ns; ++i ) {
-      // HARDCODED Half-filling
+      // HARDCODED Half-filling paramagnetic shift
       Eps[i][0] = Eps[i][1] = -U[i]/2.0;
     }
     for(int ii = 0; ii< _Ns; ++ii) {
@@ -51,6 +51,8 @@ public:
         }
       }
     }
+    // TODO: move to input file and make site-dependent
+    _xmu = precision(0.0);
   };
 
   inline int valid(const St & state, const long long &nst) {
@@ -128,7 +130,7 @@ private:
   std::vector<precision> U;
   // Chemical potential
   precision _xmu;
-  // site shift
+  // site energy shift
   std::vector<std::vector<precision> > Eps;
   // Inverse temperature
   double _beta;
@@ -136,7 +138,11 @@ private:
   // Non-diagonal states iterator
   std::vector<St> _states;
 
-
+  /**
+   * _Ns - number of lattice sites
+   * _ms - number of electron spins
+   * _Ip - maximum number of electrons
+   */
   int _Ns;
   int _ms;
   int _Ip;
