@@ -36,7 +36,8 @@ t = np.array([[0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
               [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
                0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]])
 
-sectors = np.array([[16,16],])
+Ns = len(U)
+sectors = np.array([[Ns/2,Ns/2],])
 
 data = h5py.File("input.h5", "w");
 
@@ -50,5 +51,5 @@ hop_g = data.create_group("hopping")
 hop_g.create_dataset("values", data=t)
 
 int_g = data.create_group("interaction")
-int_ds = int_g.create_dataset("values", shape=(len(U),), data=U)
+int_ds = int_g.create_dataset("values", shape=(Ns,), data=U)
 
