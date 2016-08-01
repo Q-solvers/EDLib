@@ -40,7 +40,7 @@ add_subdirectory(test)
 
 enable_testing()
 
-add_test(SzSymmetryTest SzSymmetryTest)
+add_test(SzSymmetryTest test/SzSymmetryTest)
 
 set(SOURCE_FILES main.cpp)
 
