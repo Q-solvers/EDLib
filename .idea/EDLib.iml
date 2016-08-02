@@ -6,12 +6,14 @@
       <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/GreensFunction.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/HubbardModel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/EigenPair.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />

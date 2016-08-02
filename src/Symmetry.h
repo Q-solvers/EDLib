@@ -22,7 +22,7 @@ public:
   virtual ~Symmetry(){};
   virtual bool next_state() = 0;
   virtual long long state() = 0;
-  virtual int index(long long combination) = 0;
+//  virtual int index(long long combination) = 0;
   virtual long long state(int index) = 0;
   virtual void reset() = 0;
   virtual void init() = 0;

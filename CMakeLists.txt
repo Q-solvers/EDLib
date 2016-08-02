@@ -3,7 +3,7 @@ project(Hubbard C CXX Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
-find_package(ALPSCore COMPONENTS params hdf5 REQUIRED)
+find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
 find_package(ARPACK)
 find_package(BLAS)
 find_package(LAPACK)
@@ -16,7 +16,7 @@ include(EnableGtests)
 UseGtest()
 include_directories(${GTEST_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -O3 -DNDEBUG")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --std=c++11 -DNDEBUG")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m64")
 
 

@@ -24,8 +24,8 @@ public:
    * \param [in] p - alps::parameters
    */
   Hamiltonian(alps::params& p) :
-    storage(p),
-    symmetry(p),
+    _storage(p),
+    _symmetry(p),
     model(p) {
     std::string input = p["INPUT_FILE"];
     alps::hdf5::archive input_data(input.c_str(), "r");
@@ -36,16 +36,16 @@ public:
    * fill current sector
    */
   void fill() {
-    symmetry.init();
-    storage.reset(symmetry.sector().size());
+    _symmetry.init();
+    _storage.reset(_symmetry.sector().size());
     int i =0;
     long long k = 0;
     int isign = 0;
-    while (symmetry.next_state()) {
-      long long nst = symmetry.state();
+    while (_symmetry.next_state()) {
+      long long nst = _symmetry.state();
       // Compute diagonal element for current i state
 
-      storage.addDiagonal(i, model.diagonal(nst));
+      _storage.addDiagonal(i, model.diagonal(nst));
       // non-diagonal terms calculation
       for(auto & state: model.states()) {
         if(model.valid(state, nst)) {
@@ -56,45 +56,56 @@ public:
       i++;
     }
     // additional steps after all data
-    storage.endMatrix();
+    _storage.endMatrix();
   }
   /**
    * perform Hamiltonian diagonalization
    * result will be stored in evals and evecs
    */
   void diag() {
-    while(symmetry.next_sector()) {
+    while(_symmetry.next_sector()) {
       fill();
       /**
        * perform ARPACK call
        */
-      int info = storage.diag();
+      int info = _storage.diag();
       if(info != 0) {
 
       } else {
-        const std::vector<prec>& evals = storage.eigenvalues();
-        const std::vector<std::vector<prec> >& evecs = storage.eigenvectors();
+        const std::vector<prec>& evals = _storage.eigenvalues();
+        const std::vector<std::vector<prec> >& evecs = _storage.eigenvectors();
         for(int i = 0; i<evals.size(); ++i) {
-          eigenpairs.push_back(EigenPair<prec, typename Symmetry::Sector>(evals[i], evecs[i], symmetry.sector()));
+          _eigenpairs.push_back(EigenPair<prec, typename Symmetry::Sector>(evals[i], evecs[i], _symmetry.sector()));
         }
       }
     }
-    std::sort(eigenpairs.begin(), eigenpairs.end());
+    std::sort(_eigenpairs.begin(), _eigenpairs.end());
     std::cout<<"Here is the list of eigenvalues:"<<std::endl;
-    for(auto& eigenpair : eigenpairs) {
+    for(auto& eigenpair : _eigenpairs) {
       std::cout<<eigenpair.eigenvalue()<<" ";
       eigenpair.sector().print();
       std::cout<<std::endl;
     }
   }
 
+  const Symmetry & symmetry() const {
+    return _symmetry;
+  }
+
+  Symmetry & symmetry() {
+    return _symmetry;
+  }
+
+  const std::vector<EigenPair<prec, typename Symmetry::Sector> > & eigenpairs() const {
+    return _eigenpairs;
+  };
 private:
   // CSR format Hamiltonian matrix storage
-  Storage storage;
-  Symmetry symmetry;
+  Storage _storage;
+  Symmetry _symmetry;
 
   // Eigen-pairs
-  std::vector<EigenPair<prec, typename Symmetry::Sector> > eigenpairs;
+  std::vector<EigenPair<prec, typename Symmetry::Sector> > _eigenpairs;
 
   /**
    * Model to diagonalize
@@ -103,15 +114,15 @@ private:
 
 
   /**
-   * \param i - current index
-   * \param nst - curent state
+   * \param i - current Hamiltonian matrix line
+   * \param nst - current state
    * \param k - state to hop between
    * \param v - hopping value
    * \param sector - current conservation law sector
    */
   void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v) {
-    int k_index = symmetry.index(k) - 1;
-    storage.addElement(i, k_index, v);
+    int k_index = _symmetry.index(k) - 1;
+    _storage.addElement(i, k_index, v);
   }
 
 };

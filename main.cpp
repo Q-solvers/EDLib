@@ -6,6 +6,7 @@
 #include <SzSymmetry.h>
 #include <SOCRSStorage.h>
 #include <HubbardModel.h>
+#include <GreensFunction.h>
 
 
 /**
@@ -21,6 +22,9 @@ void define_parameters(alps::params &p) {
   p.define<size_t>("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
   p.define<size_t>("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
   p.define<std::string>("INPUT_FILE", "input.h5", "File with initial data");
+  p.define<int>("lanc.NOMEGA", 32, "Number of fermionic frequencies");
+  p.define<int>("lanc.NLANC", 100, "Number of Lanczos iterations");
+  p.define<double>("lanc.BETA", 10.0, "Inverse temperature");
 }
 
 
@@ -33,5 +37,7 @@ int main(int argc, const char ** argv) {
   Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > ham(params);
 //  Hamiltonian<double, SzSymmetry, CRSStorage<double> > ham(100000, 100000, params);
   ham.diag();
+  GreensFunction<double, Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > , HubbardModel<double> > greensFunction(params, ham);
+  greensFunction.compute();
   return 0;
 }

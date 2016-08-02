@@ -72,8 +72,9 @@ public:
   inline const precision diagonal(long long state) const {
     precision xtemp = 0.0;
     for(int im = 0;im < _Ns;++im){
-      xtemp += (Eps[im][0]      - _xmu) * checkState(state, im)
-               + (Eps[im][_ms - 1] - _xmu) * checkState(state, im + _Ns);
+      for(int is = 0 ; is< _ms; ++is) {
+        xtemp += (Eps[im][is] - _xmu) * checkState(state, im + is* _Ns);
+      }
       xtemp += U[im]* checkState(state, im)* checkState(state, im + _Ns);
     }
     return xtemp;
@@ -122,6 +123,14 @@ public:
   }
 
   const std::vector<St>& states() const {return _states;};
+
+  const int orbitals() const {
+    return _Ns;
+  }
+
+  const int spins() const {
+    return _ms;
+  }
 
 private:
   // Hopping

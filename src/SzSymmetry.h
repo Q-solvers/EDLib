@@ -100,12 +100,12 @@ public:
     return _state;
   }
 
-  virtual int index(long long state) override {
+  virtual int index(long long state, SzSymmetry::Sector & sector = _current_sector) {
     long long up = state>>_Ns;
     long long down = state & ((1ll<<_Ns) - 1);
-    int cup= c_n_k[_Ns][_current_sector.nup()];
-    int cdo= c_n_k[_Ns][_current_sector.ndown()];
-    return (ninv[_current_sector.nup()][(int)up] - 1)*(cdo) + ninv[_current_sector.ndown()][(int)down];
+    int cup= c_n_k[_Ns][sector.nup()];
+    int cdo= c_n_k[_Ns][sector.ndown()];
+    return (ninv[sector.nup()][(int)up] - 1)*(cdo) + ninv[sector.ndown()][(int)down];
   }
 
   virtual long long state(int index) override {
@@ -134,7 +134,12 @@ public:
     return true;
   }
 
-  const SzSymmetry::Sector& sector() {
+  void set_sector(SzSymmetry::Sector& sector) {
+    _current_sector = sector;
+    init();
+  }
+
+  const SzSymmetry::Sector& sector() const {
     return _current_sector;
   }
 

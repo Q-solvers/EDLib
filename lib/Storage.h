@@ -131,7 +131,6 @@ public:
 protected:
   int & n() {return _n;}
 private:
-  // TODO: should set _n before diagonalize
   int _n;
   int nev;
   int ncv;
