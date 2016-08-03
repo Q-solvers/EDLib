@@ -31,7 +31,7 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > ham(params);
-//  Hamiltonian<double, SzSymmetry, CRSStorage<double> > ham(100000, 100000, params);
+//  Hamiltonian<double, SzSymmetry, CRSStorage<double> , HubbardModel<double> > ham(params);
   ham.diag();
   return 0;
 }
