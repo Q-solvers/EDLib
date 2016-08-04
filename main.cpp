@@ -17,7 +17,7 @@ void define_parameters(alps::params &p) {
   p.define<int>("NSITES", 4, "Number of sites");
   p.define<int>("NSPINS", 2, "Number of spins");
   p.define<int>("arpack.NEV", 2, "Number of eigenvalues to find");
-  p.define<int>("arpack.NCV", 4, "Number of convergent values");
+  p.define<int>("arpack.NCV", "Number of convergent values");
   p.define<bool>("arpack.SECTOR", "Read symmetry sectors from file");
   p.define<size_t>("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
   p.define<size_t>("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
@@ -35,7 +35,7 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > ham(params);
-//  Hamiltonian<double, SzSymmetry, CRSStorage<double> > ham(100000, 100000, params);
+//  Hamiltonian<double, SzSymmetry, CRSStorage<double> , HubbardModel<double> > ham(params);
   ham.diag();
   GreensFunction<double, Hamiltonian<double, SzSymmetry, SOCRSStorage<double, SzSymmetry, HubbardModel<double> > , HubbardModel<double> > , HubbardModel<double> > greensFunction(params, ham);
   greensFunction.compute();

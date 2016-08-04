@@ -12,14 +12,14 @@
 template<typename prec>
 class Storage {
 public:
-  Storage(alps::params &p) : nev(p["arpack.NEV"]) {
+  Storage(alps::params &p) : _nev(p["arpack.NEV"]) {
     v.reserve(size_t(p["storage.MAX_DIM"]));
     resid.reserve(size_t(p["storage.MAX_DIM"]));
     workd.reserve(3*size_t(p["storage.MAX_DIM"]));
     if(p.exists("arpack.NCV")) {
-      ncv = p["arpack.NCV"];
+      _ncv = p["arpack.NCV"];
     } else{
-      ncv = 2 * nev + 3;
+      _ncv = 2 * _nev + 3;
     }
   }
 
@@ -39,6 +39,16 @@ public:
     if(n == 1) {
       zero_eigenapair();
       return 0;
+    }
+    int nev = _nev;
+    int ncv = _ncv;
+    if(n < ncv){
+     std::cout<<" Reducing ncv"<<std::endl;
+     ncv = n;
+    }
+    if(nev >= ncv){
+     std::cout<<" Reducing nev"<<std::endl;
+     nev = ncv - 1;
     }
     char which[3] = "SA";
     double sigma = 0.0;
@@ -132,8 +142,8 @@ protected:
   int & n() {return _n;}
 private:
   int _n;
-  int nev;
-  int ncv;
+  int _nev;
+  int _ncv;
   std::vector<prec> v;
   std::vector<prec> resid;
   std::vector<prec> workd;
