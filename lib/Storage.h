@@ -40,16 +40,8 @@ public:
       zero_eigenapair();
       return 0;
     }
-    int nev = _nev;
-    int ncv = _ncv;
-    if(n < ncv){
-     std::cout<<" Reducing ncv"<<std::endl;
-     ncv = n;
-    }
-    if(nev >= ncv){
-     std::cout<<" Reducing nev"<<std::endl;
-     nev = ncv - 1;
-    }
+    int ncv = std::min(_ncv, _n);
+    int nev = std::min(_nev, _ncv-1);
     char which[3] = "SA";
     double sigma = 0.0;
     char bmat[2] = "I";
