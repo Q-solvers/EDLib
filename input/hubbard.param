@@ -8,3 +8,4 @@ MAX_SIZE=70000
 
 [arpack]
 NEV=2
+SECTOR=TRUE

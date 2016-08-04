@@ -20,13 +20,34 @@ public:
     return _omega;
   }
 
-  int lanczos() {
+  int lanczos(std::vector<precision> &v) {
     int nlanc = 0;
-    MPI_Win v_win;
+    unsigned long size = v.size();
+    std::vector<precision> w(size, precision(0.0));
     precision alf = 0, bet = 0;
+    ham.fill();
     for (int iter = 1; iter <= _Nl; iter++) {
-      nlanc = nlanc + 1;
+      ++nlanc;
+      if(iter != 1) {
+        for (int j = 0; j < size; ++j) {
+          precision dummy = v[j];
+          v[j] = w[j]/bet;
+          w[j] = -bet*dummy;
+        }
+      }
+      ham.storage().av(v.data(), w.data(), size, false);
+      for (int k = 0; k < v.size(); ++k) {
+        alf += w[k] * v[k];
+      }
       alfalanc[iter - 1] = alf;
+      for (int j = 0; j < size; ++j) {
+        w[j] -= alf*v[j];
+      }
+      for (int k = 0; k < v.size(); ++k) {
+        bet += w[k] * w[k];
+      }
+      bet = std::sqrt(bet);
+
       if (iter != _Nl) betalanc[iter] = bet;
       if (std::abs(bet) < 1e-10 && iter >= (2 * ham.symmetry().sector().size())) {
         break;
@@ -36,6 +57,10 @@ public:
   }
 
   const Hamiltonian &hamiltonian() const{
+    return ham;
+  };
+
+  Hamiltonian &hamiltonian() {
     return ham;
   };
 

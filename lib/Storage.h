@@ -117,7 +117,7 @@ public:
    * Matrix-Vector product
    * Should be implemented based on storage type
    */
-  virtual void av(prec* v, prec* w, int n) = 0;
+  virtual void av(prec* v, prec* w, int n, bool clear=true) = 0;
 
   void saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
              prec *workd, prec *workl, int *lworkl, int *info){};

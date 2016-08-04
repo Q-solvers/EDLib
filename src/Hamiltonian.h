@@ -24,13 +24,9 @@ public:
    * \param [in] p - alps::parameters
    */
   Hamiltonian(alps::params& p) :
-    _storage(p),
     _symmetry(p),
-    model(p) {
-    std::string input = p["INPUT_FILE"];
-    alps::hdf5::archive input_data(input.c_str(), "r");
-    input_data.close();
-  };
+    _storage(p, _symmetry),
+    model(p) {};
 
   /**
    * fill current sector
@@ -96,6 +92,10 @@ public:
     return _symmetry;
   }
 
+  Storage& storage() {
+    return _storage;
+  }
+
   const std::vector<EigenPair<prec, typename Symmetry::Sector> > & eigenpairs() const {
     return _eigenpairs;
   };
@@ -121,7 +121,7 @@ private:
    * \param sector - current conservation law sector
    */
   void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v) {
-    int k_index = _symmetry.index(k) - 1;
+    int k_index = _symmetry.index(k);
     _storage.addElement(i, k_index, v);
   }
 

@@ -29,7 +29,7 @@ public:
     return _eigenvector;
   }
 
-  SectorType sector() const {
+  const SectorType& sector() const {
     return _sector;
   }
 

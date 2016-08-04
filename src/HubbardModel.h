@@ -62,8 +62,8 @@ public:
   inline void set(const St & state, const long long &nst, long long &k, int &sign) {
     long long k1, k2;
     int isign1, isign2;
-    a(state.indicies().first + state.spin() * _Ns + 1, nst, k1, isign1);
-    adag(state.indicies().second + state.spin() * _Ns + 1, k1, k2, isign2);
+    a(state.indicies().first + state.spin() * _Ns, nst, k1, isign1);
+    adag(state.indicies().second + state.spin() * _Ns, k1, k2, isign2);
     k = k2;
     // -t c^+ c
     sign = -isign1*isign2;
@@ -99,11 +99,11 @@ public:
    */
   void inline a(const int& i,const long long& jold,long long &k,int &isign) {
     long long sign=0;
-    for(int ll=0; ll<i-1; ll++) {
+    for(int ll=0; ll<i; ++ll) {
       sign+= ((jold&(1ll<<(_Ip-ll-1)))!=0) ? 1 : 0;
     }
     isign = (sign % 2) == 0 ? 1 : -1;
-    k=jold-(1ll<<(_Ip-i));
+    k=jold-(1ll<<(_Ip-i-1));
   }
 
   /**
@@ -115,11 +115,11 @@ public:
    */
   void inline adag(const int& i, const long long &jold, long long& k, int& isign) {
     long long sign=0;
-    for(int ll=0; ll<i-1; ll++) {
+    for(int ll=0; ll<i; ++ll) {
       sign+= ((jold&(1ll<<(_Ip-ll-1)))!=0) ? 1 : 0;
     }
     isign = (sign % 2) == 0 ? 1 : -1;
-    k = jold + (1ll << (_Ip - i));
+    k = jold + (1ll << (_Ip - i -1));
   }
 
   const std::vector<St>& states() const {return _states;};

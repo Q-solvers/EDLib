@@ -31,7 +31,7 @@ public:
 
     size_t size() const {return _size;}
 
-    void print() {
+    void print() const {
       std::cout<<_nup<<" "<<_ndown;
     }
 
@@ -52,7 +52,7 @@ public:
       basis[i].reserve(cnk);
       for (int k = 0; k < cnk; ++k) {
         basis[i][k] = next_basis(_Ns, i, upstate, k==0);
-        ninv[i][basis[i][k]] = k + 1;
+        ninv[i][basis[i][k]] = k;
       }
       for(int j = 0; j<= _Ns;++j) {
         c_n_k[i][j] = C_n_k_i(i, j);
@@ -100,12 +100,16 @@ public:
     return _state;
   }
 
-  virtual int index(long long state, SzSymmetry::Sector & sector = _current_sector) {
+  int index(long long state, const SzSymmetry::Sector & sector) {
     long long up = state>>_Ns;
     long long down = state & ((1ll<<_Ns) - 1);
     int cup= c_n_k[_Ns][sector.nup()];
     int cdo= c_n_k[_Ns][sector.ndown()];
-    return (ninv[sector.nup()][(int)up] - 1)*(cdo) + ninv[sector.ndown()][(int)down];
+    return ninv[sector.nup()][(int)up]*(cdo) + ninv[sector.ndown()][(int)down];
+  }
+
+  virtual int index(long long state) override {
+    return index(state, _current_sector);
   }
 
   virtual long long state(int index) override {
@@ -134,7 +138,7 @@ public:
     return true;
   }
 
-  void set_sector(SzSymmetry::Sector& sector) {
+  void set_sector(const SzSymmetry::Sector& sector) {
     _current_sector = sector;
     init();
   }
@@ -142,6 +146,42 @@ public:
   const SzSymmetry::Sector& sector() const {
     return _current_sector;
   }
+
+
+  /**
+   * Actions on v>
+   */
+
+  template<typename precision, class Model>
+  bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model) {
+    init();
+    return false;
+  };
+  template<typename precision, class Model>
+  bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model) {
+    // check that the [article can be created
+    if((spin == 0 && _current_sector._nup==0) || (spin == 1 && _current_sector._ndown==0)) {
+      return false;
+    }
+    init();
+    long long k = 0;
+    int sign = 0;
+    int nup_new = _current_sector._nup - (1-spin);
+    int ndn_new = _current_sector._ndown - spin;
+    SzSymmetry::Sector next_sec(nup_new, ndn_new, c_n_k[_Ns][nup_new] * c_n_k[_Ns][ndn_new]);
+    outvec.resize(next_sec.size());
+    int i = 0;
+    while(next_state()){
+      long long nst = state();
+      if(model.checkState(nst, orbital + spin*_Ns)) {
+        model.a(orbital + spin*_Ns, nst, k, sign);
+        int i1 = index(k, next_sec);
+        outvec[i1] = sign * invec.get()[i];
+      }
+      ++i;
+    };
+    return true;
+  };
 
   /**
    * Calculate n2!/n1!

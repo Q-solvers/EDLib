@@ -12,15 +12,15 @@ template <typename prec, class Symmetry, class Model>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  SOCRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
-                                   _max_dim(p["storage.MAX_DIM"]), symmetry(p), model(p) {
+  SOCRSStorage(alps::params & p, Symmetry &s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+                                   _max_dim(p["storage.MAX_DIM"]), symmetry(s), model(p) {
     /** init what you need from parameters*/
     col_ind.assign(_max_size, 0);
     signs.assign(_max_size, 0);
     dvalues.assign(_max_dim, prec(0.0));
   };
 
-  virtual void av(prec *v, prec *w, int n) override {
+  virtual void av(prec *v, prec *w, int n, bool clear=true) override {
     long long k;
     int isign;
     symmetry.init();
@@ -30,10 +30,10 @@ public:
     for(int i = 0; i<n; ++i){
       symmetry.next_state();
       long long nst = symmetry.state();
-      w[i] = dvalues[i] * v[i];
+      w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
       for(auto & state: model.states()) {
         int test = model.valid(state, nst);
-        w[i] += test * state.value() * (1- 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
+        w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
         _vind_bit%= sizeof(char);
@@ -48,7 +48,6 @@ public:
       s<<"Current sector request more memory than allocated. Increase MAX_DIM parameter. Requested "<<sector_size<<", allocated "<<_max_dim<<".";
       throw std::runtime_error(s.str().c_str());
     }
-    symmetry.next_sector();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
@@ -100,7 +99,7 @@ public:
   }
 private:
   // System symmetry to walk through all states
-  Symmetry symmetry;
+  Symmetry& symmetry;
   // Internal storage structure
   std::vector<prec> dvalues;
   std::vector<size_t> col_ind;

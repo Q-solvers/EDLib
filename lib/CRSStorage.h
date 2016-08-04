@@ -12,11 +12,11 @@
 #include "fortranbinding.h"
 #include "Storage.h"
 
-template<typename prec>
+template<typename prec, class Symmetry>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  CRSStorage(alps::params & p):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
+  CRSStorage(alps::params & p, Symmetry& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
     // init what you need from parameters
   };
 
@@ -74,9 +74,9 @@ public:
   /**
    * Simple Compressed-Row-Storage Matrix-Vector product
    */
-  virtual void av(prec* v, prec* w, int n) override {
+  virtual void av(prec* v, prec* w, int n, bool clear=true) override {
     for (int i = 0; i < n; ++i) {
-      w[i] = 0.0;
+      w[i] = clear? 0.0: w[i];
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
         w[i] = w[i] + values[j] * v[col_ind[j]-1];
       }
