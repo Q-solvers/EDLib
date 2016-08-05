@@ -6,34 +6,57 @@
 #define HUBBARD_GREENSFUNCTION_H
 
 
+#include <iomanip>
 #include "Lanczos.h"
 
 template<typename precision, class Hamiltonian, class Model>
 class GreensFunction: public Lanczos<precision, Hamiltonian> {
   using Lanczos<precision, Hamiltonian>::hamiltonian;
   using Lanczos<precision, Hamiltonian>::lanczos;
+  using Lanczos<precision, Hamiltonian>::computefrac;
 public:
-  GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), gf(Lanczos<precision, Hamiltonian>::omega()), _model(p) {
+  GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(p),
+                                                    gf(p["NSPINS"], std::vector<alps::gf::omega_gf>(p["NSITES"], alps::gf::omega_gf(Lanczos<precision, Hamiltonian>::omega() ) ) ) {
   }
 
   void compute() {
+    auto & ground_state = hamiltonian().eigenpairs()[0];
     for(auto & eigenpair : hamiltonian().eigenpairs()) {
-      hamiltonian().symmetry().set_sector(eigenpair.sector());
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
-          if(hamiltonian().symmetry().template create_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model)){
-            lanczos(outvec);
+          hamiltonian().symmetry().set_sector(eigenpair.sector());
+          double expectation_value = 0;
+          if(hamiltonian().symmetry().template create_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model, expectation_value)){
+            int nlanc = lanczos(outvec);
+            std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
+            computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
           }
-          if(hamiltonian().symmetry().template annihilate_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model)){
-            lanczos(outvec);
+          hamiltonian().symmetry().set_sector(eigenpair.sector());
+          if(hamiltonian().symmetry().template annihilate_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model, expectation_value)){
+            int nlanc = lanczos(outvec);
+            std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
+            computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
           }
         }
       }
     }
+    for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
+      for (int is = 0; is < _model.spins(); ++is) {
+        std::ostringstream Gomega_name;
+        Gomega_name<<"G_omega"<<"_"<<(is ? "up": "down")<<"_"<<i;
+        std::ofstream G_omega_file(Gomega_name.str().c_str());
+        G_omega_file << std::setprecision(14) << gf[is][i];
+        Gomega_name<<".h5";
+        alps::hdf5::archive ar(Gomega_name.str().c_str(), alps::hdf5::archive::WRITE);
+        gf[is][i].save(ar, "/G_omega");
+        G_omega_file.close();
+        ar.close();
+      }
+    }
   }
 private:
-  alps::gf::omega_gf gf;
+  std::vector< std::vector<alps::gf::omega_gf> > gf;
   Model _model;
 };
 

@@ -153,13 +153,41 @@ public:
    */
 
   template<typename precision, class Model>
-  bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model) {
+  bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model, double & expectation_value) {
+    // check that the particle can be annihilated
+    if((spin == 0 && _current_sector._nup==_Ns) || (spin == 1 && _current_sector._ndown==_Ns)) {
+      return false;
+    }
     init();
-    return false;
+    long long k = 0;
+    int sign = 0;
+    int nup_new = _current_sector._nup + (1-spin);
+    int ndn_new = _current_sector._ndown + spin;
+    SzSymmetry::Sector next_sec(nup_new, ndn_new, c_n_k[_Ns][nup_new] * c_n_k[_Ns][ndn_new]);
+    outvec.assign(next_sec.size(), 0.0);
+    double norm = 0.0;
+    int i = 0;
+    while(next_state()){
+      long long nst = state();
+      if(model.checkState(nst, orbital + spin*_Ns) == 0) {
+        model.adag(orbital + spin*_Ns, nst, k, sign);
+        int i1 = index(k, next_sec);
+        outvec[i1] = sign * invec.get()[i];
+        norm += std::norm(outvec[i1]);
+      }
+      ++i;
+    };
+    norm = std::sqrt(norm);
+    for (int j = 0; j < next_sec.size(); ++j) {
+      outvec[j] /= norm;
+    }
+    set_sector(next_sec);
+    expectation_value = norm;
+    return true;
   };
   template<typename precision, class Model>
-  bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model) {
-    // check that the [article can be created
+  bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model, double & expectation_value) {
+    // check that the particle can be annihilated
     if((spin == 0 && _current_sector._nup==0) || (spin == 1 && _current_sector._ndown==0)) {
       return false;
     }
@@ -169,7 +197,8 @@ public:
     int nup_new = _current_sector._nup - (1-spin);
     int ndn_new = _current_sector._ndown - spin;
     SzSymmetry::Sector next_sec(nup_new, ndn_new, c_n_k[_Ns][nup_new] * c_n_k[_Ns][ndn_new]);
-    outvec.resize(next_sec.size());
+    outvec.assign(next_sec.size(), precision(0.0));
+    double norm = 0.0;
     int i = 0;
     while(next_state()){
       long long nst = state();
@@ -177,9 +206,16 @@ public:
         model.a(orbital + spin*_Ns, nst, k, sign);
         int i1 = index(k, next_sec);
         outvec[i1] = sign * invec.get()[i];
+        norm += std::norm(outvec[i1]);
       }
       ++i;
     };
+    norm = std::sqrt(norm);
+    for (int j = 0; j < next_sec.size(); ++j) {
+      outvec[j] /= norm;
+    }
+    set_sector(next_sec);
+    expectation_value = norm;
     return true;
   };
 

@@ -35,7 +35,7 @@ public:
 
   void inline addDiagonal(const int &i, prec v) {
     row_ptr[i] = _vind;
-    col_ind[_vind] = i + 1;
+    col_ind[_vind] = i;
     values[_vind] = v;
     ++_vind;
     ++n();
@@ -49,7 +49,7 @@ public:
     bool hasstate = false;
     // check that there is no any data on the k state
     for (int iii = row_ptr[i]; iii <= _vind; ++iii) {
-      if (col_ind[iii] == (j + 1)) {
+      if (col_ind[iii] == j) {
         hasstate = true;
         findedstate = iii;
         break;
@@ -60,7 +60,7 @@ public:
       values[findedstate] += t;
     } else {
       // create new element in CRS arrays
-      col_ind[_vind] = j + 1;
+      col_ind[_vind] = j;
       values[_vind] = t;
       ++_vind;
       if(_vind>_max_size) {
@@ -78,7 +78,7 @@ public:
     for (int i = 0; i < n; ++i) {
       w[i] = clear? 0.0: w[i];
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
-        w[i] = w[i] + values[j] * v[col_ind[j]-1];
+        w[i] = w[i] + values[j] * v[col_ind[j]];
       }
     }
   }
@@ -95,7 +95,7 @@ public:
       for(int j = 0; j<n(); ++j) {
         bool f = true;
         for(int k = row_ptr[i]; k<row_ptr[i+1]; ++k) {
-          if((col_ind[k]-1) == j) {
+          if((col_ind[k]) == j) {
             std::cout<<std::setw(6)<<values[k]<<(j==n()-1? "" : ", ");
             f = false;
           } /*else {

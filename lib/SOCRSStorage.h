@@ -33,7 +33,7 @@ public:
       w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
       for(auto & state: model.states()) {
         int test = model.valid(state, nst);
-        w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind] - 1];
+        w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind]];
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
         _vind_bit%= sizeof(char);
@@ -69,12 +69,12 @@ public:
     bool hasstate = false;
     // check that there is no any data on the k state
     for (int iii = _vind_start; iii < _vind; iii++) {
-      if (col_ind[iii] == (j + 1)) {
+      if (col_ind[iii] == j) {
         throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }
     }
     // create new element in CRS arrays
-    col_ind[_vind] = j + 1;
+    col_ind[_vind] = j;
     signs[_vind_byte] &= ~(1ll << _vind_bit);
     signs[_vind_byte] |= sign<0 ? 1ll<<_vind_bit:0;
     ++_vind_bit;
