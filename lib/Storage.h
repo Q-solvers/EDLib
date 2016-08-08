@@ -41,7 +41,7 @@ public:
       return 0;
     }
     int ncv = std::min(_ncv, _n);
-    int nev = std::min(_nev, _ncv-1);
+    int nev = std::min(_nev, ncv-1);
     char which[3] = "SA";
     double sigma = 0.0;
     char bmat[2] = "I";
