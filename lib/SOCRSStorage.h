@@ -6,6 +6,7 @@
 #define HUBBARD_SOCRSSTORAGE_H
 
 #include <vector>
+#include <iomanip>
 #include "Storage.h"
 
 template <typename prec, class Symmetry, class Model>
@@ -21,8 +22,6 @@ public:
   };
 
   virtual void av(prec *v, prec *w, int n, bool clear=true) override {
-    long long k;
-    int isign;
     symmetry.init();
     _vind = 0;
     _vind_byte = 0;
@@ -63,10 +62,10 @@ public:
   /**
    * Add off-diagonal H(i,j) element
    */
-  void inline addElement(const int &i, int j, prec t) {
-    char sign = (prec(0) < t) - (t < prec(0));
-    int findedstate = 0;
-    bool hasstate = false;
+  void inline addElement(const int &i, int j, prec t, int sign) {
+    if (i == j) {
+      throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
+    }
     // check that there is no any data on the k state
     for (int iii = _vind_start; iii < _vind; iii++) {
       if (col_ind[iii] == j) {
@@ -90,6 +89,36 @@ public:
 
   void endMatrix() {
     // Nothing to do
+  }
+
+  void print() {
+    std::vector<prec> line(n(), prec(0.0));
+    symmetry.init();
+    _vind = 0;
+    _vind_byte = 0;
+    _vind_bit =0;
+    std::cout<< std::setprecision(2)<<std::fixed;
+    std::cout<<"[";
+    for(int i = 0; i<n(); ++i){
+      symmetry.next_state();
+      long long nst = symmetry.state();
+      std::fill(line.begin(), line.end(), prec(0.0));
+      line[i] = dvalues[i];
+      for(auto & state: model.states()) {
+        int test = model.valid(state, nst);
+        line[col_ind[_vind]] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1));
+        _vind_bit+=test;
+        _vind_byte+=_vind_bit/sizeof(char);
+        _vind_bit%= sizeof(char);
+        _vind+= test;
+      }
+      std::cout<<"[";
+      for(int j = 0; j<n(); ++j){
+        std::cout<<std::setw(6)<<line[j]<<(j==n()-1? "" : ", ");
+      }
+      std::cout<<"]"<<(i==n()-1? "" : ", \n");
+    }
+    std::cout<<"]"<<std::endl;
   }
 
   virtual void zero_eigenapair() override {

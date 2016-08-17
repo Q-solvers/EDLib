@@ -46,7 +46,7 @@ public:
       for(auto & state: model.states()) {
         if(model.valid(state, nst)) {
           model.set(state, nst, k, isign);
-          hopping(i, nst, k, isign * state.value());
+          hopping(i, nst, k, state.value(), isign);
         }
       }
       i++;
@@ -120,9 +120,9 @@ private:
    * \param v - hopping value
    * \param sector - current conservation law sector
    */
-  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v) {
+  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v, const int &sign) {
     int k_index = _symmetry.index(k);
-    _storage.addElement(i, k_index, v);
+    _storage.addElement(i, k_index, v, sign);
   }
 
 };

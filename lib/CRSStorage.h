@@ -44,30 +44,24 @@ public:
   /**
    * Add off-diagonal H(i,j) element
    */
-  void inline addElement(const int &i, int j, prec t) {
-    int findedstate = 0;
-    bool hasstate = false;
+  void inline addElement(const int &i, int j, prec t, int sign) {
+    if (i == j) {
+      throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
+    }
     // check that there is no any data on the k state
-    for (int iii = row_ptr[i]; iii <= _vind; ++iii) {
+    for (int iii = row_ptr[i]; iii < _vind; ++iii) {
       if (col_ind[iii] == j) {
-        hasstate = true;
-        findedstate = iii;
-        break;
+        throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }
     }
-    // if there is data add value
-    if (hasstate) {
-      values[findedstate] += t;
-    } else {
-      // create new element in CRS arrays
-      col_ind[_vind] = j;
-      values[_vind] = t;
-      ++_vind;
-      if(_vind>_max_size) {
-        std::stringstream s;
-        s<<"Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested "<<_vind<<", allocated "<<_max_size<<".";
-        throw std::runtime_error(s.str().c_str());
-      }
+    // create new element in CRS arrays
+    col_ind[_vind] = j;
+    values[_vind] = sign * t;
+    ++_vind;
+    if(_vind>_max_size) {
+      std::stringstream s;
+      s<<"Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested "<<_vind<<", allocated "<<_max_size<<".";
+      throw std::runtime_error(s.str().c_str());
     }
   }
 

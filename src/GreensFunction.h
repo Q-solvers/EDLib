@@ -25,8 +25,8 @@ public:
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
-          hamiltonian().symmetry().set_sector(eigenpair.sector());
           double expectation_value = 0;
+          hamiltonian().symmetry().set_sector(eigenpair.sector());
           if(hamiltonian().symmetry().template create_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model, expectation_value)){
             int nlanc = lanczos(outvec);
             std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
