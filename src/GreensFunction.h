@@ -13,15 +13,22 @@ template<typename precision, class Hamiltonian, class Model>
 class GreensFunction: public Lanczos<precision, Hamiltonian> {
   using Lanczos<precision, Hamiltonian>::hamiltonian;
   using Lanczos<precision, Hamiltonian>::lanczos;
+  using Lanczos<precision, Hamiltonian>::omega;
   using Lanczos<precision, Hamiltonian>::computefrac;
 public:
   GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(p),
-                                                    gf(p["NSPINS"], std::vector<alps::gf::omega_gf>(p["NSITES"], alps::gf::omega_gf(Lanczos<precision, Hamiltonian>::omega() ) ) ) {
+                                                    gf(p["NSPINS"], std::vector<alps::gf::omega_gf>(p["NSITES"], alps::gf::omega_gf(Lanczos<precision, Hamiltonian>::omega() ) ) ),
+                                                    _cutoff(p["lanc.BOLTZMANN_CUTOFF"]){
   }
 
   void compute() {
     auto & ground_state = hamiltonian().eigenpairs()[0];
     for(auto & eigenpair : hamiltonian().eigenpairs()) {
+      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" for sector"<<eigenpair.sector()<<std::endl;
+      if(std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue())*omega().beta()) < _cutoff) {
+        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
+        continue;
+      }
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
@@ -58,6 +65,7 @@ public:
 private:
   std::vector< std::vector<alps::gf::omega_gf> > gf;
   Model _model;
+  double _cutoff;
 };
 
 

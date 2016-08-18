@@ -25,6 +25,7 @@ void define_parameters(alps::params &p) {
   p.define<int>("lanc.NOMEGA", 32, "Number of fermionic frequencies");
   p.define<int>("lanc.NLANC", 100, "Number of Lanczos iterations");
   p.define<double>("lanc.BETA", 10.0, "Inverse temperature");
+  p.define<double>("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
 }
 
 

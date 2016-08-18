@@ -18,6 +18,7 @@ class SzSymmetry: public Symmetry {
 public:
   class Sector {
     friend class SzSymmetry;
+    friend std::ostream& operator << (std::ostream& o, const SzSymmetry::Sector& c) { return o << " (nup: " <<c._nup <<" ndown: "<<c._ndown<<")";  }
   protected:
     Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
     bool operator<(Sector s) {
@@ -177,9 +178,9 @@ public:
       }
       ++i;
     };
-    norm = std::sqrt(norm);
+//    norm = std::sqrt(norm);
     for (int j = 0; j < next_sec.size(); ++j) {
-      outvec[j] /= norm;
+      outvec[j] /= std::sqrt(norm);
     }
     set_sector(next_sec);
     expectation_value = norm;
@@ -206,13 +207,14 @@ public:
         model.a(orbital + spin*_Ns, nst, k, sign);
         int i1 = index(k, next_sec);
         outvec[i1] = sign * invec.get()[i];
+        // v_i * v_i^{\star}
         norm += std::norm(outvec[i1]);
       }
       ++i;
     };
-    norm = std::sqrt(norm);
+//    norm = std::sqrt(norm);
     for (int j = 0; j < next_sec.size(); ++j) {
-      outvec[j] /= norm;
+      outvec[j] /= std::sqrt(norm);
     }
     set_sector(next_sec);
     expectation_value = norm;
