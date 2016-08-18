@@ -51,7 +51,7 @@ public:
       bet = std::sqrt(bet);
 
       if (iter != _Nl) betalanc[iter] = bet;
-      if (std::abs(bet) < 1e-10 && iter >= (2 * ham.symmetry().sector().size())) {
+      if (std::abs(bet) < 1e-10 && iter >= (2 * ham.model().symmetry().sector().size())) {
         break;
       }
     }

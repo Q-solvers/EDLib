@@ -9,12 +9,12 @@
 #include <iomanip>
 #include "Storage.h"
 
-template <typename prec, class Symmetry, class Model>
+template <typename prec, class Model>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  SOCRSStorage(alps::params & p, Symmetry &s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
-                                   _max_dim(p["storage.MAX_DIM"]), symmetry(s), model(p) {
+  SOCRSStorage(alps::params & p, Model &m):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+                                   _max_dim(p["storage.MAX_DIM"]), model(m) {
     /** init what you need from parameters*/
     col_ind.assign(_max_size, 0);
     signs.assign(_max_size, 0);
@@ -22,13 +22,13 @@ public:
   };
 
   virtual void av(prec *v, prec *w, int n, bool clear=true) override {
-    symmetry.init();
+    model.symmetry().init();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
     for(int i = 0; i<n; ++i){
-      symmetry.next_state();
-      long long nst = symmetry.state();
+      model.symmetry().next_state();
+      long long nst = model.symmetry().state();
       w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
       for(auto & state: model.states()) {
         int test = model.valid(state, nst);
@@ -93,15 +93,15 @@ public:
 
   void print() {
     std::vector<prec> line(n(), prec(0.0));
-    symmetry.init();
+    model.symmetry().init();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
     std::cout<< std::setprecision(2)<<std::fixed;
     std::cout<<"[";
     for(int i = 0; i<n(); ++i){
-      symmetry.next_state();
-      long long nst = symmetry.state();
+      model.symmetry().next_state();
+      long long nst = model.symmetry().state();
       std::fill(line.begin(), line.end(), prec(0.0));
       line[i] = dvalues[i];
       for(auto & state: model.states()) {
@@ -127,8 +127,6 @@ public:
     Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));
   }
 private:
-  // System symmetry to walk through all states
-  Symmetry& symmetry;
   // Internal storage structure
   std::vector<prec> dvalues;
   std::vector<size_t> col_ind;
@@ -145,7 +143,7 @@ private:
   size_t _vind_byte;
 
   // Hubbard model parameters
-  Model model;
+  Model &model;
 
 };
 

@@ -14,16 +14,17 @@
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/EDParams.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/fortranbinding.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/Storage.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/SOCRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/Storage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/fortranbinding.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/EnableGtests.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindARPACK.cmake" isTestSource="false" />

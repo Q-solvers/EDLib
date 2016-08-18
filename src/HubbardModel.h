@@ -26,9 +26,11 @@ namespace Hubbard {
 
 template<typename precision>
 class HubbardModel {
-  typedef typename Hubbard::InnerState<precision> St;
 public:
-  HubbardModel(alps::params &p) : _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(_ms*_Ns),
+  typedef typename Hubbard::InnerState<precision> St;
+  typedef typename SzSymmetry::Sector Sector;
+
+  HubbardModel(alps::params &p) : _symmetry(p), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(_ms*_Ns),
                                   Eps(p["NSITES"], std::vector<precision>(p["NSPINS"], precision(0.0))),
                                   t(p["NSITES"], std::vector<precision>(p["NSITES"], precision(0.0))),
                                   U(p["NSITES"], precision(0.0)) {
@@ -132,7 +134,86 @@ public:
     return _ms;
   }
 
+  inline const SzSymmetry &symmetry() const {
+    return _symmetry;
+  }
+
+  inline SzSymmetry &symmetry() {
+    return _symmetry;
+  }
+
+  /**
+ * Actions on v>
+ */
+  bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, double & expectation_value) {
+    // check that the particle can be annihilated
+    if((spin == 0 && _symmetry.sector().nup()==_Ns) || (spin == 1 && _symmetry.sector().ndown()==_Ns)) {
+      return false;
+    }
+    _symmetry.init();
+    long long k = 0;
+    int sign = 0;
+    int nup_new = _symmetry.sector().nup() + (1-spin);
+    int ndn_new = _symmetry.sector().ndown() + spin;
+    Sector next_sec(nup_new, ndn_new, _symmetry.c_n_k(_Ns, nup_new) * _symmetry.c_n_k(_Ns,ndn_new));
+    outvec.assign(next_sec.size(), 0.0);
+    double norm = 0.0;
+    int i = 0;
+    while(_symmetry.next_state()){
+      long long nst = _symmetry.state();
+      if(checkState(nst, orbital + spin*_Ns) == 0) {
+        adag(orbital + spin*_Ns, nst, k, sign);
+        int i1 = _symmetry.index(k, next_sec);
+        outvec[i1] = sign * invec.get()[i];
+        norm += std::norm(outvec[i1]);
+      }
+      ++i;
+    };
+//    norm = std::sqrt(norm);
+    for (int j = 0; j < next_sec.size(); ++j) {
+      outvec[j] /= std::sqrt(norm);
+    }
+    _symmetry.set_sector(next_sec);
+    expectation_value = norm;
+    return true;
+  };
+  bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, double & expectation_value) {
+    // check that the particle can be annihilated
+    if((spin == 0 && _symmetry.sector().nup()==0) || (spin == 1 && _symmetry.sector().ndown()==0)) {
+      return false;
+    }
+    _symmetry.init();
+    long long k = 0;
+    int sign = 0;
+    int nup_new = _symmetry.sector().nup() - (1-spin);
+    int ndn_new = _symmetry.sector().ndown() - spin;
+    Sector next_sec(nup_new, ndn_new, _symmetry.c_n_k(_Ns, nup_new) * _symmetry.c_n_k(_Ns, ndn_new));
+    outvec.assign(next_sec.size(), precision(0.0));
+    double norm = 0.0;
+    int i = 0;
+    while(_symmetry.next_state()){
+      long long nst = _symmetry.state();
+      if(checkState(nst, orbital + spin*_Ns)) {
+        a(orbital + spin*_Ns, nst, k, sign);
+        int i1 = _symmetry.index(k, next_sec);
+        outvec[i1] = sign * invec.get()[i];
+        // v_i * v_i^{\star}
+        norm += std::norm(outvec[i1]);
+      }
+      ++i;
+    };
+    for (int j = 0; j < next_sec.size(); ++j) {
+      outvec[j] /= std::sqrt(norm);
+    }
+    _symmetry.set_sector(next_sec);
+    // <v|a^{\star}a|v>
+    expectation_value = norm;
+    return true;
+  };
+
 private:
+  // Symmetry
+  SzSymmetry _symmetry;
   // Hopping
   std::vector<std::vector<precision> > t;
   // Interaction

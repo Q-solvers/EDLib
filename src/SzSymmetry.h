@@ -17,10 +17,11 @@
 class SzSymmetry: public Symmetry {
 public:
   class Sector {
+  public:
     friend class SzSymmetry;
-    friend std::ostream& operator << (std::ostream& o, const SzSymmetry::Sector& c) { return o << " (nup: " <<c._nup <<" ndown: "<<c._ndown<<")";  }
-  protected:
+    friend std::ostream& operator << (std::ostream& o, const SzSymmetry::Sector& c) { return o << " (nup: " <<c._nup <<" ndown: "<<c._ndown<<") size: "<<c._size;  }
     Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size)  {};
+  protected:
     bool operator<(Sector s) {
       return _size< s._size;
     }
@@ -43,7 +44,7 @@ public:
   };
 
   SzSymmetry(alps::params& p): Symmetry(p), _state(0), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
-                               c_n_k(_Ns+1, std::vector<int>(_Ns+1, 0)), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
+                               _c_n_k(_Ns+1, std::vector<int>(_Ns+1, 0)), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
                                _first(true){
     //TODO: read sectors from parameter file
     _Ip = 2*_Ns;
@@ -56,7 +57,7 @@ public:
         ninv[i][basis[i][k]] = k;
       }
       for(int j = 0; j<= _Ns;++j) {
-        c_n_k[i][j] = C_n_k_i(i, j);
+        _c_n_k[i][j] = C_n_k_i(i, j);
       }
     }
     if(p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
@@ -87,8 +88,8 @@ public:
       return false;
     }
     int u = 0, d = 0;
-    u = _ind / c_n_k[_Ns][_current_sector.ndown()];
-    d = _ind % c_n_k[_Ns][_current_sector.ndown()];
+    u = _ind / _c_n_k[_Ns][_current_sector.ndown()];
+    d = _ind % _c_n_k[_Ns][_current_sector.ndown()];
     res=basis[_current_sector.nup()][u];
     res<<=_Ns;
     res+=basis[_current_sector.ndown()][d];
@@ -104,8 +105,8 @@ public:
   int index(long long state, const SzSymmetry::Sector & sector) {
     long long up = state>>_Ns;
     long long down = state & ((1ll<<_Ns) - 1);
-    int cup= c_n_k[_Ns][sector.nup()];
-    int cdo= c_n_k[_Ns][sector.ndown()];
+    int cup= _c_n_k[_Ns][sector.nup()];
+    int cdo= _c_n_k[_Ns][sector.ndown()];
     return ninv[sector.nup()][(int)up]*(cdo) + ninv[sector.ndown()][(int)down];
   }
 
@@ -148,79 +149,6 @@ public:
     return _current_sector;
   }
 
-
-  /**
-   * Actions on v>
-   */
-
-  template<typename precision, class Model>
-  bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model, double & expectation_value) {
-    // check that the particle can be annihilated
-    if((spin == 0 && _current_sector._nup==_Ns) || (spin == 1 && _current_sector._ndown==_Ns)) {
-      return false;
-    }
-    init();
-    long long k = 0;
-    int sign = 0;
-    int nup_new = _current_sector._nup + (1-spin);
-    int ndn_new = _current_sector._ndown + spin;
-    SzSymmetry::Sector next_sec(nup_new, ndn_new, c_n_k[_Ns][nup_new] * c_n_k[_Ns][ndn_new]);
-    outvec.assign(next_sec.size(), 0.0);
-    double norm = 0.0;
-    int i = 0;
-    while(next_state()){
-      long long nst = state();
-      if(model.checkState(nst, orbital + spin*_Ns) == 0) {
-        model.adag(orbital + spin*_Ns, nst, k, sign);
-        int i1 = index(k, next_sec);
-        outvec[i1] = sign * invec.get()[i];
-        norm += std::norm(outvec[i1]);
-      }
-      ++i;
-    };
-//    norm = std::sqrt(norm);
-    for (int j = 0; j < next_sec.size(); ++j) {
-      outvec[j] /= std::sqrt(norm);
-    }
-    set_sector(next_sec);
-    expectation_value = norm;
-    return true;
-  };
-  template<typename precision, class Model>
-  bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, Model & model, double & expectation_value) {
-    // check that the particle can be annihilated
-    if((spin == 0 && _current_sector._nup==0) || (spin == 1 && _current_sector._ndown==0)) {
-      return false;
-    }
-    init();
-    long long k = 0;
-    int sign = 0;
-    int nup_new = _current_sector._nup - (1-spin);
-    int ndn_new = _current_sector._ndown - spin;
-    SzSymmetry::Sector next_sec(nup_new, ndn_new, c_n_k[_Ns][nup_new] * c_n_k[_Ns][ndn_new]);
-    outvec.assign(next_sec.size(), precision(0.0));
-    double norm = 0.0;
-    int i = 0;
-    while(next_state()){
-      long long nst = state();
-      if(model.checkState(nst, orbital + spin*_Ns)) {
-        model.a(orbital + spin*_Ns, nst, k, sign);
-        int i1 = index(k, next_sec);
-        outvec[i1] = sign * invec.get()[i];
-        // v_i * v_i^{\star}
-        norm += std::norm(outvec[i1]);
-      }
-      ++i;
-    };
-    for (int j = 0; j < next_sec.size(); ++j) {
-      outvec[j] /= std::sqrt(norm);
-    }
-    set_sector(next_sec);
-    // <v|a^{\star}a|v>
-    expectation_value = norm;
-    return true;
-  };
-
   /**
    * Calculate n2!/n1!
    */
@@ -241,6 +169,10 @@ public:
       return variation(n - k + 1, n) / variation(1, k);
     }
     return variation(k + 1, n) / variation(1, n - k);
+  }
+
+  int c_n_k(int n, int k) {
+    return _c_n_k[n][k];
   }
 
 private:
@@ -293,7 +225,7 @@ private:
   int _ind;
   std::vector<int> upstate;
   std::vector<int> dostate;
-  std::vector<std::vector<int> > c_n_k;
+  std::vector<std::vector<int> > _c_n_k;
   std::vector<std::vector<int> > basis;
   std::vector<std::vector<int> > ninv;
   bool _first;

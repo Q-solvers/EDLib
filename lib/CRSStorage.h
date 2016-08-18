@@ -12,11 +12,11 @@
 #include "fortranbinding.h"
 #include "Storage.h"
 
-template<typename prec, class Symmetry>
+template<typename prec, class Model>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  CRSStorage(alps::params & p, Symmetry& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
+  CRSStorage(alps::params & p,  Model& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
     // init what you need from parameters
   };
 

@@ -9,14 +9,14 @@
 #include <iomanip>
 #include "Lanczos.h"
 
-template<typename precision, class Hamiltonian, class Model>
+template<typename precision, class Hamiltonian>
 class GreensFunction: public Lanczos<precision, Hamiltonian> {
   using Lanczos<precision, Hamiltonian>::hamiltonian;
   using Lanczos<precision, Hamiltonian>::lanczos;
   using Lanczos<precision, Hamiltonian>::omega;
   using Lanczos<precision, Hamiltonian>::computefrac;
 public:
-  GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(p),
+  GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(h.model()),
                                                     gf(p["NSPINS"], std::vector<alps::gf::omega_gf>(p["NSITES"], alps::gf::omega_gf(Lanczos<precision, Hamiltonian>::omega() ) ) ),
                                                     _cutoff(p["lanc.BOLTZMANN_CUTOFF"]){
   }
@@ -38,14 +38,14 @@ public:
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
           double expectation_value = 0;
-          hamiltonian().symmetry().set_sector(eigenpair.sector());
-          if(hamiltonian().symmetry().template create_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model, expectation_value)){
+          _model.symmetry().set_sector(eigenpair.sector());
+          if(_model.create_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
             std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
           }
-          hamiltonian().symmetry().set_sector(eigenpair.sector());
-          if(hamiltonian().symmetry().template annihilate_particle<precision, Model>(i, is, eigenpair.eigenvector(), outvec, _model, expectation_value)){
+          _model.symmetry().set_sector(eigenpair.sector());
+          if(_model.annihilate_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
             std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
@@ -71,7 +71,7 @@ public:
   }
 private:
   std::vector< std::vector<alps::gf::omega_gf> > gf;
-  Model _model;
+  typename Hamiltonian::ModelType& _model;
   double _cutoff;
 };
 

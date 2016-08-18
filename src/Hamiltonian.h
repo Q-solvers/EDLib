@@ -13,10 +13,10 @@
 #include "Symmetry.h"
 #include "EigenPair.h"
 
-template<typename prec, class Symmetry, class Storage, class Model>
+template<typename prec, class Storage, class Model>
 class Hamiltonian {
-  static_assert(std::is_base_of<Symmetry, Symmetry>::value, "Symmetry should extend base Symmetry class");
 public:
+  typedef Model ModelType;
   /*
    * Allocate space for Hamiltonian matrix
    * \param [in] max_size - the maximum size of values array
@@ -24,28 +24,27 @@ public:
    * \param [in] p - alps::parameters
    */
   Hamiltonian(alps::params& p) :
-    _symmetry(p),
-    _storage(p, _symmetry),
-    model(p) {};
+    _model(p),
+    _storage(p, _model){};
 
   /**
    * fill current sector
    */
   void fill() {
-    _symmetry.init();
-    _storage.reset(_symmetry.sector().size());
+    _model.symmetry().init();
+    _storage.reset(_model.symmetry().sector().size());
     int i =0;
     long long k = 0;
     int isign = 0;
-    while (_symmetry.next_state()) {
-      long long nst = _symmetry.state();
+    while (_model.symmetry().next_state()) {
+      long long nst = _model.symmetry().state();
       // Compute diagonal element for current i state
 
-      _storage.addDiagonal(i, model.diagonal(nst));
+      _storage.addDiagonal(i, _model.diagonal(nst));
       // non-diagonal terms calculation
-      for(auto & state: model.states()) {
-        if(model.valid(state, nst)) {
-          model.set(state, nst, k, isign);
+      for(auto & state: _model.states()) {
+        if(_model.valid(state, nst)) {
+          _model.set(state, nst, k, isign);
           hopping(i, nst, k, state.value(), isign);
         }
       }
@@ -59,7 +58,7 @@ public:
    * result will be stored in evals and evecs
    */
   void diag() {
-    while(_symmetry.next_sector()) {
+    while(_model.symmetry().next_sector()) {
       fill();
       /**
        * perform ARPACK call
@@ -71,7 +70,7 @@ public:
         const std::vector<prec>& evals = _storage.eigenvalues();
         const std::vector<std::vector<prec> >& evecs = _storage.eigenvectors();
         for(int i = 0; i<evals.size(); ++i) {
-          _eigenpairs.push_back(EigenPair<prec, typename Symmetry::Sector>(evals[i], evecs[i], _symmetry.sector()));
+          _eigenpairs.push_back(EigenPair<prec, typename Model::Sector>(evals[i], evecs[i], _model.symmetry().sector()));
         }
       }
     }
@@ -84,33 +83,28 @@ public:
     }
   }
 
-  const Symmetry & symmetry() const {
-    return _symmetry;
-  }
-
-  Symmetry & symmetry() {
-    return _symmetry;
-  }
-
   Storage& storage() {
     return _storage;
   }
 
-  const std::vector<EigenPair<prec, typename Symmetry::Sector> > & eigenpairs() const {
+  const std::vector<EigenPair<prec, typename Model::Sector> > & eigenpairs() const {
     return _eigenpairs;
   };
+
+  Model &model(){
+    return _model;
+  }
 private:
   // CSR format Hamiltonian matrix storage
   Storage _storage;
-  Symmetry _symmetry;
 
   // Eigen-pairs
-  std::vector<EigenPair<prec, typename Symmetry::Sector> > _eigenpairs;
+  std::vector<EigenPair<prec, typename Model::Sector> > _eigenpairs;
 
   /**
    * Model to diagonalize
    */
-  Model model;
+  Model _model;
 
 
   /**
@@ -121,7 +115,7 @@ private:
    * \param sector - current conservation law sector
    */
   void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v, const int &sign) {
-    int k_index = _symmetry.index(k);
+    int k_index = _model.symmetry().index(k);
     _storage.addElement(i, k_index, v, sign);
   }
 
