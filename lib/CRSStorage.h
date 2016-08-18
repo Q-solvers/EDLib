@@ -11,11 +11,12 @@
 #include "fortranbinding.h"
 #include "Storage.h"
 
-template<typename prec, class Model>
+template<typename prec>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  CRSStorage(EDParams& p,  Model& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
+  template<class ModelType>
+  CRSStorage(EDParams& p,  ModelType& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
     // init what you need from parameters
   };
 

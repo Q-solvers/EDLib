@@ -12,6 +12,9 @@
 #include "Symmetry.h"
 #include "EigenPair.h"
 #include "EDParams.h"
+#include "HubbardModel.h"
+#include "CRSStorage.h"
+#include "SOCRSStorage.h"
 
 template<typename prec, class Storage, class Model>
 class Hamiltonian {
@@ -121,4 +124,6 @@ private:
 
 };
 
+typedef Hamiltonian<double, CRSStorage<double> , HubbardModel<double> > CSRHubbardHamiltonian;
+typedef Hamiltonian<double, SOCRSStorage<double, HubbardModel<double> > , HubbardModel<double> > SOCSRHubbardHamiltonian;
 #endif //HUBBARD_HAMILTONIAN_H

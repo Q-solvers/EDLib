@@ -13,7 +13,8 @@ template <typename prec, class Model>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  SOCRSStorage(EDParams& p, Model &m):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+  template<class ModelType>
+  SOCRSStorage(EDParams& p, ModelType &m):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
                                    _max_dim(p["storage.MAX_DIM"]), model(m) {
     /** init what you need from parameters*/
     col_ind.assign(_max_size, 0);
