@@ -212,11 +212,11 @@ public:
       }
       ++i;
     };
-//    norm = std::sqrt(norm);
     for (int j = 0; j < next_sec.size(); ++j) {
       outvec[j] /= std::sqrt(norm);
     }
     set_sector(next_sec);
+    // <v|a^{\star}a|v>
     expectation_value = norm;
     return true;
   };
