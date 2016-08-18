@@ -5,7 +5,7 @@
 #ifndef HUBBARD_COMBINATION_H
 #define HUBBARD_COMBINATION_H
 
-#include <alps/params.hpp>
+#include "EDParams.h"
 
 /**
  *  TODO: decide do we really need this abstract class or should we remove it and just make specification for Symmetry
@@ -18,7 +18,7 @@
  */
 class Symmetry {
 public:
-  Symmetry(alps::params& p){};
+  Symmetry(EDParams& p){};
   virtual ~Symmetry(){};
   virtual bool next_state() = 0;
   virtual long long state() = 0;

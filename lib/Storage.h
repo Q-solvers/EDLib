@@ -7,12 +7,12 @@
 
 #include "fortranbinding.h"
 #include <iostream>
-#include <alps/params.hpp>
+#include <EDParams.h>
 
 template<typename prec>
 class Storage {
 public:
-  Storage(alps::params &p) : _nev(p["arpack.NEV"]) {
+  Storage(EDParams &p) : _nev(p["arpack.NEV"]) {
     v.reserve(size_t(p["storage.MAX_DIM"]));
     resid.reserve(size_t(p["storage.MAX_DIM"]));
     workd.reserve(3*size_t(p["storage.MAX_DIM"]));

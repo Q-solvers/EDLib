@@ -6,7 +6,7 @@
 #define HUBBARD_HUBBARDMODEL_H
 
 #include <vector>
-#include <alps/params.hpp>
+#include "EDParams.h"
 
 
 namespace Hubbard {
@@ -30,7 +30,7 @@ public:
   typedef typename Hubbard::InnerState<precision> St;
   typedef typename SzSymmetry::Sector Sector;
 
-  HubbardModel(alps::params &p) : _symmetry(p), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(_ms*_Ns),
+  HubbardModel(EDParams &p) : _symmetry(p), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(_ms*_Ns),
                                   Eps(p["NSITES"], std::vector<precision>(p["NSPINS"], precision(0.0))),
                                   t(p["NSITES"], std::vector<precision>(p["NSITES"], precision(0.0))),
                                   U(p["NSITES"], precision(0.0)) {

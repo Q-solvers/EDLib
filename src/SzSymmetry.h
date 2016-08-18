@@ -7,8 +7,6 @@
 
 #include <queue>
 
-#include <alps/params.hpp>
-
 #include "Symmetry.h"
 
 /**
@@ -43,7 +41,7 @@ public:
     size_t _size;
   };
 
-  SzSymmetry(alps::params& p): Symmetry(p), _state(0), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
+  SzSymmetry(EDParams& p): Symmetry(p), _state(0), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
                                _c_n_k(_Ns+1, std::vector<int>(_Ns+1, 0)), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
                                _first(true){
     //TODO: read sectors from parameter file

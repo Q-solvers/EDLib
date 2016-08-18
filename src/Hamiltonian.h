@@ -6,12 +6,12 @@
 #define HUBBARD_HAMILTONIAN_H
 
 #include <vector>
-#include <alps/params.hpp>
 #include <type_traits>
 
 #include <fstream>
 #include "Symmetry.h"
 #include "EigenPair.h"
+#include "EDParams.h"
 
 template<typename prec, class Storage, class Model>
 class Hamiltonian {
@@ -23,7 +23,7 @@ public:
    * \param [in] max_dim - the maximum dimension of Hamiltonian matrix
    * \param [in] p - alps::parameters
    */
-  Hamiltonian(alps::params& p) :
+  Hamiltonian(EDParams& p) :
     _model(p),
     _storage(p, _model){};
 

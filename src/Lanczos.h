@@ -7,12 +7,11 @@
 
 #include <alps/gf/mesh.hpp>
 #include <alps/gf/gf.hpp>
-#include <alps/params.hpp>
 
 template<typename precision, class Hamiltonian>
 class Lanczos {
 public:
-  Lanczos(alps::params& p, Hamiltonian &h): _omega(p["lanc.BETA"], p["lanc.NOMEGA"]), _Nl(p["lanc.NLANC"]), ham(h), alfalanc(_Nl), betalanc(_Nl+1), det(_Nl), dl(_Nl) {
+  Lanczos(EDParams& p, Hamiltonian &h): _omega(p["lanc.BETA"], p["lanc.NOMEGA"]), _Nl(p["lanc.NLANC"]), ham(h), alfalanc(_Nl), betalanc(_Nl+1), det(_Nl), dl(_Nl) {
 
   }
 

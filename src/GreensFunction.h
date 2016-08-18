@@ -16,7 +16,7 @@ class GreensFunction: public Lanczos<precision, Hamiltonian> {
   using Lanczos<precision, Hamiltonian>::omega;
   using Lanczos<precision, Hamiltonian>::computefrac;
 public:
-  GreensFunction(alps::params& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(h.model()),
+  GreensFunction(EDParams& p, Hamiltonian& h) : Lanczos<precision, Hamiltonian>(p, h), _model(h.model()),
                                                     gf(p["NSPINS"], std::vector<alps::gf::omega_gf>(p["NSITES"], alps::gf::omega_gf(Lanczos<precision, Hamiltonian>::omega() ) ) ),
                                                     _cutoff(p["lanc.BOLTZMANN_CUTOFF"]){
   }

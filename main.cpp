@@ -1,14 +1,13 @@
 #include <iostream>
-#include <alps/params.hpp>
 
 
+#include <EDParams.h>
 #include <Hamiltonian.h>
 #include <SzSymmetry.h>
 #include <SOCRSStorage.h>
 #include <CRSStorage.h>
 #include <HubbardModel.h>
 #include <GreensFunction.h>
-#include <EDParams.h>
 
 
 int main(int argc, const char ** argv) {
