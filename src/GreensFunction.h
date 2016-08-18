@@ -23,9 +23,14 @@ public:
 
   void compute() {
     auto & ground_state = hamiltonian().eigenpairs()[0];
+    double Z = 0.0;
     for(auto & eigenpair : hamiltonian().eigenpairs()) {
-      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" for sector"<<eigenpair.sector()<<std::endl;
-      if(std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue())*omega().beta()) < _cutoff) {
+      Z += std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue())*omega().beta());
+    }
+    for(auto & eigenpair : hamiltonian().eigenpairs()) {
+      double boltzmann_f = std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue()) * omega().beta());
+      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor"<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
+      if(boltzmann_f < _cutoff) {
         std::cout<<"Skipped by Boltzmann factor."<<std::endl;
         continue;
       }
@@ -50,6 +55,7 @@ public:
     }
     for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
       for (int is = 0; is < _model.spins(); ++is) {
+        gf[is][i] /= Z;
         std::ostringstream Gomega_name;
         Gomega_name<<"G_omega"<<"_"<<(is ? "up": "down")<<"_"<<i;
         std::ofstream G_omega_file(Gomega_name.str().c_str());
@@ -61,6 +67,7 @@ public:
         ar.close();
       }
     }
+    std::cout<<"Statsum: "<<Z<<std::endl;
   }
 private:
   std::vector< std::vector<alps::gf::omega_gf> > gf;
