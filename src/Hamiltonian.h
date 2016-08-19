@@ -127,7 +127,7 @@ private:
 typedef Hamiltonian<double, CRSStorage<double> , HubbardModel<double> > CSRHubbardHamiltonian;
 typedef Hamiltonian<double, SOCRSStorage<double, HubbardModel<double> > , HubbardModel<double> > SOCSRHubbardHamiltonian;
 
-typedef Hamiltonian<double, CRSStorage<float> , HubbardModel<float> > CSRHubbardHamiltonian_float;
-typedef Hamiltonian<double, SOCRSStorage<float, HubbardModel<float> > , HubbardModel<float> > SOCSRHubbardHamiltonian_float;
+typedef Hamiltonian<float, CRSStorage<float> , HubbardModel<float> > CSRHubbardHamiltonian_float;
+typedef Hamiltonian<float, SOCRSStorage<float, HubbardModel<float> > , HubbardModel<float> > SOCSRHubbardHamiltonian_float;
 
 #endif //HUBBARD_HAMILTONIAN_H

@@ -19,7 +19,7 @@ int main(int argc, const char ** argv) {
   SOCSRHubbardHamiltonian_float ham(params);
   ham.diag();
 //  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
-  GreensFunction<float, SOCSRHubbardHamiltonian > greensFunction(params, ham);
+  GreensFunction<float, SOCSRHubbardHamiltonian_float > greensFunction(params, ham);
   greensFunction.compute();
   return 0;
 }
