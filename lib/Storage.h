@@ -43,10 +43,10 @@ public:
     int ncv = std::min(_ncv, _n);
     int nev = std::min(_nev, ncv-1);
     char which[3] = "SA";
-    double sigma = 0.0;
+    prec sigma = 0.0;
     char bmat[2] = "I";
     int lworkl = ncv*(ncv+8);
-    double tol = 1e-14;
+    prec tol = 1e-14;
     int info = 0;
     std::vector<int> iparam(11, 0);
     std::vector<int> ipntr(11, 0);
@@ -121,12 +121,12 @@ public:
    */
   virtual void av(prec* v, prec* w, int n, bool clear=true) = 0;
 
-  void saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
+  void saupd(int *ido, char *bmat, int *n, char *which, int *nev, prec *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
              prec *workd, prec *workl, int *lworkl, int *info){};
   inline void seupd(int *rvec, char *All, int *select, prec *d,
-                    prec *z, int *ldz, double *sigma,
+                    prec *z, int *ldz, prec *sigma,
                     char *bmat, int *n, char *which, int *nev,
-                    double *tol, prec *resid, int *ncv, prec *v,
+                    prec *tol, prec *resid, int *ncv, prec *v,
                     int *ldv, int *iparam, int *ipntr, prec *workd,
                     prec *workl, int *lworkl, int *ierr){};
 
@@ -159,6 +159,23 @@ void Storage<double>::seupd(int *rvec, char *All, int *select, double *d,
                                int *ldv, int *iparam, int *ipntr, double *workd,
                                double *workl, int *lworkl, int *ierr) {
   dseupd_(rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
+          ldv, iparam, ipntr, workd, workl, lworkl, ierr);
+}
+
+template<>
+void Storage<float>::saupd(int *ido, char *bmat, int *n, char *which, int *nev, float *tol, float *resid, int *ncv, float *v, int *ldv, int *iparam, int *ipntr,
+                               float *workd, float *workl, int *lworkl, int *info) {
+  ssaupd_(ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
+}
+
+template<>
+void Storage<float>::seupd(int *rvec, char *All, int *select, float *d,
+                               float *z, int *ldz, float *sigma,
+                               char *bmat, int *n, char *which, int *nev,
+                               float *tol, float *resid, int *ncv, float *v,
+                               int *ldv, int *iparam, int *ipntr, float *workd,
+                               float *workl, int *lworkl, int *ierr) {
+  sseupd_(rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
           ldv, iparam, ipntr, workd, workl, lworkl, ierr);
 }
 

@@ -16,10 +16,10 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
 //  CSRHubbardHamiltonian ham(params);
-  SOCSRHubbardHamiltonian ham(params);
+  SOCSRHubbardHamiltonian_float ham(params);
   ham.diag();
 //  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
-  GreensFunction<double, SOCSRHubbardHamiltonian > greensFunction(params, ham);
+  GreensFunction<float, SOCSRHubbardHamiltonian > greensFunction(params, ham);
   greensFunction.compute();
   return 0;
 }
