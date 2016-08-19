@@ -40,13 +40,13 @@ public:
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.create_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|m>="<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|aa*|n>="<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
           }
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.annihilate_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|m>="<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|n>="<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
           }
         }
