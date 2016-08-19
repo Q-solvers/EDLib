@@ -15,11 +15,11 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-//  CSRHubbardHamiltonian ham(params);
-  SOCSRHubbardHamiltonian ham(params);
+  CSRHubbardHamiltonian ham(params);
+//  SOCSRHubbardHamiltonian ham(params);
   ham.diag();
-//  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
-  GreensFunction<double, SOCSRHubbardHamiltonian > greensFunction(params, ham);
+  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
+//  GreensFunction<double, SOCSRHubbardHamiltonian > greensFunction(params, ham);
   greensFunction.compute();
   return 0;
 }

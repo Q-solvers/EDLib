@@ -75,14 +75,14 @@ public:
       }
       if(nlanc == 1) {
         det[0] = dl[0];
-        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb / det[0];
+        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += ((long double)(expectation_value * expb)) / det[0];
       } else {
         det[nlanc - 1] = dl[nlanc - 1];
-        det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
+        det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - (long double)(std::pow(betalanc[nlanc - 1], 2));
         for (int i = nlanc - 3; i >= 0; --i) {
-          det[i] = dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2];
+          det[i] = dl[i] * det[i + 1] - (long double)(std::pow(betalanc[i + 1], 2)) * det[i + 2];
         }
-        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb * det[1] / det[0];
+        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += ((long double)(expectation_value * expb)) * det[1] / det[0];
       }
     }
   }
@@ -105,8 +105,8 @@ private:
   std::vector<precision> alfalanc;
   std::vector<precision> betalanc;
 
-  std::vector<std::complex<double> > det;
-  std::vector<std::complex<double> > dl;
+  std::vector<std::complex<long double> > det;
+  std::vector<std::complex<long double> > dl;
 };
 
 

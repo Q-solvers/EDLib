@@ -7,7 +7,7 @@ MAX_DIM=5000
 MAX_SIZE=80000
 
 [arpack]
-NEV=20
+NEV=60
 SECTOR=FALSE
 
 [lanc]
