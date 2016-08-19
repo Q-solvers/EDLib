@@ -8,7 +8,6 @@
 
 #include <iomanip>
 #include "Lanczos.h"
-
 template<typename precision, class Hamiltonian>
 class GreensFunction: public Lanczos<precision, Hamiltonian> {
   using Lanczos<precision, Hamiltonian>::hamiltonian;
@@ -29,11 +28,11 @@ public:
     }
     for(auto & eigenpair : hamiltonian().eigenpairs()) {
       double boltzmann_f = std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue()) * omega().beta());
-      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor"<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
       if(boltzmann_f < _cutoff) {
-        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
+//        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
         continue;
       }
+      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor"<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
@@ -41,13 +40,13 @@ public:
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.create_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|m>="<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
           }
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.annihilate_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<is<<" "<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|m>="<<expectation_value<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
           }
         }
@@ -57,7 +56,7 @@ public:
       for (int is = 0; is < _model.spins(); ++is) {
         gf[is][i] /= Z;
         std::ostringstream Gomega_name;
-        Gomega_name<<"G_omega"<<"_"<<(is ? "up": "down")<<"_"<<i;
+        Gomega_name<<"G_omega"<<"_"<<(is ? "down": "up")<<"_"<<i;
         std::ofstream G_omega_file(Gomega_name.str().c_str());
         G_omega_file << std::setprecision(14) << gf[is][i];
         Gomega_name<<".h5";

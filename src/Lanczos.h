@@ -50,7 +50,7 @@ public:
       bet = std::sqrt(bet);
 
       if (iter != _Nl) betalanc[iter] = bet;
-      if (std::abs(bet) < 1e-10 && iter >= (2 * ham.model().symmetry().sector().size())) {
+      if (std::abs(bet) < 1e-10 /*|| iter >= (2 * ham.model().symmetry().sector().size())*/) {
         break;
       }
     }
@@ -73,12 +73,17 @@ public:
       for (int i = 0; i < nlanc; ++i) {
         dl[i] = ener - ((double)(alfalanc[i]) * isign);
       }
-      det[nlanc - 1] = dl[nlanc - 1];
-      det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
-      for (int i = nlanc - 3; i >= 0; --i) {
-        det[i] = dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2];
+      if(nlanc == 1) {
+        det[0] = dl[0];
+        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb / det[0];
+      } else {
+        det[nlanc - 1] = dl[nlanc - 1];
+        det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
+        for (int i = nlanc - 3; i >= 0; --i) {
+          det[i] = dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2];
+        }
+        gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb * det[1] / det[0];
       }
-      gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb * det[1] / det[0];
     }
   }
 
