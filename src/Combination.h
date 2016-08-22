@@ -23,7 +23,7 @@ public:
   /**
   *
   */
-  void init_state(int ik, std::vector<int>& vec) {
+  inline void init_state(int ik, std::vector<int>& vec) {
     for(int i=0;i<ik;i++) {
       vec[i] = i;
     }
@@ -32,7 +32,7 @@ public:
   /**
    *
    */
-  bool next_combination(int n, int k, std::vector < int > &old) {
+  inline bool next_combination(int n, int k, std::vector < int > &old) {
     for (int i = k - 1; i >= 0; i--) {
       if (old[i] < (n - 1 - k + (i + 1))) {
         old[i] += 1;
