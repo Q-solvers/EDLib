@@ -2,8 +2,8 @@
 // Created by iskakoff on 19/07/16.
 //
 
-#ifndef HUBBARD_COMBINATION_H
-#define HUBBARD_COMBINATION_H
+#ifndef HUBBARD_SYMMETRY_H
+#define HUBBARD_SYMMETRY_H
 
 #include "EDParams.h"
 
@@ -18,17 +18,23 @@
  */
 class Symmetry {
 public:
-  Symmetry(EDParams& p){};
+  Symmetry(EDParams& p): _state(0){};
   virtual ~Symmetry(){};
   virtual bool next_state() = 0;
-  virtual long long state() = 0;
+  const long long state() const {
+    return _state;
+  };
+  long long & state() {
+    return _state;
+  };
   virtual int index(long long combination) = 0;
-  virtual long long state(int index) = 0;
   virtual void reset() = 0;
   virtual void init() = 0;
   // check that there is the next simmetry sector. if exist set current sector to the next available
   virtual bool next_sector() = 0;
+private:
+  long long _state;
 };
 
 
-#endif //HUBBARD_COMBINATION_H
+#endif //HUBBARD_SYMMETRY_H

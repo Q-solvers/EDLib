@@ -8,6 +8,7 @@
 #include <queue>
 
 #include "Symmetry.h"
+#include "Combination.h"
 
 /**
  * Sz symmetry class
@@ -41,21 +42,18 @@ public:
     size_t _size;
   };
 
-  SzSymmetry(EDParams& p): Symmetry(p), _state(0), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
-                               _c_n_k(_Ns+1, std::vector<int>(_Ns+1, 0)), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
+  SzSymmetry(EDParams& p): Symmetry(p), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
+                               _comb(_Ns), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
                                _first(true){
     //TODO: read sectors from parameter file
     _Ip = 2*_Ns;
     _ind = 0;
     for(int i = 0; i<=_Ns;++i) {
-      int cnk = C_n_k_i(_Ns,i);
+      int cnk = _comb.c_n_k(_Ns,i);
       basis[i].reserve(cnk);
       for (int k = 0; k < cnk; ++k) {
         basis[i][k] = next_basis(_Ns, i, upstate, k==0);
         ninv[i][basis[i][k]] = k;
-      }
-      for(int j = 0; j<= _Ns;++j) {
-        _c_n_k[i][j] = C_n_k_i(i, j);
       }
     }
     if(p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
@@ -65,12 +63,12 @@ public:
       input_file>>alps::make_pvp("sectors/values", sectors);
       input_file.close();
       for(auto& sector : sectors) {
-        _sectors.push(SzSymmetry::Sector(sector[0], sector[1], (size_t) (C_n_k_i(_Ns, sector[0]) * C_n_k_i(_Ns, sector[1]))));
+        _sectors.push(SzSymmetry::Sector(sector[0], sector[1], (size_t) (_comb.c_n_k(_Ns, sector[0]) * _comb.c_n_k(_Ns, sector[1]))));
       }
     } else {
       for(int i = 0; i<=_Ns;++i) {
         for(int j = 0; j<= _Ns;++j) {
-          _sectors.push(SzSymmetry::Sector(i, j, (size_t) (C_n_k_i(_Ns, i) * C_n_k_i(_Ns, j))));
+          _sectors.push(SzSymmetry::Sector(i, j, (size_t) (_comb.c_n_k(_Ns, i) * _comb.c_n_k(_Ns, j))));
         }
       }
     }
@@ -86,25 +84,21 @@ public:
       return false;
     }
     int u = 0, d = 0;
-    u = _ind / _c_n_k[_Ns][_current_sector.ndown()];
-    d = _ind % _c_n_k[_Ns][_current_sector.ndown()];
+    u = _ind / _comb.c_n_k(_Ns,_current_sector.ndown());
+    d = _ind % _comb.c_n_k(_Ns,_current_sector.ndown());
     res=basis[_current_sector.nup()][u];
     res<<=_Ns;
     res+=basis[_current_sector.ndown()][d];
     _ind++;
-    _state = res;
+    state() = res;
     return true;
-  }
-
-  virtual long long state() override {
-    return _state;
   }
 
   int index(long long state, const SzSymmetry::Sector & sector) {
     long long up = state>>_Ns;
     long long down = state & ((1ll<<_Ns) - 1);
-    int cup= _c_n_k[_Ns][sector.nup()];
-    int cdo= _c_n_k[_Ns][sector.ndown()];
+    int cup= _comb.c_n_k(_Ns,sector.nup());
+    int cdo= _comb.c_n_k(_Ns,sector.ndown());
     return ninv[sector.nup()][(int)up]*(cdo) + ninv[sector.ndown()][(int)down];
   }
 
@@ -112,12 +106,8 @@ public:
     return index(state, _current_sector);
   }
 
-  virtual long long state(int index) override {
-    return 0;
-  }
-
   virtual void reset() override {
-    _state = 0ll;
+    state() = 0ll;
     _first = true;
     _ind = 0;
   }
@@ -147,30 +137,8 @@ public:
     return _current_sector;
   }
 
-  /**
-   * Calculate n2!/n1!
-   */
-  int variation(int n1, int n2) {
-    int result = 1;
-    for(int i=n1; i<=n2; i++) {
-      result *= i;
-    }
-    return result;
-  }
-
-  /**
-   * Calculate number of combinations:
-   * C_k^n = n!/(k!*(n-k)!)
-   */
-  int C_n_k_i(int n, int k) {
-    if((n - k) > k) {
-      return variation(n - k + 1, n) / variation(1, k);
-    }
-    return variation(k + 1, n) / variation(1, n - k);
-  }
-
-  int c_n_k(int n, int k) {
-    return _c_n_k[n][k];
+  inline const Combination & comb() const {
+    return _comb;
   }
 
 private:
@@ -217,15 +185,14 @@ private:
 
   SzSymmetry::Sector _current_sector;
   std::queue<SzSymmetry::Sector> _sectors;
-  long long _state;
   int _Ns;
   int _Ip;
   int _ind;
   std::vector<int> upstate;
   std::vector<int> dostate;
-  std::vector<std::vector<int> > _c_n_k;
   std::vector<std::vector<int> > basis;
   std::vector<std::vector<int> > ninv;
+  Combination _comb;
   bool _first;
 };
 

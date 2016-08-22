@@ -156,7 +156,7 @@ public:
     int sign = 0;
     int nup_new = _symmetry.sector().nup() + (1-spin);
     int ndn_new = _symmetry.sector().ndown() + spin;
-    Sector next_sec(nup_new, ndn_new, _symmetry.c_n_k(_Ns, nup_new) * _symmetry.c_n_k(_Ns,ndn_new));
+    Sector next_sec(nup_new, ndn_new, _symmetry.comb().c_n_k(_Ns, nup_new) * _symmetry.comb().c_n_k(_Ns,ndn_new));
     outvec.assign(next_sec.size(), 0.0);
     double norm = 0.0;
     int i = 0;
@@ -188,7 +188,7 @@ public:
     int sign = 0;
     int nup_new = _symmetry.sector().nup() - (1-spin);
     int ndn_new = _symmetry.sector().ndown() - spin;
-    Sector next_sec(nup_new, ndn_new, _symmetry.c_n_k(_Ns, nup_new) * _symmetry.c_n_k(_Ns, ndn_new));
+    Sector next_sec(nup_new, ndn_new, _symmetry.comb().c_n_k(_Ns, nup_new) * _symmetry.comb().c_n_k(_Ns, ndn_new));
     outvec.assign(next_sec.size(), precision(0.0));
     double norm = 0.0;
     int i = 0;

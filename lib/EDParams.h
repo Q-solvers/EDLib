@@ -23,6 +23,7 @@ private:
  */
   void define_parameters() {
     define<int>("NSITES", 4, "Number of sites");
+    define<int>("NSITES_BOSE", 2, "Number of bosonic sites. Should be 2^K - 1");
     define<int>("NSPINS", 2, "Number of spins");
     define<int>("arpack.NEV", 2, "Number of eigenvalues to find");
     define<int>("arpack.NCV", "Number of convergent values");
