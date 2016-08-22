@@ -21,3 +21,16 @@ TEST(SzSymmetryTest, States) {
   SzSymmetry sym(p);
   sym.init();
 }
+
+TEST(SzSymmetryTest, Initialization) {
+  EDParams p;
+  SzSymmetry sym(p);
+  while(sym.next_sector()) {
+    sym.init();
+    int i = 0;
+    while (sym.next_state()) {
+      ASSERT_EQ(i, sym.index(sym.state()));
+      ++i;
+    }
+  }
+}
