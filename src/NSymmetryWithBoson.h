@@ -74,11 +74,10 @@ public:
   }
 
   virtual int index(long long st) override {
-    long long c = st>>(_Nb);
+    long long f = st>>(_Nb);
     int bos = st & ((1<<_Nb)-1);
-    long long f = c & ((1ll<<_Nf) - 1);
     int cup = _comb.c_n_k(_Nf, _current_sector.n())*(1<<_Nb);
-    return  cup - ((num(f, _Nf, _current_sector.n())<<_Nb) - bos) - ((1<<_Nb) - 1) - 1;
+    return cup - ((num(f, _Nf, _current_sector.n())<<_Nb) - bos) - ((1<<_Nb) - 1) - 1;
   }
 
   virtual void reset() override {
