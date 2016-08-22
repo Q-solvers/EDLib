@@ -77,7 +77,7 @@ public:
 
   virtual void init() override {
     reset();
-    initState(_current_sector.n(), _totstate);
+    _comb.init_state(_current_sector.n(), _totstate);
   }
 
   virtual bool next_sector() override {
@@ -102,41 +102,17 @@ private:
   int next_basis(int n, int k, std::vector < int > &old){
     int res = 0;
     if(_first) {
-      initState(k, old);
+      _comb.init_state(k, old);
       _first = false;
       //pass
     }
     else {
-      next_combination(n, k, old);
+      _comb.next_combination(n, k, old);
     }
     for (int i = 0; i < k; i++) {
       res += (1 << old[i]);
     }
     return res;
-  }
-  /**
-  *
-  */
-  void initState(int ik, std::vector<int>& vec) {
-    for(int i=0;i<ik;i++) {
-      vec[i] = i;
-    }
-  }
-
-  /**
-   *
-   */
-  bool next_combination(int n, int k, std::vector < int > &old) {
-    for (int i = k - 1; i >= 0; i--) {
-      if (old[i] < (n - 1 - k + (i + 1))) {
-        old[i] += 1;
-        for (int j = i + 1; j < k; j++) {
-          old[j] = old[j - 1] + 1;
-        }
-        return true;
-      }
-    }
-    return false;
   }
 
   inline const int num(long long b, int n, int m) const {
