@@ -12,7 +12,7 @@ namespace HolsteinAnderson {
   template<typename prec>
   class InnerState {
   public:
-    InnerState(int ii, int spin, prec val) : _index(ii), _spin(spin), _value(val) {};
+    InnerState(int ii, int spin, prec val, std::function<bool(long long)>& valid) : _index(ii), _spin(spin), _value(val), _valid(valid) {};
     const inline int& index() const {return _index;}
     const inline prec& value() const {return _value;}
     const inline int spin() const {return _spin;}
@@ -20,6 +20,7 @@ namespace HolsteinAnderson {
     int _index;
     int _spin;
     prec _value;
+    std::function<bool(long long)>& _valid;
   };
 }
 
@@ -48,6 +49,7 @@ public:
         }
       }
     }
+
   }
 
 
@@ -59,6 +61,20 @@ public:
     xtemp += _U * checkState(state, 0)* checkState(state, _Ns);
     xtemp += _W*number_of_bosons(state);
     return xtemp;
+  }
+
+  inline int valid(const St & state, const long long &nst) {
+    return (checkState(nst, state.spin() * _Ns)*  (1 - checkState(nst, state.index() + state.spin() * _Ns)));
+  }
+
+  inline void set(const St & state, const long long &nst, long long &k, int &sign) {
+    long long k1, k2;
+    int isign1, isign2;
+//    a(state.spin() * _Ns, nst, k1, isign1);
+//    adag(state.index() + state.spin() * _Ns, k1, k2, isign2);
+    k = k2;
+    // -t c^+ c
+    sign = -isign1*isign2;
   }
 
 private:
