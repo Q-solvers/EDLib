@@ -8,6 +8,7 @@
       <sourceFolder url="file://$MODULE_DIR$/test/NSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/NSymmetryWithBoson.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/EigenPair.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/CMakeLists.txt" isTestSource="false" />
@@ -15,10 +16,10 @@
       <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/GreensFunction.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/HubbardModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/NSymmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/HolsteinAndersonModel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/NSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Combination.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/fortranbinding.h" isTestSource="false" />
