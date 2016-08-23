@@ -26,12 +26,17 @@ public:
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
+    // Iteration over rows.
     for(int i = 0; i<n; ++i){
       _model.symmetry().next_state();
       long long nst = _model.symmetry().state();
+      // Diagonal contribution.
       w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
+      // Offdiagonal contribution.
+      // Iteration over columns(unordered).
       for(auto & state: _model.states()) {
         int test = _model.valid(state, nst);
+        // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
         w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind]];
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
@@ -76,6 +81,9 @@ public:
     }
   }
 
+  /**
+   * Add diagonal H(i,i) element with value v.
+   */
   void inline addDiagonal(const int &i, prec v) {
     dvalues[i] = v;
     ++n();
@@ -83,19 +91,19 @@ public:
   }
 
   /**
-   * Add off-diagonal H(i,j) element
+   * Add off-diagonal H(i,j) element with value t (discarded here, restored in av) and Fermi sign.
    */
   void inline addElement(const int &i, int j, prec t, int sign) {
     if (i == j) {
       throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
     }
-    // check that there is no any data on the k state
+    // It is an error to add the element (i, j) twice.
     for (size_t iii = _vind_start; iii < _vind; iii++) {
       if (col_ind[iii] == j) {
         throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }
     }
-    // create new element in CRS arrays
+    // Store sign in CRS-like array, one bit per sign.
     col_ind[_vind] = j;
     signs[_vind_byte] &= ~(1ll << _vind_bit);
     signs[_vind_byte] |= sign<0 ? 1ll<<_vind_bit:0;
@@ -115,6 +123,8 @@ public:
   }
 
   void print() {
+    // See: av().
+    // Each row of the matrix is first restored from the arrays.
     std::vector<prec> line(n(), prec(0.0));
     _model.symmetry().init();
     _vind = 0;
@@ -161,7 +171,9 @@ private:
 
   // internal indicies
   size_t _vind;
+  // start of current row, used for checks
   size_t _vind_start;
+  // bit and byte of the bitmap corresponding to CRS index
   size_t _vind_bit;
   size_t _vind_byte;
 
