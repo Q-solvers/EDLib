@@ -58,11 +58,11 @@ public:
     _xmu = precision(0.0);
   };
 
-  inline int valid(const St & state, const long long &nst) {
+  inline int valid(const St & state, long long nst) {
     return (checkState(nst, state.indicies().first + state.spin() * _Ns)*  (1 - checkState(nst, state.indicies().second + state.spin() * _Ns)));
   }
 
-  inline void set(const St & state, const long long &nst, long long &k, int &sign) {
+  inline void set(const St & state, long long nst, long long &k, int &sign) {
     long long k1, k2;
     int isign1, isign2;
     a(state.indicies().first + state.spin() * _Ns, nst, k1, isign1);
@@ -90,7 +90,7 @@ public:
    *
    * \return 0 if state is empty, 1 - otherwise
    */
-  int inline checkState(const long long& nst, const int& im) const {
+  int inline checkState(long long nst, const int& im) const {
     return (int) ((nst & (1ll << (_Ip - 1 - im))) >> (_Ip - 1 - im));
   }
   /**
@@ -100,7 +100,7 @@ public:
    * \param k [out] - resulting state
    * \param isign [out] - fermionic sign
    */
-  void inline a(const int& i,const long long& jold,long long &k,int &isign) {
+  void inline a(int i,long long jold,long long &k,int &isign) {
     long long sign=0;
     for(int ll=0; ll<i; ++ll) {
       sign+= ((jold&(1ll<<(_Ip-ll-1)))!=0) ? 1 : 0;
@@ -116,7 +116,7 @@ public:
    * \param k [out] - resulting state
    * \param isign [out] - fermionic sign
    */
-  void inline adag(const int& i, const long long &jold, long long& k, int& isign) {
+  void inline adag(int i, long long jold, long long& k, int& isign) {
     long long sign=0;
     for(int ll=0; ll<i; ++ll) {
       sign+= ((jold&(1ll<<(_Ip-ll-1)))!=0) ? 1 : 0;

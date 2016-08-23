@@ -11,12 +11,11 @@
 #include "fortranbinding.h"
 #include "Storage.h"
 
-template<typename prec>
+template<typename prec, class Model>
 class CRSStorage: public Storage<prec> {
   using Storage<prec>::n;
 public:
-  template<class ModelType>
-  CRSStorage(EDParams& p,  ModelType& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]) {
+  CRSStorage(EDParams& p,  Model& s):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]), _model(s) {
     // init what you need from parameters
   };
 
@@ -77,6 +76,29 @@ public:
     }
   }
 
+  void fill() {
+    _model.symmetry().init();
+    reset(_model.symmetry().sector().size());
+    int i =0;
+    long long k = 0;
+    int isign = 0;
+    while (_model.symmetry().next_state()) {
+      long long nst = _model.symmetry().state();
+      // Compute diagonal element for current i state
+
+      addDiagonal(i, _model.diagonal(nst));
+      // non-diagonal terms calculation
+      for(auto & state: _model.states()) {
+        if(_model.valid(state, nst)) {
+          _model.set(state, nst, k, isign);
+          int k_index = _model.symmetry().index(k);
+          addElement(i, k_index, state.value(), isign);
+        }
+      }
+      i++;
+    }
+  }
+
   void endMatrix() {
     row_ptr[n()] = _vind;
   }
@@ -121,6 +143,8 @@ private:
 
 
   size_t _vind;
+
+  Model& _model;
 };
 
 

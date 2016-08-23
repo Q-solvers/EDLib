@@ -8,6 +8,7 @@
 #include <CRSStorage.h>
 #include <HubbardModel.h>
 #include <GreensFunction.h>
+#include "HolsteinAndersonModel.h"
 
 
 int main(int argc, const char ** argv) {

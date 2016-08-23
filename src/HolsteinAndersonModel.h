@@ -9,26 +9,98 @@
 #include "NSymmetryWithBoson.h"
 
 namespace HolsteinAnderson {
-  template<typename prec>
-  class InnerState {
+  class StateBase {
   public:
-    InnerState(int ii, int spin, prec val, std::function<bool(long long)>& valid) : _index(ii), _spin(spin), _value(val), _valid(valid) {};
+    virtual bool valid(long long, int, int, int){
+      return 0;
+    }
+    virtual void set(long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const {
+
+    }
+    int inline checkState(long long nst, int im, int Nf, int Nb) const {
+      return (int) ( ( (nst>>Nb) & (1ll << (Nf - 1 - im) ) ) >> (Nf - 1 - im));
+    }
+    /**
+     * Anihilate particle
+     * \param i [in] - site to anihilate particle
+     * \param jold [in] - current state
+     * \param k [out] - resulting state
+     * \param isign [out] - fermionic sign
+     * \param Ip [in] - number of fermionic sites
+     */
+    void inline a(int i,long long jold,long long &k,int &isign, int Ip) const {
+      long long sign=0;
+      for(int ll=0; ll<i; ++ll) {
+        sign+= ((jold&(1ll<<(Ip-ll-1)))!=0) ? 1 : 0;
+      }
+      isign = (sign % 2) == 0 ? 1 : -1;
+      k=jold-(1ll<<(Ip-i-1));
+    }
+
+    /**
+     * Create particle
+     * \param i [in] - site to create particle
+     * \param jold [in] - current state
+     * \param k [out] - resulting state
+     * \param isign [out] - fermionic sign
+     * \param Ip [in] - number of fermionic sites
+     */
+    void inline adag(int i, long long jold, long long& k, int& isign, int Ip) const {
+      long long sign=0;
+      for(int ll=0; ll<i; ++ll) {
+        sign+= ((jold&(1ll<<(Ip-ll-1)))!=0) ? 1 : 0;
+      }
+      isign = (sign % 2) == 0 ? 1 : -1;
+      k = jold + (1ll << (Ip - i -1));
+    }
+  };
+
+  template<typename prec>
+  class HybridizationState : public StateBase {
+  public:
+    HybridizationState(int ii, int spin, prec val) : _index(ii), _spin(spin), _value(val) {};
     const inline int& index() const {return _index;}
     const inline prec& value() const {return _value;}
     const inline int spin() const {return _spin;}
+    virtual bool valid(long long nst, int Ns, int Nf, int Nb) override {
+      return checkState(nst, _spin*Ns, Nf, Nb) * (1 - checkState(nst, _index + _spin * Ns, Nf, Nb));
+    }
+
+    virtual void set( long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const override {
+      long long k1, k2;
+      int isign1, isign2;
+      k2 = nst >> Nb;
+      a(_spin * Ns, k2, k1, isign1, Nf);
+      adag(_index + _spin * Ns, k1, k2, isign2, Nf);
+      k = k2;
+      // -t c^+ c
+      sign = -isign1*isign2;
+    }
+
   private:
     int _index;
     int _spin;
     prec _value;
-    std::function<bool(long long)>& _valid;
+  };
+
+  template<typename prec>
+  class BosonCouplingState : public StateBase {
+  public:
+    virtual bool valid(long long nst, int Ns, int Nf, int Nb) override {
+      return 0;
+    }
+    virtual void set(long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const override {
+
+    }
   };
 }
-
 template<typename precision>
 class HolsteinAndersonModel {
 public:
 
-  typedef typename HolsteinAnderson::InnerState<precision> St;
+  typedef typename HolsteinAnderson::StateBase St;
+  typedef typename HolsteinAnderson::HybridizationState<precision> HSt;
+  typedef typename HolsteinAnderson::BosonCouplingState<precision> BSt;
   typedef typename NSymmetryWithBoson::Sector Sector;
 
   HolsteinAndersonModel(EDParams& p) : _symmetry(p), _Nf(2*int(p["NSITES"])), _Ns(p["NSITES"]), _Nb(p["NSITES_BOSE"]), _ms(p["NSPINS"]) {
@@ -42,14 +114,14 @@ public:
     input_data>>alps::make_pvp("bosonic_bath/energy", _W);
     input_data>>alps::make_pvp("bosonic_bath/coupling", _g);
     input_data.close();
-    for(int ii = 0; ii< _Nf-1; ++ii) {
+    for(int ii = 0; ii< _Ns-1; ++ii) {
       if (std::abs(_Vk[ii]) > 1e-10) {
         for(int is = 0; is < _ms; ++is) {
-          _states.push_back(St(ii, is, _Vk[ii]));
+          _states.push_back(HSt(ii, is, _Vk[ii]));
         }
       }
     }
-
+    _states.push_back(BSt());
   }
 
 
@@ -63,18 +135,16 @@ public:
     return xtemp;
   }
 
-  inline int valid(const St & state, const long long &nst) {
-    return (checkState(nst, state.spin() * _Ns)*  (1 - checkState(nst, state.index() + state.spin() * _Ns)));
+  inline int valid(St & state, long long nst) {
+    return state.valid(nst, _Ns, _Nf, _Nb);
   }
 
-  inline void set(const St & state, const long long &nst, long long &k, int &sign) {
-    long long k1, k2;
-    int isign1, isign2;
-//    a(state.spin() * _Ns, nst, k1, isign1);
-//    adag(state.index() + state.spin() * _Ns, k1, k2, isign2);
-    k = k2;
-    // -t c^+ c
-    sign = -isign1*isign2;
+  int valid_hyb(long long nst) const {
+    return (checkState(nst, 0 * _Ns) * (1 - checkState(nst, 0 * _Ns)));
+  }
+
+  inline void set(const St & state, long long nst, long long &k, int &sign) {
+    state.set(nst, k, sign, _Ns, _Nf, _Nb);
   }
 
 private:

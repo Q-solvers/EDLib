@@ -34,25 +34,7 @@ public:
    * fill current sector
    */
   void fill() {
-    _model.symmetry().init();
-    _storage.reset(_model.symmetry().sector().size());
-    int i =0;
-    long long k = 0;
-    int isign = 0;
-    while (_model.symmetry().next_state()) {
-      long long nst = _model.symmetry().state();
-      // Compute diagonal element for current i state
-
-      _storage.addDiagonal(i, _model.diagonal(nst));
-      // non-diagonal terms calculation
-      for(auto & state: _model.states()) {
-        if(_model.valid(state, nst)) {
-          _model.set(state, nst, k, isign);
-          hopping(i, nst, k, state.value(), isign);
-        }
-      }
-      i++;
-    }
+    _storage.fill();
     // additional steps after all data
     _storage.endMatrix();
   }
@@ -109,25 +91,12 @@ private:
    */
   Model _model;
 
-
-  /**
-   * \param i - current Hamiltonian matrix line
-   * \param nst - current state
-   * \param k - state to hop between
-   * \param v - hopping value
-   * \param sector - current conservation law sector
-   */
-  void inline hopping(const int& i, const long long& nst, const long long& k, const prec &v, const int &sign) {
-    int k_index = _model.symmetry().index(k);
-    _storage.addElement(i, k_index, v, sign);
-  }
-
 };
 
-typedef Hamiltonian<double, CRSStorage<double> , HubbardModel<double> > CSRHubbardHamiltonian;
+typedef Hamiltonian<double, CRSStorage<double, HubbardModel<double> > , HubbardModel<double> > CSRHubbardHamiltonian;
 typedef Hamiltonian<double, SOCRSStorage<double, HubbardModel<double> > , HubbardModel<double> > SOCSRHubbardHamiltonian;
 
-typedef Hamiltonian<float, CRSStorage<float> , HubbardModel<float> > CSRHubbardHamiltonian_float;
+typedef Hamiltonian<float, CRSStorage<float, HubbardModel<float> > , HubbardModel<float> > CSRHubbardHamiltonian_float;
 typedef Hamiltonian<float, SOCRSStorage<float, HubbardModel<float> > , HubbardModel<float> > SOCSRHubbardHamiltonian_float;
 
 #endif //HUBBARD_HAMILTONIAN_H

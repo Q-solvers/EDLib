@@ -13,9 +13,8 @@ template <typename prec, class Model>
 class SOCRSStorage : public Storage<prec>{
 public:
   using Storage<prec>::n;
-  template<class ModelType>
-  SOCRSStorage(EDParams& p, ModelType &m):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
-                                   _max_dim(p["storage.MAX_DIM"]), model(m) {
+  SOCRSStorage(EDParams& p, Model &m):  Storage<prec>(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+                                   _max_dim(p["storage.MAX_DIM"]), _model(m) {
     /** init what you need from parameters*/
     col_ind.assign(_max_size, 0);
     signs.assign(_max_size, 0);
@@ -23,16 +22,16 @@ public:
   };
 
   virtual void av(prec *v, prec *w, int n, bool clear=true) override {
-    model.symmetry().init();
+    _model.symmetry().init();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
     for(int i = 0; i<n; ++i){
-      model.symmetry().next_state();
-      long long nst = model.symmetry().state();
+      _model.symmetry().next_state();
+      long long nst = _model.symmetry().state();
       w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
-      for(auto & state: model.states()) {
-        int test = model.valid(state, nst);
+      for(auto & state: _model.states()) {
+        int test = _model.valid(state, nst);
         w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind]];
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
@@ -54,6 +53,29 @@ public:
     n()= 0;
   }
 
+  void fill() {
+    _model.symmetry().init();
+    reset(_model.symmetry().sector().size());
+    int i =0;
+    long long k = 0;
+    int isign = 0;
+    while (_model.symmetry().next_state()) {
+      long long nst = _model.symmetry().state();
+      // Compute diagonal element for current i state
+
+      addDiagonal(i, _model.diagonal(nst));
+      // non-diagonal terms calculation
+      for(auto & state: _model.states()) {
+        if(_model.valid(state, nst)) {
+          _model.set(state, nst, k, isign);
+          int k_index = _model.symmetry().index(k);
+          addElement(i, k_index, state.value(), isign);
+        }
+      }
+      i++;
+    }
+  }
+
   void inline addDiagonal(const int &i, prec v) {
     dvalues[i] = v;
     ++n();
@@ -68,7 +90,7 @@ public:
       throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
     }
     // check that there is no any data on the k state
-    for (int iii = _vind_start; iii < _vind; iii++) {
+    for (size_t iii = _vind_start; iii < _vind; iii++) {
       if (col_ind[iii] == j) {
         throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }
@@ -94,19 +116,19 @@ public:
 
   void print() {
     std::vector<prec> line(n(), prec(0.0));
-    model.symmetry().init();
+    _model.symmetry().init();
     _vind = 0;
     _vind_byte = 0;
     _vind_bit =0;
     std::cout<< std::setprecision(2)<<std::fixed;
     std::cout<<"[";
     for(int i = 0; i<n(); ++i){
-      model.symmetry().next_state();
-      long long nst = model.symmetry().state();
+      _model.symmetry().next_state();
+      long long nst = _model.symmetry().state();
       std::fill(line.begin(), line.end(), prec(0.0));
       line[i] = dvalues[i];
-      for(auto & state: model.states()) {
-        int test = model.valid(state, nst);
+      for(auto & state: _model.states()) {
+        int test = _model.valid(state, nst);
         line[col_ind[_vind]] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1));
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
@@ -130,7 +152,7 @@ public:
 private:
   // Internal storage structure
   std::vector<prec> dvalues;
-  std::vector<size_t> col_ind;
+  std::vector<int> col_ind;
   std::vector<char> signs;
 
   // the maximum sizes of all the objects
@@ -144,7 +166,7 @@ private:
   size_t _vind_byte;
 
   // Hubbard model parameters
-  Model &model;
+  Model &_model;
 
 };
 
