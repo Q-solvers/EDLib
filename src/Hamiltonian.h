@@ -35,8 +35,6 @@ public:
    */
   void fill() {
     _storage.fill();
-    // additional steps after all data
-    _storage.endMatrix();
   }
   /**
    * perform Hamiltonian diagonalization

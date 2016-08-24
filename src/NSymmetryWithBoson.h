@@ -36,7 +36,7 @@ public:
     size_t _size;
   };
 
-  NSymmetryWithBoson(EDParams &p) : Symmetry(p), _Nf(2*int(p["NSITES"])), _Nb(p["NSITES_BOSE"]), _totstate(_Nf, 0.0), _current_sector(-1, 0),
+  NSymmetryWithBoson(EDParams &p) : Symmetry(), _Nf(2*int(p["NSITES"])), _Nb(p["NSITES_BOSE"]), _totstate(_Nf, 0.0), _current_sector(-1, 0),
                            _comb(_Nf) {
     if(p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
       std::vector<std::vector<int> > sectors;

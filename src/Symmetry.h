@@ -18,7 +18,7 @@
  */
 class Symmetry {
 public:
-  Symmetry(EDParams& p): _state(0){};
+  Symmetry(): _state(0){};
   virtual ~Symmetry(){};
   virtual bool next_state() = 0;
   const long long state() const {

@@ -42,7 +42,7 @@ public:
     size_t _size;
   };
 
-  SzSymmetry(EDParams& p): Symmetry(p), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
+  SzSymmetry(EDParams& p): Symmetry(), _current_sector(-1,-1,0), _Ns(p["NSITES"]), upstate(_Ns+1), dostate(_Ns+1),
                                _comb(_Ns), basis(_Ns+1), ninv(_Ns+1, std::vector<int>(1<<_Ns, 0)),
                                _first(true){
     //TODO: read sectors from parameter file

@@ -30,6 +30,7 @@ private:
     define<bool>("arpack.SECTOR", "Read symmetry sectors from file");
     define<size_t>("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
     define<size_t>("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
+    define<int>("spinstorage.ORBITAL_NUMBER", 1, "Number of orbitals with interaction");
     define<std::string>("INPUT_FILE", "input.h5", "File with initial data");
     define<int>("lanc.NOMEGA", 32, "Number of fermionic frequencies");
     define<int>("lanc.NLANC", 100, "Number of Lanczos iterations");

@@ -97,6 +97,7 @@ public:
       }
       i++;
     }
+    endMatrix();
   }
 
   void endMatrix() {
