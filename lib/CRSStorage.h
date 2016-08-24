@@ -48,7 +48,7 @@ public:
       throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
     }
     // check that there is no any data on the k state
-    for (int iii = row_ptr[i]; iii < _vind; ++iii) {
+    for (size_t iii = row_ptr[i]; iii < _vind; ++iii) {
       if (col_ind[iii] == j) {
         throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
       }

@@ -34,17 +34,15 @@ public:
   HubbardModel(EDParams &p) : _symmetry(p), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(_ms*_Ns),
                                   Eps(p["NSITES"], std::vector<precision>(p["NSPINS"], precision(0.0))),
                                   t(p["NSITES"], std::vector<precision>(p["NSITES"], precision(0.0))),
-                                  U(p["NSITES"], precision(0.0)) {
+                                  U(p["NSITES"], precision(0.0)),
+                                  _xmu(p["NSITES"], precision(0.0)) {
     std::string input = p["INPUT_FILE"];
     alps::hdf5::archive input_data(input.c_str(), "r");
     input_data>>alps::make_pvp("BETA", _beta);
     input_data>>alps::make_pvp("hopping/values", t);
     input_data>>alps::make_pvp("interaction/values", U);
+    input_data>>alps::make_pvp("chemical_potential/values", _xmu);
     input_data.close();
-    for(int i = 0; i< _Ns; ++i ) {
-      // HARDCODED Half-filling paramagnetic shift
-      Eps[i][0] = Eps[i][1] = -U[i]/2.0;
-    }
     for(int ii = 0; ii< _Ns; ++ii) {
       for (int jj = 0; jj < _Ns; ++jj) {
         if (std::abs(t[ii][jj]) > 1e-10) {
@@ -54,8 +52,6 @@ public:
         }
       }
     }
-    // TODO: move to input file and make site-dependent
-    _xmu = precision(0.0);
   };
 
   inline int valid(const St & state, long long nst) {
@@ -76,7 +72,7 @@ public:
     precision xtemp = 0.0;
     for(int im = 0;im < _Ns;++im){
       for(int is = 0 ; is< _ms; ++is) {
-        xtemp += (Eps[im][is] - _xmu) * checkState(state, im + is* _Ns);
+        xtemp += (Eps[im][is] - _xmu[is]) * checkState(state, im + is* _Ns);
       }
       xtemp += U[im]* checkState(state, im)* checkState(state, im + _Ns);
     }
@@ -237,7 +233,7 @@ private:
   // Interaction
   std::vector<precision> U;
   // Chemical potential
-  precision _xmu;
+  std::vector<precision> _xmu;
   // site energy shift
   std::vector<std::vector<precision> > Eps;
   // Inverse temperature
