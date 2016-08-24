@@ -32,7 +32,7 @@ public:
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
         continue;
       }
-      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor"<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
+      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor = "<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
           std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
@@ -40,13 +40,13 @@ public:
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.create_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|aa*|n>="<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|aa*|n>="<<expectation_value<<" nlanc:"<< nlanc<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
           }
           _model.symmetry().set_sector(eigenpair.sector());
           if(_model.annihilate_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
-            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|n>="<<expectation_value<<std::endl;
+            std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|n>="<<expectation_value<<" nlanc:"<< nlanc<<std::endl;
             computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
           }
         }

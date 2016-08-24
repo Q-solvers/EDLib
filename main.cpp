@@ -17,12 +17,12 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-//  CSRHubbardHamiltonian ham(params);
-  Hamiltonian<double, SpinResolvedStorage<double, HubbardModel<double> > , HubbardModel<double> > ham(params);
+//  CSRHubbardHamiltonian_float ham(params);
+  Hamiltonian<float, SpinResolvedStorage<float, HubbardModel<float> > , HubbardModel<float> > ham(params);
 //  SOCSRHubbardHamiltonian_float ham(params);
   ham.diag();
-//  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
-//  GreensFunction<float, SOCSRHubbardHamiltonian_float > greensFunction(params, ham);
-//  greensFunction.compute();
+//  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
+  GreensFunction<float, Hamiltonian<float, SpinResolvedStorage<float, HubbardModel<float> > , HubbardModel<float> > > greensFunction(params, ham);
+  greensFunction.compute();
   return 0;
 }

@@ -16,31 +16,32 @@
 TEST(SpinResolvedStorageTest, Init) {
   EDParams p;
   p["NSITES"]=8;
+  p["storage.MAX_SIZE"] = 80000;
+  p["storage.MAX_DIM"] = 4900;
   HubbardModel<double> m(p);
+  HubbardModel<double> m2(p);
   SpinResolvedStorage<double, HubbardModel<double> > storage(p, m);
-//  while (m.symmetry().next_sector()) {
-//    m.symmetry().init();
-//    storage.fill();
-//    storage.diag();
-//  }
-  m.symmetry().set_sector(SzSymmetry::Sector(1, 6, 224));
-  m.symmetry().init();
-  storage.fill();
-  std::vector<double> v(224, 1.0);
-  std::vector<double> w(224, 0.0);
-  std::vector<double> w2(224, 0.0);
-  storage.av(v.data(), w.data(), 224);
-//  std::cout<<"========"<<std::endl;
-  CRSStorage<double, HubbardModel<double> > storage2(p, m);
-  m.symmetry().init();
-  storage2.fill();
-  storage2.av(v.data(), w2.data(), 224);
+  CRSStorage<double, HubbardModel<double> > storage2(p, m2);
+  while (m.symmetry().next_sector() && m2.symmetry().next_sector()) {
+    std::vector<double> v(m.symmetry().sector().size(), 1.0);
+    std::vector<double> w(m.symmetry().sector().size(), 0.0);
+    std::vector<double> w2(m.symmetry().sector().size(), 0.0);
+    m.symmetry().init();
+    m2.symmetry().init();
+    storage.fill();
+    storage2.fill();
+    storage.av(v.data(), w.data(), m.symmetry().sector().size());
+    storage2.av(v.data(), w2.data(), m.symmetry().sector().size());
+//    std::cout<< boost::algorithm::join( v | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
+//    std::cout<< boost::algorithm::join( w | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
+//    std::cout<< boost::algorithm::join( w2 | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
+    for(int i = 0; i< w.size(); ++i) {
+      ASSERT_EQ(w[i], w2[i]);
+    }
+  }
 //  std::cout<< boost::algorithm::join( v | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
 //  std::cout<< boost::algorithm::join( w | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
 //  std::cout<< boost::algorithm::join( w2 | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
 //  storage.print();
 //  storage2.print();
-  for(int i = 0; i< w.size(); ++i) {
-    ASSERT_EQ(w[i], w2[i]);
-  }
 }

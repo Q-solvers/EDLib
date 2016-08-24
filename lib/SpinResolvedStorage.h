@@ -132,7 +132,7 @@ public:
     reset();
     // fill off-diagonal matrix for each spin
     fill_spin(_up_symmetry, _Ns, H_up);
-    int sign = (_up_symmetry.sector().n() %2) == 0 ? -1:1;
+    int sign = (_up_symmetry.sector().n() %2) == 0 ? 1:1;
     fill_spin(_down_symmetry, 0, H_down, sign);
     // fill diagonal;
     int i =0;
