@@ -83,22 +83,22 @@ public:
     return xtemp;
   }
   /**
-   * Check that im state is occupated
+   * @brief Check that im state is occupated
    *
-   * \param nst - current state
-   * \param im - state to check
+   * @param nst - current state
+   * @param im - state to check
    *
-   * \return 0 if state is empty, 1 - otherwise
+   * @return 0 if state is empty, 1 - otherwise
    */
   int inline checkState(long long nst, const int& im) const {
     return (int) ((nst & (1ll << (_Ip - 1 - im))) >> (_Ip - 1 - im));
   }
   /**
-   * Anihilate particle
-   * \param i [in] - site to anihilate particle
-   * \param jold [in] - current state
-   * \param k [out] - resulting state
-   * \param isign [out] - fermionic sign
+   * @brief Anihilate particle
+   * @param i [in] - site to anihilate particle
+   * @param jold [in] - current state
+   * @param k [out] - resulting state
+   * @param isign [out] - fermionic sign
    */
   void inline a(int i,long long jold,long long &k,int &isign) {
     long long sign=0;
@@ -110,7 +110,7 @@ public:
   }
 
   /**
-   * Create particle
+   * @brief Create particle
    * \param i [in] - site to create particle
    * \param jold [in] - current state
    * \param k [out] - resulting state
@@ -144,8 +144,15 @@ public:
   }
 
   /**
- * Actions on v>
- */
+   * @brief Perform the create operator action to the eigenstate
+   *
+   * @param orbital - the orbital to create a particle
+   * @param spin - the spin of a particle to create
+   * @param invec - current eigenstate
+   * @param outvec - Op-vec product
+   * @param expectation_value - expectation value of aa*
+   * @return true if the particle has been created
+   */
   bool create_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, double & expectation_value) {
     // check that the particle can be annihilated
     if((spin == 0 && _symmetry.sector().nup()==_Ns) || (spin == 1 && _symmetry.sector().ndown()==_Ns)) {
@@ -178,6 +185,16 @@ public:
     expectation_value = norm;
     return true;
   };
+  /**
+   * @brief Perform the annihilator operator action to the eigenstate
+   *
+   * @param orbital - the orbital to destroy a particle
+   * @param spin - the spin of a particle to destroy
+   * @param invec - current eigenstate
+   * @param outvec - Op-vec product
+   * @param expectation_value - expectation value of a*a
+   * @return true if the particle has been destroyed
+   */
   bool annihilate_particle(int orbital, int spin, const std::shared_ptr<precision>& invec, std::vector<precision>& outvec, double & expectation_value) {
     // check that the particle can be annihilated
     if((spin == 0 && _symmetry.sector().nup()==0) || (spin == 1 && _symmetry.sector().ndown()==0)) {

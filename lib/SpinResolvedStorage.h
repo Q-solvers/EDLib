@@ -38,6 +38,9 @@ public:
       if (i == j) {
         throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
       }
+      if(std::abs(t) == 0) {
+        return;
+      }
       // check that there is no any data on the k state
       for (int iii = _row_ptr[i]; iii < _vind; ++iii) {
         if (_col_ind[iii] == j) {
@@ -87,21 +90,28 @@ public:
       // Diagonal contribution.
       w[i] = _diagonal[i] * v[i] + (clear? 0.0: w[i]);
     }
-    std::vector<prec> ww_u(_up_symmetry.sector().size(), 0.0);
-    std::vector<prec> ww_d(_down_symmetry.sector().size(), 0.0);
     // Offdiagonal contribution.
-    // Iteration over columns(unordered).
+    // iterate over up spin blocks
     for(int k = 0; k<_up_symmetry.sector().size(); ++k) {
+      // Iteration over rows.
       for(int i = 0; i<_down_symmetry.sector().size(); ++i) {
-        for (int j = H_down.row_ptr()[k]; j < H_down.row_ptr()[k + 1]; ++j) {
-          w[i + k*_up_symmetry.sector().size()] += H_down.values()[j] * v[H_down.col_ind()[j] + k*_up_symmetry.sector().size()];
+        // Iteration over columns(unordered).
+        for (int j = H_down.row_ptr()[i]; j < H_down.row_ptr()[i + 1]; ++j) {
+//          std::cout<<"w["<<i + _down_symmetry.sector().size()*k<<"] = "<<w[i+_down_symmetry.sector().size()*k]<<" + "<<H_down.values()[j]
+//                   <<"*v[ "<<H_down.col_ind()[j] + _down_symmetry.sector().size()*k<<"]"<<std::endl;
+          w[i + k*_down_symmetry.sector().size()] += H_down.values()[j] * v[H_down.col_ind()[j] + k*_down_symmetry.sector().size()];
         }
       }
     }
-    for(int k = 0; k<_down_symmetry.sector().size(); ++k) {
-      for(int i = 0; i<_up_symmetry.sector().size(); ++i) {
-        for (int j = H_up.row_ptr()[k]; j < H_up.row_ptr()[k + 1]; ++j) {
-          w[i + k*_down_symmetry.sector().size()] += H_up.values()[j] * v[H_up.col_ind()[j] + k*_down_symmetry.sector().size()];
+    //
+    // Iteration over rows.
+    for(int i = 0; i<_up_symmetry.sector().size(); ++i) {
+      // Iteration over columns(unordered).
+      for (int j = H_up.row_ptr()[i]; j < H_up.row_ptr()[i + 1]; ++j) {
+        for(int k = 0; k<_down_symmetry.sector().size(); ++k) {
+//          std::cout<<"w["<<i*_down_symmetry.sector().size() + k<<"] = "<<w[i*_down_symmetry.sector().size() + k]<<" + "<<H_up.values()[j]
+//                   <<"*v[ "<<H_up.col_ind()[j]*_down_symmetry.sector().size() + k<<"]"<<std::endl;
+          w[i*_down_symmetry.sector().size() + k] += H_up.values()[j] * v[H_up.col_ind()[j]*_down_symmetry.sector().size() + k];
         }
       }
     }
@@ -122,7 +132,7 @@ public:
     reset();
     // fill off-diagonal matrix for each spin
     fill_spin(_up_symmetry, _Ns, H_up);
-    int sign = (_up_symmetry.sector().n() %2) == 0 ? 1:-1;
+    int sign = (_up_symmetry.sector().n() %2) == 0 ? -1:1;
     fill_spin(_down_symmetry, 0, H_down, sign);
     // fill diagonal;
     int i =0;
@@ -153,6 +163,49 @@ public:
     }
   }
 
+  void print() {
+    std::cout<< std::setprecision(2)<<std::fixed;
+    std::cout<<"{";
+    for(int i = 0; i<_up_symmetry.sector().size(); ++i) {
+      std::cout<<"{";
+      for(int j = 0; j<_up_symmetry.sector().size(); ++j) {
+        bool f = true;
+        for(int k = H_up.row_ptr()[i]; k<H_up.row_ptr()[i+1]; ++k) {
+          if((H_up.col_ind()[k]) == j) {
+            std::cout<<std::setw(6)<<H_up.values()[k]<<(j==_up_symmetry.sector().size()-1? "" : ", ");
+            f = false;
+          } /*else {
+            std::cout<<"0.0 ";
+          }*/
+        }
+        if(f) {
+          std::cout<<std::setw(6)<<0.0<<(j==_up_symmetry.sector().size()-1? "" : ", ");
+        }
+      }
+      std::cout<<"}"<<(i==_up_symmetry.sector().size()-1? "" : ", \n");
+    }
+    std::cout<<"}"<<std::endl;
+    std::cout<<"\n\n{";
+    for(int i = 0; i<_down_symmetry.sector().size(); ++i) {
+      std::cout<<"{";
+      for(int j = 0; j<_down_symmetry.sector().size(); ++j) {
+        bool f = true;
+        for(int k = H_down.row_ptr()[i]; k<H_down.row_ptr()[i+1]; ++k) {
+          if((H_down.col_ind()[k]) == j) {
+            std::cout<<std::setw(6)<<H_down.values()[k]<<(j==_down_symmetry.sector().size()-1? "" : ", ");
+            f = false;
+          } /*else {
+            std::cout<<"0.0 ";
+          }*/
+        }
+        if(f) {
+          std::cout<<std::setw(6)<<0.0<<(j==_down_symmetry.sector().size()-1? "" : ", ");
+        }
+      }
+      std::cout<<"}"<<(i==_down_symmetry.sector().size()-1? "" : ", \n");
+    }
+    std::cout<<"}"<<std::endl;
+  }
 private:
   std::vector<Eigen::Matrix<prec, -1, -1> > H_loc;
   Model & _model;

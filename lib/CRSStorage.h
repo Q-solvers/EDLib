@@ -71,6 +71,7 @@ public:
     for (int i = 0; i < n; ++i) {
       w[i] = clear? 0.0: w[i];
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
+//        std::cout<<"w["<<i<<"] = "<<w[i]<<" + "<<values[j]<<"*v[ "<<col_ind[j]<<"]"<<std::endl;
         w[i] = w[i] + values[j] * v[col_ind[j]];
       }
     }
@@ -106,9 +107,9 @@ public:
 
   void print() {
     std::cout<< std::setprecision(2)<<std::fixed;
-    std::cout<<"[";
+    std::cout<<"{";
     for(int i = 0; i<n(); ++i) {
-      std::cout<<"[";
+      std::cout<<"{";
       for(int j = 0; j<n(); ++j) {
         bool f = true;
         for(int k = row_ptr[i]; k<row_ptr[i+1]; ++k) {
@@ -123,9 +124,9 @@ public:
           std::cout<<std::setw(6)<<0.0<<(j==n()-1? "" : ", ");
         }
       }
-      std::cout<<"]"<<(i==n()-1? "" : ", \n");
+      std::cout<<"}"<<(i==n()-1? "" : ", \n");
     }
-    std::cout<<"]"<<std::endl;
+    std::cout<<"}"<<std::endl;
   }
 
   virtual void zero_eigenapair() override {
