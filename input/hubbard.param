@@ -1,4 +1,4 @@
-NSITES=8
+NSITES=16
 NSPINS=2
 INPUT_FILE=input.h5
 
@@ -7,7 +7,7 @@ MAX_DIM=5000
 MAX_SIZE=80000
 
 [arpack]
-NEV=40
+NEV=1
 SECTOR=FALSE
 
 [lanc]

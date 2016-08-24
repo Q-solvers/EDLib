@@ -17,8 +17,8 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  CSRHubbardHamiltonian ham(params);
-//  Hamiltonian<double, SpinResolvedStorage<double, HubbardModel<double> > , HubbardModel<double> > ham(params);
+//  CSRHubbardHamiltonian ham(params);
+  Hamiltonian<double, SpinResolvedStorage<double, HubbardModel<double> > , HubbardModel<double> > ham(params);
 //  SOCSRHubbardHamiltonian_float ham(params);
   ham.diag();
 //  GreensFunction<double, CSRHubbardHamiltonian > greensFunction(params, ham);
