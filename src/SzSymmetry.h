@@ -62,8 +62,8 @@ public:
       alps::hdf5::archive input_file(input, "r");
       input_file>>alps::make_pvp("sectors/values", sectors);
       input_file.close();
-      for(auto& sector : sectors) {
-        _sectors.push(SzSymmetry::Sector(sector[0], sector[1], (size_t) (_comb.c_n_k(_Ns, sector[0]) * _comb.c_n_k(_Ns, sector[1]))));
+      for(int i = 0; i< sectors.size(); ++i) {
+        _sectors.push(SzSymmetry::Sector(sectors[i][0], sectors[i][1], (size_t) (_comb.c_n_k(_Ns, sectors[i][0]) * _comb.c_n_k(_Ns, sectors[i][1]))));
       }
     } else {
       for(int i = 0; i<=_Ns;++i) {
@@ -75,7 +75,7 @@ public:
   };
   virtual ~SzSymmetry() {};
 
-  virtual bool next_state() override {
+  virtual bool next_state() {
     long long res = 0;
     if(_first) {
       _first = false;
@@ -102,24 +102,24 @@ public:
     return ninv[sector.nup()][(int)up]*(cdo) + ninv[sector.ndown()][(int)down];
   }
 
-  virtual int index(long long state) override {
+  virtual int index(long long state) {
     return index(state, _current_sector);
   }
 
-  virtual void reset() override {
+  virtual void reset() {
     state() = 0ll;
     _first = true;
     _ind = 0;
   }
 
-  virtual void init() override {
+  virtual void init() {
     // TODO: Decide what we should have to init
     reset();
     _comb.init_state(_current_sector.nup(), upstate);
     _comb.init_state(_current_sector.ndown(), dostate);
   };
 
-  virtual bool next_sector() override {
+  virtual bool next_sector() {
     if(_sectors.empty())
       return false;
     _current_sector = _sectors.front();

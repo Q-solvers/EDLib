@@ -44,8 +44,8 @@ public:
       alps::hdf5::archive input_file(input, "r");
       input_file>>alps::make_pvp("sectors/values", sectors);
       input_file.close();
-      for(auto& sector : sectors) {
-        _sectors.push(NSymmetryWithBoson::Sector(sector[0], (size_t) (_comb.c_n_k(_Nf, sector[0]) * (1<<_Nb))));
+      for(int kkk = 0; kkk<sectors.size(); ++kkk) {
+        _sectors.push(NSymmetryWithBoson::Sector(sectors[kkk][0], (size_t) (_comb.c_n_k(_Nf, sectors[kkk][0]) * (1<<_Nb))));
       }
     } else {
       for(int i = 0; i<=_Nf;++i) {
@@ -54,7 +54,7 @@ public:
     }
   }
 
-  virtual bool next_state() override {
+  virtual bool next_state() {
     long long res = 0;
     if(_ind>=_current_sector.size()) {
       return false;
@@ -73,25 +73,25 @@ public:
     return true;
   }
 
-  virtual int index(long long st) override {
+  virtual int index(long long st) {
     long long f = st>>_Nb;
     int bos = st & ((1<<_Nb)-1);
     int cup = _comb.c_n_k(_Nf, _current_sector.n())*(1<<_Nb);
     return cup - ((num(f, _Nf, _current_sector.n())<<_Nb) - bos) - ((1<<_Nb) - 1) - 1;
   }
 
-  virtual void reset() override {
+  virtual void reset() {
     state() = 0ll;
     _first = true;
     _ind = 0;
   }
 
-  virtual void init() override {
+  virtual void init() {
     reset();
     _comb.init_state(_current_sector.n(), _totstate);
   }
 
-  virtual bool next_sector() override {
+  virtual bool next_sector() {
     if(_sectors.empty())
       return false;
     _current_sector = _sectors.front();

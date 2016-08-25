@@ -59,9 +59,9 @@ public:
     }
     std::sort(_eigenpairs.begin(), _eigenpairs.end());
     std::cout<<"Here is the list of eigenvalues:"<<std::endl;
-    for(auto& eigenpair : _eigenpairs) {
-      std::cout<<eigenpair.eigenvalue()<<" ";
-      eigenpair.sector().print();
+    for(int kkk = 0; kkk<_eigenpairs.size(); ++kkk) {
+      std::cout<<_eigenpairs[kkk].eigenvalue()<<" ";
+      _eigenpairs[kkk].sector().print();
       std::cout<<std::endl;
     }
   }

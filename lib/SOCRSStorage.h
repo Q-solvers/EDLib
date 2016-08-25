@@ -21,7 +21,7 @@ public:
     dvalues.assign(_max_dim, prec(0.0));
   };
 
-  virtual void av(prec *v, prec *w, int n, bool clear=true) override {
+  virtual void av(prec *v, prec *w, int n, bool clear=true) {
     _model.symmetry().init();
     _vind = 0;
     _vind_byte = 0;
@@ -34,10 +34,10 @@ public:
       w[i] = dvalues[i] * v[i] + (clear? 0.0: w[i]);
       // Offdiagonal contribution.
       // Iteration over columns(unordered).
-      for(auto & state: _model.states()) {
-        int test = _model.valid(state, nst);
+      for(int kkk=0; kkk< _model.states().size(); ++kkk) {
+        int test = _model.valid(_model.states()[kkk], nst);
         // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
-        w[i] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind]];
+        w[i] += test * _model.states()[kkk].value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1)) * v[col_ind[_vind]];
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
         _vind_bit%= sizeof(char);
@@ -70,11 +70,11 @@ public:
 
       addDiagonal(i, _model.diagonal(nst));
       // non-diagonal terms calculation
-      for(auto & state: _model.states()) {
-        if(_model.valid(state, nst)) {
-          _model.set(state, nst, k, isign);
+      for(int kkk = 0; kkk<_model.states().size(); ++kkk) {
+        if(_model.valid(_model.states()[kkk], nst)) {
+          _model.set(_model.states()[kkk], nst, k, isign);
           int k_index = _model.symmetry().index(k);
-          addElement(i, k_index, state.value(), isign);
+          addElement(i, k_index, _model.states()[kkk].value(), isign);
         }
       }
       i++;
@@ -137,9 +137,9 @@ public:
       long long nst = _model.symmetry().state();
       std::fill(line.begin(), line.end(), prec(0.0));
       line[i] = dvalues[i];
-      for(auto & state: _model.states()) {
-        int test = _model.valid(state, nst);
-        line[col_ind[_vind]] += test * state.value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1));
+      for(int kkk=0; kkk<_model.states().size(); ++kkk) {
+        int test = _model.valid(_model.states()[kkk], nst);
+        line[col_ind[_vind]] += test * _model.states()[kkk].value() * (1 - 2* ((signs[_vind_byte]>>_vind_bit)&1));
         _vind_bit+=test;
         _vind_byte+=_vind_bit/sizeof(char);
         _vind_bit%= sizeof(char);
@@ -154,7 +154,7 @@ public:
     std::cout<<"]"<<std::endl;
   }
 
-  virtual void zero_eigenapair() override {
+  virtual void zero_eigenapair() {
     Storage<prec>::eigenvalues().resize(1);
     Storage<prec>::eigenvalues()[0] = dvalues[0];
     Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));

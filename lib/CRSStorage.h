@@ -67,7 +67,7 @@ public:
   /**
    * Simple Compressed-Row-Storage Matrix-Vector product
    */
-  virtual void av(prec* v, prec* w, int n, bool clear=true) override {
+  virtual void av(prec* v, prec* w, int n, bool clear=true) {
     for (int i = 0; i < n; ++i) {
       w[i] = clear? 0.0: w[i];
       for(int j = row_ptr[i]; j<row_ptr[i+1];++j){
@@ -89,11 +89,11 @@ public:
 
       addDiagonal(i, _model.diagonal(nst));
       // non-diagonal terms calculation
-      for(auto & state: _model.states()) {
-        if(_model.valid(state, nst)) {
-          _model.set(state, nst, k, isign);
+      for(int kkk = 0; kkk< _model.states().size(); ++kkk) {
+        if(_model.valid(_model.states()[kkk], nst)) {
+          _model.set(_model.states()[kkk], nst, k, isign);
           int k_index = _model.symmetry().index(k);
-          addElement(i, k_index, state.value(), isign);
+          addElement(i, k_index, _model.states()[kkk].value(), isign);
         }
       }
       i++;
@@ -129,7 +129,7 @@ public:
     std::cout<<"}"<<std::endl;
   }
 
-  virtual void zero_eigenapair() override {
+  virtual void zero_eigenapair() {
     Storage<prec>::eigenvalues().resize(1);
     Storage<prec>::eigenvalues()[0] = values[0];
     Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));

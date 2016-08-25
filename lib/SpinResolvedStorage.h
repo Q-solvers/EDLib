@@ -80,11 +80,13 @@ public:
     H_loc.resize(_interaction_size);
   }
 
-  virtual void zero_eigenapair() override {
-
+  virtual void zero_eigenapair() {
+    Storage<prec>::eigenvalues().resize(1);
+    Storage<prec>::eigenvalues()[0] = _diagonal[0];
+    Storage<prec>::eigenvectors().assign(1, std::vector<prec>(1, prec(1.0)));
   }
 
-  virtual void av(prec *v, prec *w, int n, bool clear = true) override {
+  virtual void av(prec *v, prec *w, int n, bool clear = true) {
     // Iteration over rows.
     for(int i = 0; i<n; ++i){
       // Diagonal contribution.
@@ -145,12 +147,11 @@ public:
     int i =0;
     while (spin_symmetry.next_state()) {
       long long nst = spin_symmetry.state();
-      for(auto & state: _model.states()) {
-        if(_model.valid(state, nst << shift)) {
-          _model.set(state, nst << shift, k, isign);
+      for(int kkk=0; kkk< _model.states().size(); ++kkk) {
+        if(_model.valid(_model.states()[kkk], nst << shift)) {
+          _model.set(_model.states()[kkk], nst << shift, k, isign);
           int j = spin_symmetry.index(k >> shift);
-//          std::cout<<"st:"<<std::bitset<4>(nst).to_string()<<" -> "<<std::bitset<4>(k>>shift).to_string()<<" "<<i<<" "<<j<<std::endl;
-          spin_matrix.addElement(i, j, state.value(), isign);
+          spin_matrix.addElement(i, j, _model.states()[kkk].value(), isign);
         }
       }
       spin_matrix.endLine(i);

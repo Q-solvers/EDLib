@@ -62,11 +62,11 @@ namespace HolsteinAnderson {
     const inline int& index() const {return _index;}
     const inline prec& value() const {return _value;}
     const inline int spin() const {return _spin;}
-    virtual bool valid(long long nst, int Ns, int Nf, int Nb) override {
+    virtual bool valid(long long nst, int Ns, int Nf, int Nb) {
       return checkState(nst, _spin*Ns, Nf, Nb) * (1 - checkState(nst, _index + _spin * Ns, Nf, Nb));
     }
 
-    virtual void set( long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const override {
+    virtual void set( long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const {
       long long k1, k2;
       int isign1, isign2;
       k2 = nst >> Nb;
@@ -86,10 +86,10 @@ namespace HolsteinAnderson {
   template<typename prec>
   class BosonCouplingState : public StateBase {
   public:
-    virtual bool valid(long long nst, int Ns, int Nf, int Nb) override {
+    virtual bool valid(long long nst, int Ns, int Nf, int Nb) {
       return 0;
     }
-    virtual void set(long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const override {
+    virtual void set(long long nst, long long &k, int &sign, int Ns, int Nf, int Nb) const {
 
     }
   };

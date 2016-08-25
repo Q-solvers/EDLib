@@ -21,33 +21,33 @@ public:
   }
 
   void compute() {
-    auto & ground_state = hamiltonian().eigenpairs()[0];
     double Z = 0.0;
-    for(auto & eigenpair : hamiltonian().eigenpairs()) {
-      Z += std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue())*omega().beta());
+    for(int kkk = 0; kkk< hamiltonian().eigenpairs().size(); ++kkk) {
+      Z += std::exp(-(hamiltonian().eigenpairs()[kkk].eigenvalue() - hamiltonian().eigenpairs()[0].eigenvalue())*omega().beta());
     }
-    for(auto & eigenpair : hamiltonian().eigenpairs()) {
-      double boltzmann_f = std::exp(-(eigenpair.eigenvalue() - ground_state.eigenvalue()) * omega().beta());
+    for(int kkk = 0; kkk< hamiltonian().eigenpairs().size(); ++kkk) {
+      double boltzmann_f = std::exp(-(hamiltonian().eigenpairs()[kkk].eigenvalue() - hamiltonian().eigenpairs()[0].eigenvalue()) * omega().beta());
       if(boltzmann_f < _cutoff) {
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
         continue;
       }
-      std::cout<<"Compute Green's function contribution for eigenvalue E="<<eigenpair.eigenvalue()<<" with Boltzmann factor = "<<boltzmann_f<<"; for sector"<<eigenpair.sector()<<std::endl;
+      std::cout<<"Compute Green's function contribution for eigenvalue E="<<hamiltonian().eigenpairs()[kkk].eigenvalue()<<" with Boltzmann factor = "
+               <<boltzmann_f<<"; for sector"<<hamiltonian().eigenpairs()[kkk].sector()<<std::endl;
       for(int i = 0; i<1/*_model.orbitals()*/; ++i) {
         for(int is = 0; is< _model.spins() ; ++is) {
-          std::vector<precision> outvec(eigenpair.sector().size(), precision(0.0));
+          std::vector<precision> outvec(hamiltonian().eigenpairs()[kkk].sector().size(), precision(0.0));
           double expectation_value = 0;
-          _model.symmetry().set_sector(eigenpair.sector());
-          if(_model.create_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
+          _model.symmetry().set_sector(hamiltonian().eigenpairs()[kkk].sector());
+          if(_model.create_particle(i, is, hamiltonian().eigenpairs()[kkk].eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
             std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|aa*|n>="<<expectation_value<<" nlanc:"<< nlanc<<std::endl;
-            computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, 1, gf[is][i]);
+            computefrac(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, 1, gf[is][i]);
           }
-          _model.symmetry().set_sector(eigenpair.sector());
-          if(_model.annihilate_particle(i, is, eigenpair.eigenvector(), outvec, expectation_value)){
+          _model.symmetry().set_sector(hamiltonian().eigenpairs()[kkk].sector());
+          if(_model.annihilate_particle(i, is, hamiltonian().eigenpairs()[kkk].eigenvector(), outvec, expectation_value)){
             int nlanc = lanczos(outvec);
             std::cout<<"orbital: "<<i<<"   spin: "<<(is == 0 ? "up" :"down")<<" <n|a*a|n>="<<expectation_value<<" nlanc:"<< nlanc<<std::endl;
-            computefrac(expectation_value, eigenpair.eigenvalue(), ground_state.eigenvalue(), nlanc, -1, gf[is][i]);
+            computefrac(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, -1, gf[is][i]);
           }
         }
       }
