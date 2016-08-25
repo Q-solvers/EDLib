@@ -97,8 +97,6 @@ public:
       for(int i = 0; i<_down_symmetry.sector().size(); ++i) {
         // Iteration over columns(unordered).
         for (int j = H_down.row_ptr()[i]; j < H_down.row_ptr()[i + 1]; ++j) {
-//          std::cout<<"w["<<i + _down_symmetry.sector().size()*k<<"] = "<<w[i+_down_symmetry.sector().size()*k]<<" + "<<H_down.values()[j]
-//                   <<"*v[ "<<H_down.col_ind()[j] + _down_symmetry.sector().size()*k<<"]"<<std::endl;
           w[i + k*_down_symmetry.sector().size()] += H_down.values()[j] * v[H_down.col_ind()[j] + k*_down_symmetry.sector().size()];
         }
       }
@@ -109,8 +107,6 @@ public:
       // Iteration over columns(unordered).
       for (int j = H_up.row_ptr()[i]; j < H_up.row_ptr()[i + 1]; ++j) {
         for(int k = 0; k<_down_symmetry.sector().size(); ++k) {
-//          std::cout<<"w["<<i*_down_symmetry.sector().size() + k<<"] = "<<w[i*_down_symmetry.sector().size() + k]<<" + "<<H_up.values()[j]
-//                   <<"*v[ "<<H_up.col_ind()[j]*_down_symmetry.sector().size() + k<<"]"<<std::endl;
           w[i*_down_symmetry.sector().size() + k] += H_up.values()[j] * v[H_up.col_ind()[j]*_down_symmetry.sector().size() + k];
         }
       }
@@ -132,8 +128,7 @@ public:
     reset();
     // fill off-diagonal matrix for each spin
     fill_spin(_up_symmetry, _Ns, H_up);
-    int sign = (_up_symmetry.sector().n() %2) == 0 ? 1:1;
-    fill_spin(_down_symmetry, 0, H_down, sign);
+    fill_spin(_down_symmetry, 0, H_down);
     // fill diagonal;
     int i =0;
     while (_model.symmetry().next_state()) {
@@ -144,7 +139,7 @@ public:
     n() = _model.symmetry().sector().size();
   }
 
-  void fill_spin(NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix, int sign = 1) {
+  void fill_spin(NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix) {
     long long k = 0;
     int isign = 0;
     int i =0;
@@ -155,7 +150,7 @@ public:
           _model.set(state, nst << shift, k, isign);
           int j = spin_symmetry.index(k >> shift);
 //          std::cout<<"st:"<<std::bitset<4>(nst).to_string()<<" -> "<<std::bitset<4>(k>>shift).to_string()<<" "<<i<<" "<<j<<std::endl;
-          spin_matrix.addElement(i, j, state.value(), isign * sign);
+          spin_matrix.addElement(i, j, state.value(), isign);
         }
       }
       spin_matrix.endLine(i);
