@@ -7,8 +7,8 @@
 #include "NSymmetry.h"
 
 TEST(NSymmetryTest, Initialization) {
-  EDParams p;
-  NSymmetry sym(p);
+  EDLib::EDParams p;
+  EDLib::Symmetry::NSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();
     int i = 0;

@@ -9,8 +9,8 @@
 
 TEST(HubbardModelTest, Filling) {
 //  const char *string = "--NSITES=16 --INPUT_FILE=../input/input.h5";
-  EDParams p;
+  EDLib::EDParams p;
   p["INPUT_FILE"] = "./input/input.h5";
-  HolsteinAndersonModel<double> model(p);
+  EDLib::Model::HolsteinAndersonModel<double> model(p);
   model.diagonal(0);
 }

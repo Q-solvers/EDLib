@@ -8,6 +8,8 @@ find_package(ARPACK)
 find_package(Eigen3)
 find_package(BLAS)
 find_package(LAPACK)
+find_package(MPI)
+set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
@@ -28,8 +30,10 @@ set(extlibs
     ${HDF5_LIBRARIES}
     ${ALPSCore_LIBRARIES}
     ${ARPACK_LIB}
+    ${PARPACK_LIB}
     ${BLAS_LIBRARIES}
     ${LAPACK_LIBRARIES}
+    ${MPI_Fortran_LIBRARIES}
     )
 
 include_directories(${Hubbard_SOURCE_DIR}/src)

@@ -13,16 +13,31 @@
 
 
 int main(int argc, const char ** argv) {
-  EDParams params(argc, argv);
+#ifdef ALPS_HAVE_MPI
+  MPI_Init(&argc, (char ***) &argv);
+#endif
+  EDLib::EDParams params(argc, argv);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
+  try {
 //  CSRHubbardHamiltonian_float ham(params);
-  Hamiltonian<float, SpinResolvedStorage<float, HubbardModel<float> > , HubbardModel<float> > ham(params);
+    EDLib::SRSHubbardHamiltonian ham(params);
 //  SOCSRHubbardHamiltonian_float ham(params);
-  ham.diag();
+    ham.diag();
 //  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
-  GreensFunction<float, Hamiltonian<float, SpinResolvedStorage<float, HubbardModel<float> > , HubbardModel<float> > > greensFunction(params, ham);
-  greensFunction.compute();
+    EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
+    greensFunction.compute();
+  } catch (std::exception & e) {
+#ifdef ALPS_HAVE_MPI
+    alps::mpi::communicator comm;
+    if(comm.rank() == 0) std::cerr<<e.what();
+#else
+    std::cerr<<e.what();
+#endif
+  }
+#ifdef ALPS_HAVE_MPI
+  MPI_Finalize();
+#endif
   return 0;
 }

@@ -10,7 +10,7 @@
       <sourceFolder url="file://$MODULE_DIR$/test/SpinResolvedStorage_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/NSymmetryWithBoson.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/EigenPair.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/CMakeLists.txt" isTestSource="false" />
@@ -21,8 +21,9 @@
       <sourceFolder url="file://$MODULE_DIR$/src/NSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/HolsteinAndersonModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/FermionicModel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/SingleImpurityAndersonModel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/Combination.h" isTestSource="false" />

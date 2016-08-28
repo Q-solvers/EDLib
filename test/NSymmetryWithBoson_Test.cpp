@@ -7,8 +7,8 @@
 #include "NSymmetryWithBoson.h"
 
 TEST(NSymmetryWithBosonTest, Initialization) {
-  EDParams p;
-  NSymmetryWithBoson sym(p);
+  EDLib::EDParams p;
+  EDLib::Symmetry::NSymmetryWithBoson sym(p);
   while(sym.next_sector()) {
     sym.init();
     int i = 0;

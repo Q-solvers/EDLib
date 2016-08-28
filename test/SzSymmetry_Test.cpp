@@ -8,8 +8,8 @@
 
 
 TEST(SzSymmetryTest, Combinatorics) {
-  EDParams p;
-  SzSymmetry sym(p);
+  EDLib::EDParams p;
+  EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 
   ASSERT_EQ(sym.comb().c_n_k(3, 2), 3);
@@ -17,14 +17,14 @@ TEST(SzSymmetryTest, Combinatorics) {
 
 
 TEST(SzSymmetryTest, States) {
-  EDParams p;
-  SzSymmetry sym(p);
+  EDLib::EDParams p;
+  EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 }
 
 TEST(SzSymmetryTest, Initialization) {
-  EDParams p;
-  SzSymmetry sym(p);
+  EDLib::EDParams p;
+  EDLib::Symmetry::SzSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();
     int i = 0;
