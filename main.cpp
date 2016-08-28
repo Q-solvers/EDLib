@@ -28,6 +28,7 @@ int main(int argc, const char ** argv) {
 //  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
     EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
     greensFunction.compute();
+    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef ALPS_HAVE_MPI
     alps::mpi::communicator comm;

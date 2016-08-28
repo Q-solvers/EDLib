@@ -103,6 +103,14 @@ namespace EDLib {
         return true;
       }
 
+      const Combination &comb() const {
+        return _comb;
+      }
+
+      std::queue<NSymmetry::Sector> &sectors() {
+        return _sectors;
+      }
+
     private:
 
       int _N;

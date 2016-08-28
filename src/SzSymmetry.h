@@ -9,6 +9,7 @@
 
 #include "Symmetry.h"
 #include "Combination.h"
+#include "NSymmetry.h"
 
 namespace EDLib {
   namespace Symmetry {
@@ -182,6 +183,61 @@ namespace EDLib {
       std::vector < std::vector < int > > ninv;
       Combination _comb;
       bool _first;
+    protected:
+    public:
+      std::queue<SzSymmetry::Sector> &sectors() {
+        return _sectors;
+      }
+    };
+    class ImpuritySzSymmetry : public SzSymmetry {
+    public:
+      ImpuritySzSymmetry(EDParams &p, int Ns, int ml) : SzSymmetry(p), _up_symmetry(Ns-ml), _down_symmetry(Ns-ml), _imp_symmetry(ml), _ml(ml), _Nk(Ns-ml) {
+
+      };
+      virtual bool next_state() {
+        long long res = 0;
+        if(_imp_max_down==_imp_down && _imp_max_up==_imp_up && !_imp_symmetry.next_state())
+          return false;
+        if(!_imp_symmetry.next_state()) {
+
+        }
+        state() = res;
+        return true;
+      }
+
+      virtual void reset() {
+        state() = 0ll;
+        _up_symmetry.reset();
+        _down_symmetry.reset();
+        _imp_symmetry.reset();
+//        _first = true;
+//        _ind = 0;
+      }
+
+      virtual void init() {
+        reset();
+        int ndown = sector().ndown();
+        int nup = sector().nup();
+        _imp_max_down = std::min(_ml, ndown);
+        _imp_max_up = std::min(_ml, nup);
+        _up_symmetry.set_sector(NSymmetry::Sector(std::min(nup, _Nk), _up_symmetry.comb().c_n_k(_Nk, std::min(nup, _Nk))));
+        _down_symmetry.set_sector(NSymmetry::Sector(std::min(ndown, _Nk), _down_symmetry.comb().c_n_k(_Nk, std::min(ndown, _Nk))));
+        _imp_symmetry.set_sector(SzSymmetry::Sector(std::max(0, nup - _Nk), std::max(0, ndown-_Nk),
+                                                    _imp_symmetry.comb().c_n_k(_Nk, std::min(ndown, _Nk))));
+      };
+      
+      
+
+    private:
+      NSymmetry _up_symmetry;
+      NSymmetry _down_symmetry;
+      SzSymmetry _imp_symmetry;
+      int _ml;
+      int _Nk;
+      int _imp_up;
+      int _imp_down;
+      int _imp_max_up;
+      int _imp_max_down;
     };
   }
 }

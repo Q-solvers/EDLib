@@ -161,18 +161,18 @@ namespace EDLib {
     }
     template<typename precision>
     class SingleImpurityAndersonModel : public FermionicModel {
-      typedef typename Symmetry::SzSymmetry SYMMETRY;
+    public:
+      typedef typename Symmetry::ImpuritySzSymmetry SYMMETRY;
       typedef typename SingleImpurityAnderson::InnerState St;
       typedef typename SingleImpurityAnderson::InnerHybridizationState<precision> HSt;
       typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
-    public:
-      SingleImpurityAndersonModel(EDParams &p) : _symmetry(p) {
+      typedef typename Symmetry::ImpuritySzSymmetry::Sector Sector;
 
+      SingleImpurityAndersonModel(EDParams &p): _symmetry(p, p["NSITES"], p["siam.NORBITALS"]), _Ns(p["NSITES"]), _ml(p["siam.NORBITALS"]) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
-        input_data >> alps::make_pvp("NORBITALS", _ml);
-        input_data >> alps::make_pvp("NSITES", _Ns);
         input_data >> alps::make_pvp("NSPINS", _ms);
+        _symmetry = SYMMETRY(p, _Ns, _ml);
         if ((_Ns - _ml) % _ml != 0 || _ml > _Ns) {
           throw std::logic_error("Incorrect values for the total number of sites and the number of orbitals. Please check input file.");
         }
@@ -182,7 +182,7 @@ namespace EDLib {
         _Ip = _ms * _Ns;
         _Nk = (_Ns - _ml) / _ml;
         _Eps.assign(_ml, std::vector < precision >(_ms, precision(0.0)));
-        _Epsk.assign(_ml, std::vector < std::vector < precision > >(_ms, precision(0.0))),
+        _Epsk.assign(_ml, std::vector < std::vector < precision > >(_Nk, std::vector < precision >(_ms, precision(0.0)))),
           _Vk.assign(_ml, std::vector < std::vector < precision > >(_Nk, std::vector < precision >(_ms, precision(0.0)))),
           _U.assign(_ml, std::vector < std::vector < std::vector < precision > > >
             (_ml, std::vector < std::vector < precision > >
@@ -253,7 +253,7 @@ namespace EDLib {
         state.set(nst, k, sign, _Ns);
       }
 
-      Symmetry::SzSymmetry &symmetry() {
+      SYMMETRY &symmetry() {
         return _symmetry;
       }
 
@@ -270,7 +270,7 @@ namespace EDLib {
       }
 
     private:
-      Symmetry::SzSymmetry _symmetry;
+      SYMMETRY _symmetry;
       int _Ns;
       int _ms;
       int _ml;

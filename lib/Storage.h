@@ -148,14 +148,14 @@ namespace EDLib {
 
       std::vector < prec > evals;
       std::vector < std::vector < prec > > evecs;
+      alps::mpi::communicator _comm;
     };
 
     template<>
     void Storage < double >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv, int *iparam, int *ipntr,
                                    double *workd, double *workl, int *lworkl, int *info) {
 #ifdef ALPS_HAVE_MPI
-      alps::mpi::communicator comm;
-      int scomm = PMPI_Comm_c2f(comm);
+      int scomm = PMPI_Comm_c2f(_comm);
       pdsaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
 #else
       dsaupd_(ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
@@ -169,15 +169,25 @@ namespace EDLib {
                                    double *tol, double *resid, int *ncv, double *v,
                                    int *ldv, int *iparam, int *ipntr, double *workd,
                                    double *workl, int *lworkl, int *ierr) {
+#ifdef ALPS_HAVE_MPI
+      int scomm = PMPI_Comm_c2f(_comm);
+      pdseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
+               ldv, iparam, ipntr, workd, workl, lworkl, ierr);
+#else
       dseupd_(rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
               ldv, iparam, ipntr, workd, workl, lworkl, ierr);
+#endif
     }
 
     template<>
     void Storage < float >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, float *tol, float *resid, int *ncv, float *v, int *ldv, int *iparam, int *ipntr,
                                   float *workd, float *workl, int *lworkl, int *info) {
-
+#ifdef ALPS_HAVE_MPI
+      int scomm = PMPI_Comm_c2f(_comm);
+      pssaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
+#else
       ssaupd_(ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
+#endif
     }
 
     template<>
@@ -187,8 +197,14 @@ namespace EDLib {
                                   float *tol, float *resid, int *ncv, float *v,
                                   int *ldv, int *iparam, int *ipntr, float *workd,
                                   float *workl, int *lworkl, int *ierr) {
+#ifdef ALPS_HAVE_MPI
+      int scomm = PMPI_Comm_c2f(_comm);
+      psseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
+               ldv, iparam, ipntr, workd, workl, lworkl, ierr);
+#else
       sseupd_(rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
               ldv, iparam, ipntr, workd, workl, lworkl, ierr);
+#endif
     }
   }
 }
