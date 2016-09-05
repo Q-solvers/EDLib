@@ -8,6 +8,8 @@
 #include <alps/gf/mesh.hpp>
 #include <alps/gf/gf.hpp>
 
+#include <cmath>
+
 namespace EDLib {
   namespace gf {
     template<typename precision, class Hamiltonian>
@@ -64,12 +66,14 @@ namespace EDLib {
        */
       void computefrac(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, alps::gf::omega_gf &gf) {
         double expb = 0;
+        double shift;
         if (_omega.beta() * (excited_state - groundstate) > 25)
           expb = 0;
         else
           expb = exp(-_omega.beta() * (excited_state - groundstate));
         const std::vector < double > &freqs = _omega.points();
         for (int iomega = 0; iomega < _omega.extent(); ++iomega) {
+          shift = 1.0;
           std::complex < double > ener = std::complex < double >(0.0, freqs[iomega]) + (excited_state) * isign;
           det.assign(nlanc, 0.0);
           for (int i = 0; i < nlanc; ++i) {
@@ -82,7 +86,12 @@ namespace EDLib {
             det[nlanc - 1] = dl[nlanc - 1];
             det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
             for (int i = nlanc - 3; i >= 0; --i) {
-              det[i] = dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2];
+              det[i] = (dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2]);
+              if(std::abs(det[i]) > (std::numeric_limits<float>::max()/2.0) && i!=0) {
+                shift = 1.0/(std::numeric_limits<float>::max()/1000.0);
+                det[i] *=shift;
+                det[i+1] *=shift;
+              }
             }
             gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb * det[1] / det[0];
           }
