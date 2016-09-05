@@ -15,7 +15,7 @@ namespace EDLib {
     template<typename prec>
     class Storage {
     public:
-      Storage(EDParams &p) : _nev(p["arpack.NEV"]) {
+      Storage(EDParams &p) : _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
         v.reserve(size_t(p["storage.MAX_DIM"]));
         resid.reserve(size_t(p["storage.MAX_DIM"]));
         workd.reserve(3 * size_t(p["storage.MAX_DIM"]));
@@ -79,7 +79,7 @@ namespace EDLib {
           std::cout << "' '" << std::endl;
           return info;
         }
-        int rvec = 1;
+        int rvec = 1-_eval_only;
         char howmny[2] = "A";
         evals.resize(nev);
         seupd(&rvec, howmny, &select[0], &evals[0], &v[0], &ldv, &sigma, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0],
@@ -93,12 +93,17 @@ namespace EDLib {
           return info;
         }
         // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
-        int nconv = iparam[4];
-        evecs.assign(nconv, std::vector < prec >(n, prec(0.0)));
-        for (int i = 0; i < nconv; ++i) {
-          int offset = i * n;
-          std::memcpy(&evecs[i][0], &v[offset], n * sizeof(prec));
-        }
+        if(_eval_only == 0) {
+          int nconv = iparam[4];
+          evecs.assign(nconv, std::vector < prec >(n, prec(0.0)));
+          for (int i = 0; i < nconv; ++i) {
+            int offset = i * n;
+            std::memcpy(&evecs[i][0], &v[offset], n * sizeof(prec));
+          }
+        } else {
+          int nconv = iparam[4];
+          evecs.assign(nconv, std::vector < prec >(1, prec(0.0)));
+        };
         return 0;
       }
 
@@ -141,6 +146,7 @@ namespace EDLib {
       int _n;
       int _nev;
       int _ncv;
+      int _eval_only;
       std::vector < prec > v;
       std::vector < prec > resid;
       std::vector < prec > workd;

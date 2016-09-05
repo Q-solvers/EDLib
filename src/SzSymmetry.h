@@ -192,7 +192,6 @@ namespace EDLib {
     class ImpuritySzSymmetry : public SzSymmetry {
     public:
       ImpuritySzSymmetry(EDParams &p, int Ns, int ml) : SzSymmetry(p), _up_symmetry(Ns-ml), _down_symmetry(Ns-ml), _imp_symmetry(ml), _ml(ml), _Nk(Ns-ml) {
-
       };
       virtual bool next_state() {
         long long res = 0;
@@ -218,6 +217,7 @@ namespace EDLib {
         reset();
         int ndown = sector().ndown();
         int nup = sector().nup();
+        _up_symmetry.sectors();
         _imp_max_down = std::min(_ml, ndown);
         _imp_max_up = std::min(_ml, nup);
         _up_symmetry.set_sector(NSymmetry::Sector(std::min(nup, _Nk), _up_symmetry.comb().c_n_k(_Nk, std::min(nup, _Nk))));

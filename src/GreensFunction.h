@@ -22,6 +22,9 @@ namespace EDLib {
                                                     gf(p["NSPINS"],
                                                        std::vector < alps::gf::omega_gf >(p["NSITES"], alps::gf::omega_gf(Lanczos < precision, Hamiltonian >::omega()))),
                                                     _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
+        if(p["storage.EIGENVALUES_ONLY"] == 1) {
+          throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
+        }
       }
 
       void compute() {
