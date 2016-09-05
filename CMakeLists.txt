@@ -29,8 +29,8 @@ set(extlibs
     ${Boost_LIBRARIES}
     ${HDF5_LIBRARIES}
     ${ALPSCore_LIBRARIES}
-    ${ARPACK_LIB}
     ${PARPACK_LIB}
+    ${ARPACK_LIB}
     ${BLAS_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${MPI_Fortran_LIBRARIES}
