@@ -17,7 +17,12 @@ namespace EDLib {
     class CRSStorage : public Storage < prec > {
       using Storage < prec >::n;
     public:
-      CRSStorage(EDParams &p, Model &s) : Storage < prec >(p), _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]), _model(s) {
+#ifdef ALPS_HAVE_MPI
+      CRSStorage(EDParams &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
+#else
+      CRSStorage(EDParams &p, Model &s) : Storage < prec >(p),
+#endif
+                                          _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]), _model(s) {
         // init what you need from parameters
       };
 

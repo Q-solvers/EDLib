@@ -25,15 +25,18 @@ namespace EDLib {
     typedef Model ModelType;
 
     /*
-     * Allocate space for Hamiltonian matrix
-     * \param [in] max_size - the maximum size of values array
-     * \param [in] max_dim - the maximum dimension of Hamiltonian matrix
+     * Initialize Hamiltonian for specific model and allocate storage
      * \param [in] p - alps::parameters
      */
+#ifdef ALPS_HAVE_MPI
+    Hamiltonian(EDParams &p, alps::mpi::communicator& comm) :
+      _model(p),
+      _storage(p, _model, comm) {};
+#else
     Hamiltonian(EDParams &p) :
       _model(p),
       _storage(p, _model) {};
-
+#endif
     /**
      * fill current sector
      */

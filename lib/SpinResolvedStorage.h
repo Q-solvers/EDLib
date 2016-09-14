@@ -21,6 +21,9 @@ namespace EDLib {
     BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value);
     public:
       using Storage < prec >::n;
+      using Storage < prec >::comm;
+      using Storage < prec >::prepare_work_arrays;
+      using Storage < prec >::finalize;
 
       template<typename p>
       class CRSMatrix {
@@ -79,28 +82,21 @@ namespace EDLib {
 
       typedef CRSMatrix < prec > Matrix;
 
+#ifdef ALPS_HAVE_MPI
+      SpinResolvedStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
+                                                   _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
+                                                   _loc_symmetry(m.interacting_orbitals()) {
+        _nprocs = _comm.size();
+        _myid = _comm.rank();
+      }
+#else
       SpinResolvedStorage(EDParams &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
                                                    _loc_symmetry(m.interacting_orbitals()) {
-        long long max_up = 1ll<<_interaction_size;
-        // iteration over down spin
-//        while(_loc_symmetry.next_sector()) {
-//          _loc_symmetry.init();
-//          while(_loc_symmetry.next_state()) {
-//            long long nst_dn = _loc_symmetry.state();
-//            for(long long up = 0; up< max_up; ++up) {
-//              long long nst =
-//              for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
-//                if (_model.valid(_model.T_states()[kkk], nst)) {
-//                  _model.set(_model.T_states()[kkk], nst, k, isign);
-//                  int j = spin_symmetry.index(k >> shift);
-//                  spin_matrix.addElement(i, j, _model.T_states()[kkk].value(), isign);
-//                }
-//              }
-//            }
-//          }
-//        }
+        _nprocs = _comm.size();
+        _myid = _comm.rank();
       }
+#endif
 
       virtual void zero_eigenapair() {
         Storage < prec >::eigenvalues().resize(1);
@@ -109,20 +105,20 @@ namespace EDLib {
       }
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
+#ifdef ALPS_HAVE_MPI
+        MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
+        for(int i = 0; i<_procs.size(); ++i) {
+          MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], MPI_DOUBLE_PRECISION, i, 0, _proc_size[i], MPI_DOUBLE_PRECISION, _win);
+        }
+#endif
         // Iteration over rows.
         for (int i = 0; i < n; ++i) {
           // Diagonal contribution.
           w[i] = _diagonal[i] * v[i] + (clear ? 0.0 : w[i]);
         }
-
-        // Interaction part
-        for(int i =0; i<n; i+=_up_symmetry.sector().size()) {
-
-        }
-
         // Offdiagonal contribution.
         // iterate over up spin blocks
-        for (int k = 0; k < _up_symmetry.sector().size(); ++k) {
+        for (int k = 0; k < _up_size; ++k) {
           // Iteration over rows.
           for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
             // Iteration over columns(unordered).
@@ -133,11 +129,16 @@ namespace EDLib {
         }
         //
         // Iteration over rows.
-        for (int i = 0; i < _up_symmetry.sector().size(); ++i) {
+#ifdef ALPS_HAVE_MPI
+        MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOPUT | MPI_MODE_NOSTORE, _win);
+#endif
+        for (int i = 0; i < _up_size; ++i) {
           // Iteration over columns(unordered).
-          for (int j = H_up.row_ptr()[i]; j < H_up.row_ptr()[i + 1]; ++j) {
+          for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             for (int k = 0; k < _down_symmetry.sector().size(); ++k) {
-              w[i * _down_symmetry.sector().size() + k] += H_up.values()[j] * v[H_up.col_ind()[j] * _down_symmetry.sector().size() + k];
+              w[i * _down_symmetry.sector().size() + k] += H_up.values()[j] * _vecval[H_up.col_ind()[j] * _down_symmetry.sector().size() + k];
+//              if(_run_comm.rank() == 0) std::cout<<(H_up.col_ind()[j] * _down_symmetry.sector().size() + k)<<std::endl;
+//              if(_run_comm.rank() == 0) std::cout<<(i * _down_symmetry.sector().size() + k)<<std::endl;
             }
           }
         }
@@ -151,33 +152,116 @@ namespace EDLib {
         H_up.init(_up_symmetry.sector().size());
         H_down.init(_down_symmetry.sector().size());
 #ifdef ALPS_HAVE_MPI
-        alps::mpi::communicator comm;
-        _nprocs = comm.size();
-        _myid = comm.rank();
-        _locsize = sector.size()/_nprocs;
-        _diagonal.assign(_locsize, prec(0.0));
+        MPI_Comm run_comm;
+        int up_size = _up_symmetry.sector().size();
+        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
+        MPI_Comm_split(_comm, color, _myid, &run_comm);
+        if(color == 1) {
+          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
+          int size = _run_comm.size();
+          int locsize = up_size / size;
+          int myid = _run_comm.rank();
+          if ((up_size % size) > myid) {
+            locsize += 1;
+            _offset =  myid * locsize* _down_symmetry.sector().size();
+          } else {
+            _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
+          }
+          _up_size = locsize;
+          _up_shift = _offset / _down_symmetry.sector().size();
+          _locsize = locsize * _down_symmetry.sector().size();
+          _model.symmetry().set_offset(_offset);
+          _procs.assign(size, 0);
+          _proc_offset.assign(size, 0);
+          _proc_size.assign(size, 0);
+        } else {
+          _up_size = 0;
+          _locsize=0;
+        }
+        int a = _myid;
+//        std::cout<<"Before barrier "<<a<<std::endl;
+//        alps::mpi::broadcast(_run_comm, &a, 1, 0);
+//        std::cout<<"After barrier "<<a<<std::endl;
 #else
-        _diagonal.assign(sector.size(), prec(0.0));
+        _locsize = sector.size();
+        _up_size = _up_symmetry.sector().size();
+        _up_shift = 0;
 #endif
+        _diagonal.assign(_locsize, prec(0.0));
+        _vecval.assign(sector.size(), prec(0.0));
+        n() = _locsize;
       }
 
       void fill() {
         _model.symmetry().init();
         reset();
-        // fill interaction
-
+        if(n()==0) {
+          // Do nothing if the matrix size is zero;
+          return;
+        }
         // fill off-diagonal matrix for each spin
         fill_spin(_up_symmetry, _Ns, H_up);
         fill_spin(_down_symmetry, 0, H_down);
         // fill diagonal;
-        int i = 0;
-        while (_model.symmetry().next_state()) {
+        for(int i =0; i<_locsize; ++i) {
+          _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
-          ++i;
         }
-        n() = _model.symmetry().sector().size();
+#ifdef ALPS_HAVE_MPI
+        find_neighbours();
+#endif
       }
+
+#ifdef ALPS_HAVE_MPI
+      void find_neighbours() {
+        int ci, cid;
+        for(int i = 0; i< _up_size; ++ i) {
+          for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
+            calcIndex(ci, cid, H_up.col_ind()[j]);
+            if(_procs[cid]==0)  {_procs[cid]=1;}
+          }
+        }
+        int oset = 0;
+        int nprocs = _run_comm.size();
+        for(int i=0; i < nprocs; i++) {
+          if(_procs[i]!=0) {
+            _procs[i]=1;
+            _proc_offset[i]=oset * _down_symmetry.sector().size();
+            int ls=_up_symmetry.sector().size()/nprocs;
+            if((_up_symmetry.sector().size()% nprocs) > i) {
+              ls++;
+//              loc_offset[i] = i * ls;
+            }else{
+//              loc_offset[i] = i * ls + (Nstates[nup][ndo] % nprocs);
+            }
+            _proc_size[i]=ls * _down_symmetry.sector().size();
+            oset+=ls;
+          }
+        }
+//        std::cout<<_run_comm.rank()<<"  neighbours: ";
+//        for(int i=0; i < nprocs; i++) {
+//          std::cout<<" "<<i<<" "<<bool(_procs[i])<<" "<<_proc_size[i]<<" "<<_proc_offset[i]<<" ";
+//        }
+      }
+
+      void calcIndex(int &ci, int &cid, int i) {
+        //       local variables
+        int tmp1, tmp2, tmp3, tmp4;
+        int nprocs = _run_comm.size();
+        tmp1 = _up_symmetry.sector().size() / nprocs + 1;
+        tmp2 = _up_symmetry.sector().size() % nprocs;
+        tmp3 = _up_symmetry.sector().size() / nprocs;
+        tmp4 = (i - 1) - (tmp1 * tmp2);
+        if (i > (tmp1 * tmp2)) {
+          ci = (tmp4%tmp3);
+          cid = (i - 1 - tmp2) / tmp3;
+        } else {
+          ci = ((i - 1)% (tmp3 + 1));
+          cid = (i - 1) / (tmp3 + 1);
+        }
+      }
+#endif
 
       void fill_spin(Symmetry::NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix) {
         long long k = 0;
@@ -208,9 +292,7 @@ namespace EDLib {
               if ((H_up.col_ind()[k]) == j) {
                 std::cout << std::setw(6) << H_up.values()[k] << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
                 f = false;
-              } /*else {
-            std::cout<<"0.0 ";
-          }*/
+              }
             }
             if (f) {
               std::cout << std::setw(6) << 0.0 << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
@@ -242,11 +324,28 @@ namespace EDLib {
       }
 
       void endMatrix() {
-#ifdef ALPS_HAVE_MPI
-
-#endif
       }
 
+    protected:
+#ifdef ALPS_HAVE_MPI
+      virtual alps::mpi::communicator & comm() {
+        return _run_comm;
+      }
+
+      virtual void prepare_work_arrays(prec * data) {
+        MPI_Info info;
+        MPI_Info_create( &info );
+        MPI_Info_set( info, "no_locks", "true");
+        MPI_Win_create(&data[2*n()], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
+        MPI_Info_free(&info);
+      }
+
+      virtual void finalize(){
+        MPI_Win_free(&_win);
+        MPI_Comm run_comm = _run_comm;
+        MPI_Comm_free(&run_comm);
+      }
+#endif
 
     private:
       std::vector < Matrix > H_loc;
@@ -255,6 +354,7 @@ namespace EDLib {
       Matrix H_down;
 
       std::vector < prec > _diagonal;
+      std::vector < prec > _vecval;
 
       Symmetry::NSymmetry _up_symmetry;
       Symmetry::NSymmetry _down_symmetry;
@@ -265,10 +365,21 @@ namespace EDLib {
       int _Ns;
       int _ms;
 
+
+      size_t _up_size;
+      size_t _up_shift;
+
 #ifdef ALPS_HAVE_MPI
+      alps::mpi::communicator _comm;
+      alps::mpi::communicator _run_comm;
       size_t _locsize;
+      size_t _offset;
       int _nprocs;
+      std::vector<int> _proc_offset;
+      std::vector<int> _procs;
+      std::vector<int> _proc_size;
       int _myid;
+      MPI_Win _win;
 #endif
     };
 

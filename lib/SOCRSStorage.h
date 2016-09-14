@@ -16,8 +16,12 @@ namespace EDLib {
     class SOCRSStorage : public Storage < prec > {
     public:
       using Storage < prec >::n;
-
-      SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p), _vind(0), _max_size(p["storage.MAX_SIZE"]),
+#ifdef ALPS_HAVE_MPI
+      SOCRSStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm),
+#else
+      SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p),
+#endif
+                                            _vind(0), _max_size(p["storage.MAX_SIZE"]),
                                             _max_dim(p["storage.MAX_DIM"]), _model(m) {
         /** init what you need from parameters*/
         col_ind.assign(_max_size, 0);

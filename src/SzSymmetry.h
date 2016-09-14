@@ -143,7 +143,9 @@ namespace EDLib {
       inline const Combination &comb() const {
         return _comb;
       }
-
+#ifdef ALPS_HAVE_MPI
+      void set_offset(size_t offset) {_ind += offset;}
+#endif
     private:
       void initial_fill() {
         _Ip = 2 * _Ns;

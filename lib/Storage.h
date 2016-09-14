@@ -15,7 +15,11 @@ namespace EDLib {
     template<typename prec>
     class Storage {
     public:
+#ifdef ALPS_HAVE_MPI
+      Storage(EDParams &p, alps::mpi::communicator& comm) : _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]), _comm(comm) {
+#else
       Storage(EDParams &p) : _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
+#endif
         v.reserve(size_t(p["storage.MAX_DIM"]));
         resid.reserve(size_t(p["storage.MAX_DIM"]));
         workd.reserve(3 * size_t(p["storage.MAX_DIM"]));
@@ -39,11 +43,20 @@ namespace EDLib {
       int diag() {
         int ido = 0;
         int n = _n;
-        if (n == 1) {
-          zero_eigenapair();
+        if(n==0) {
+#ifdef ALPS_HAVE_MPI
+//          std::cout<<"Wait"<<comm().rank()<<std::endl;
+          MPI_Barrier(_comm);
+#endif
           return 0;
         }
-        int ncv = std::min(_ncv, _n);
+        if (n*comm().size() == 1) {
+          zero_eigenapair();
+          MPI_Barrier(MPI_COMM_WORLD);
+          return 0;
+        }
+        std::cout<<"diag matrix:"<<n<<std::endl;
+        int ncv = std::min(_ncv, _n*comm().size());
         int nev = std::min(_nev, ncv - 1);
         char which[3] = "SA";
         prec sigma = 0.0;
@@ -62,10 +75,11 @@ namespace EDLib {
         iparam[0] = ishfts;
         iparam[2] = maxitr;
         iparam[6] = mode;
-        v.resize(size_t(n) * ncv);
-        resid.resize(size_t(n));
-        workd.resize(3 * size_t(n));
-        workl.resize(lworkl);
+        v.assign(size_t(n) * ncv, prec(0.0));
+        resid.assign(size_t(n), prec(0.0));
+        workd.assign(3 * size_t(n), prec(0.0));
+        workl.assign(lworkl, prec(0.0));
+        prepare_work_arrays(&workd[0]);
         do {
           saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
           if (ido == -1 || ido == 1) {
@@ -77,6 +91,7 @@ namespace EDLib {
           std::cout << "' Error with _saupd, info = '  " << info << std::endl;
           std::cout << "' Check documentation in _saupd '  " << iparam[4] << std::endl;
           std::cout << "' '" << std::endl;
+          finalize();
           return info;
         }
         int rvec = 1-_eval_only;
@@ -90,6 +105,7 @@ namespace EDLib {
           std::cout << "' Error with _seupd, info = '  " << info << std::endl;
           std::cout << "' Check the documentation of _seupd. '" << std::endl;
           std::cout << "' '" << std::endl;
+          finalize();
           return info;
         }
         // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
@@ -104,6 +120,10 @@ namespace EDLib {
           int nconv = iparam[4];
           evecs.assign(nconv, std::vector < prec >(1, prec(0.0)));
         };
+        finalize();
+#ifdef ALPS_HAVE_MPI
+        MPI_Barrier(_comm);
+#endif
         return 0;
       }
 
@@ -128,6 +148,8 @@ namespace EDLib {
        * Should be implemented based on storage type
        */
       virtual void av(prec *v, prec *w, int n, bool clear = true) = 0;
+      virtual void prepare_work_arrays(prec *w){};
+      virtual void finalize(){};
 
       void saupd(int *ido, char *bmat, int *n, char *which, int *nev, prec *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
                  prec *workd, prec *workl, int *lworkl, int *info) {};
@@ -142,6 +164,11 @@ namespace EDLib {
     protected:
       int &n() { return _n; }
 
+#ifdef ALPS_HAVE_MPI
+      virtual alps::mpi::communicator & comm() {
+        return _comm;
+      }
+#endif
     private:
       int _n;
       int _nev;
@@ -154,14 +181,16 @@ namespace EDLib {
 
       std::vector < prec > evals;
       std::vector < std::vector < prec > > evecs;
-      alps::mpi::communicator _comm;
+#ifdef ALPS_HAVE_MPI
+      alps::mpi::communicator &_comm;
+#endif
     };
 
     template<>
     void Storage < double >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv, int *iparam, int *ipntr,
                                    double *workd, double *workl, int *lworkl, int *info) {
 #ifdef ALPS_HAVE_MPI
-      int scomm = PMPI_Comm_c2f(_comm);
+      int scomm = PMPI_Comm_c2f(comm());
       pdsaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
 #else
       dsaupd_(ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
@@ -176,7 +205,7 @@ namespace EDLib {
                                    int *ldv, int *iparam, int *ipntr, double *workd,
                                    double *workl, int *lworkl, int *ierr) {
 #ifdef ALPS_HAVE_MPI
-      int scomm = PMPI_Comm_c2f(_comm);
+      int scomm = PMPI_Comm_c2f(comm());
       pdseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
                ldv, iparam, ipntr, workd, workl, lworkl, ierr);
 #else
@@ -189,7 +218,7 @@ namespace EDLib {
     void Storage < float >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, float *tol, float *resid, int *ncv, float *v, int *ldv, int *iparam, int *ipntr,
                                   float *workd, float *workl, int *lworkl, int *info) {
 #ifdef ALPS_HAVE_MPI
-      int scomm = PMPI_Comm_c2f(_comm);
+      int scomm = PMPI_Comm_c2f(comm());
       pssaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
 #else
       ssaupd_(ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
@@ -204,7 +233,7 @@ namespace EDLib {
                                   int *ldv, int *iparam, int *ipntr, float *workd,
                                   float *workl, int *lworkl, int *ierr) {
 #ifdef ALPS_HAVE_MPI
-      int scomm = PMPI_Comm_c2f(_comm);
+      int scomm = PMPI_Comm_c2f(comm());
       psseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
                ldv, iparam, ipntr, workd, workl, lworkl, ierr);
 #else
