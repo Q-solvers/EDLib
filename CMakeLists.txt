@@ -29,7 +29,6 @@ set(extlibs
     ${Boost_LIBRARIES}
     ${HDF5_LIBRARIES}
     ${ALPSCore_LIBRARIES}
-    ${PARPACK_LIB}
     ${ARPACK_LIB}
     ${BLAS_LIBRARIES}
     ${LAPACK_LIBRARIES}
@@ -40,6 +39,7 @@ include_directories(${Hubbard_SOURCE_DIR}/src)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
 include_directories(${Hubbard_SOURCE_DIR}/test)
 
+add_subdirectory(parpack)
 add_subdirectory(src)
 add_subdirectory(lib)
 add_subdirectory(test)
@@ -52,4 +52,4 @@ set(SOURCE_FILES main.cpp)
 
 add_executable(Hubbard ${SOURCE_FILES})
 
-target_link_libraries(Hubbard common-lib hubbard-lib ${extlibs})
+target_link_libraries(Hubbard parpack common-lib hubbard-lib ${extlibs})
