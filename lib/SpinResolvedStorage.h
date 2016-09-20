@@ -108,7 +108,7 @@ namespace EDLib {
 #ifdef ALPS_HAVE_MPI
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
-          MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], MPI_DOUBLE_PRECISION, i, 0, _proc_size[i], MPI_DOUBLE_PRECISION, _win);
+          MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, 0, _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
         }
 #endif
         // Iteration over rows.

@@ -16,6 +16,7 @@ namespace EDLib {
     EigenPair(const precision &eval, const std::vector < precision > &evec, SectorType sec) : _eigenvalue(eval), _sector(sec),
                                                                                               _eigenvector(new precision[evec.size()], std::default_delete < precision[] >()) {
       ;
+      std::cout<<"evec:"<<evec.size()<<std::endl;
       std::memcpy(_eigenvector.get(), &evec[0], evec.size() * sizeof(precision));
     };
 
