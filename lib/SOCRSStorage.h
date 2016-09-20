@@ -88,7 +88,7 @@ namespace EDLib {
           addDiagonal(i, _model.diagonal(nst));
           // non-diagonal terms calculation
           off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
-          off_diagonal<decltype(_model.T_states())>(nst, i, _model.V_states());
+          off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
           i++;
         }
       }

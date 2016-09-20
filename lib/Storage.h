@@ -38,8 +38,8 @@ namespace EDLib {
       virtual void zero_eigenapair() = 0;
 
       /**
-         * Diagonalize current Hamiltonian
-         */
+       * Diagonalize current Hamiltonian
+       */
       int diag() {
         int ido = 0;
         int n = _n;

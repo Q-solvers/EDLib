@@ -20,7 +20,7 @@ include(EnableGtests)
 UseGtest()
 include_directories(${GTEST_INCLUDE_DIR})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -DNDEBUG -g")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -DNDEBUG -g -O3")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m64")
 
 
@@ -30,6 +30,7 @@ set(extlibs
     ${HDF5_LIBRARIES}
     ${ALPSCore_LIBRARIES}
     ${ARPACK_LIB}
+    ${PARPACK_LIB}
     ${BLAS_LIBRARIES}
     ${LAPACK_LIBRARIES}
     ${MPI_Fortran_LIBRARIES}
@@ -39,7 +40,6 @@ include_directories(${Hubbard_SOURCE_DIR}/src)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
 include_directories(${Hubbard_SOURCE_DIR}/test)
 
-add_subdirectory(parpack)
 add_subdirectory(src)
 add_subdirectory(lib)
 add_subdirectory(test)
@@ -52,4 +52,4 @@ set(SOURCE_FILES main.cpp)
 
 add_executable(Hubbard ${SOURCE_FILES})
 
-target_link_libraries(Hubbard parpack common-lib hubbard-lib ${extlibs})
+target_link_libraries(Hubbard common-lib hubbard-lib ${extlibs})
