@@ -136,9 +136,11 @@ namespace EDLib {
           // Iteration over columns(unordered).
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             for (int k = 0; k < _down_symmetry.sector().size(); ++k) {
+#ifdef USE_MPI
               w[i * _down_symmetry.sector().size() + k] += H_up.values()[j] * _vecval[H_up.col_ind()[j] * _down_symmetry.sector().size() + k];
-//              if(_run_comm.rank() == 0) std::cout<<(H_up.col_ind()[j] * _down_symmetry.sector().size() + k)<<std::endl;
-//              if(_run_comm.rank() == 0) std::cout<<(i * _down_symmetry.sector().size() + k)<<std::endl;
+#else
+              w[i * _down_symmetry.sector().size() + k] += H_up.values()[j] * v[H_up.col_ind()[j] * _down_symmetry.sector().size() + k];
+#endif
             }
           }
         }
