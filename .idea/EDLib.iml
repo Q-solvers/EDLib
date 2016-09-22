@@ -3,41 +3,19 @@
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
       <sourceFolder url="file://$MODULE_DIR$/test/NSymmetryWithBoson_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/SzSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/HolsteinAndersonModel_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/NSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/HubbardModel_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/SpinResolvedStorage_Test.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/SzSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Lanczos.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/NSymmetryWithBoson.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/EigenPair.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/GreensFunction.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/HubbardModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/NSymmetry.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/HolsteinAndersonModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/FermionicModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/SzSymmetry.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Symmetry.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/SingleImpurityAndersonModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Hamiltonian.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/src/Combination.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/fortranbinding.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/EDParams.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/Storage.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/Storage.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/SOCRSStorage.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/SpinResolvedStorage.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/Anderson.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/Hubbard.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/EnableGtests.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindARPACK.cmake" isTestSource="false" />
     </content>

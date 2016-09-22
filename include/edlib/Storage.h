@@ -7,7 +7,7 @@
 
 #include "fortranbinding.h"
 #include <iostream>
-#include <EDParams.h>
+#include "EDParams.h"
 
 namespace EDLib {
   namespace Storage {
@@ -15,7 +15,7 @@ namespace EDLib {
     template<typename prec>
     class Storage {
     public:
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       Storage(EDParams &p, alps::mpi::communicator& comm) : _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]), _comm(comm) {
 #else
       Storage(EDParams &p) : _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
@@ -44,20 +44,20 @@ namespace EDLib {
         int ido = 0;
         int n = _n;
         if(n==0) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
           broadcast_evals(true);
 #endif
           return 0;
         }
-        if (n*comm().size() == 1) {
+        if (_ntot == 1) {
           zero_eigenapair();
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
           broadcast_evals();
 #endif
           return 0;
         }
         std::cout<<"diag matrix:"<<n<<std::endl;
-        int ncv = std::min(_ncv, _n*comm().size());
+        int ncv = std::min(_ncv, _ntot);
         int nev = std::min(_nev, ncv - 1);
         char which[3] = "SA";
         prec sigma = 0.0;
@@ -122,7 +122,7 @@ namespace EDLib {
           evecs.assign(nconv, std::vector < prec >(1, prec(0.0)));
         };
         finalize();
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
         broadcast_evals();
 #endif
         return 0;
@@ -164,8 +164,9 @@ namespace EDLib {
 
     protected:
       int &n() { return _n; }
+      int &ntot() { return _ntot; }
 
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       virtual alps::mpi::communicator & comm() {
         return _comm;
       }
@@ -186,6 +187,7 @@ namespace EDLib {
 
 #endif
     private:
+      int _ntot;
       int _n;
       int _nev;
       int _ncv;
@@ -197,7 +199,7 @@ namespace EDLib {
 
       std::vector < prec > evals;
       std::vector < std::vector < prec > > evecs;
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       alps::mpi::communicator &_comm;
 #endif
     };
@@ -205,7 +207,7 @@ namespace EDLib {
     template<>
     void Storage < double >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, double *tol, double *resid, int *ncv, double *v, int *ldv, int *iparam, int *ipntr,
                                    double *workd, double *workl, int *lworkl, int *info) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       int scomm = PMPI_Comm_c2f(comm());
       pdsaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
 #else
@@ -220,7 +222,7 @@ namespace EDLib {
                                    double *tol, double *resid, int *ncv, double *v,
                                    int *ldv, int *iparam, int *ipntr, double *workd,
                                    double *workl, int *lworkl, int *ierr) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       int scomm = PMPI_Comm_c2f(comm());
       pdseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
                ldv, iparam, ipntr, workd, workl, lworkl, ierr);
@@ -233,7 +235,7 @@ namespace EDLib {
     template<>
     void Storage < float >::saupd(int *ido, char *bmat, int *n, char *which, int *nev, float *tol, float *resid, int *ncv, float *v, int *ldv, int *iparam, int *ipntr,
                                   float *workd, float *workl, int *lworkl, int *info) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       int scomm = PMPI_Comm_c2f(comm());
       pssaupd_(&scomm, ido, bmat, n, which, nev, tol, resid, ncv, v, ldv, iparam, ipntr, workd, workl, lworkl, info);
 #else
@@ -248,7 +250,7 @@ namespace EDLib {
                                   float *tol, float *resid, int *ncv, float *v,
                                   int *ldv, int *iparam, int *ipntr, float *workd,
                                   float *workl, int *lworkl, int *ierr) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       int scomm = PMPI_Comm_c2f(comm());
       psseupd_(&scomm, rvec, All, select, d, z, ldz, sigma, bmat, n, which, nev, tol, resid, ncv, v,
                ldv, iparam, ipntr, workd, workl, lworkl, ierr);

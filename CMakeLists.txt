@@ -34,13 +34,13 @@ set(extlibs
     ${MPI_Fortran_LIBRARIES}
     )
 
-include_directories(${Hubbard_SOURCE_DIR}/src)
+include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
 include_directories(${Hubbard_SOURCE_DIR}/test)
 
-add_subdirectory(src)
 add_subdirectory(lib)
 add_subdirectory(test)
+add_subdirectory(examples)
 
 enable_testing()
 
@@ -50,4 +50,4 @@ set(SOURCE_FILES main.cpp)
 
 add_executable(Hubbard ${SOURCE_FILES})
 
-target_link_libraries(Hubbard common-lib hubbard-lib ${extlibs})
+target_link_libraries(Hubbard common-lib ${extlibs})

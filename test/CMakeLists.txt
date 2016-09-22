@@ -1,5 +1,5 @@
 
-include_directories(${Hubbard_SOURCE_DIR}/src)
+include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
 
 add_executable(SzSymmetryTest SzSymmetry_Test.cpp)
@@ -9,9 +9,9 @@ add_executable(HolsteinAndersonModelTest HolsteinAndersonModel_Test.cpp)
 add_executable(NSymmetryWithBosonTest NSymmetryWithBoson_Test.cpp)
 add_executable(SpinResolvedStorageTest SpinResolvedStorage_Test.cpp)
 
-target_link_libraries(SzSymmetryTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
-target_link_libraries(NSymmetryTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
-target_link_libraries(NSymmetryWithBosonTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
-target_link_libraries(HubbardModelTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
-target_link_libraries(HolsteinAndersonModelTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
-target_link_libraries(SpinResolvedStorageTest common-lib hubbard-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(SzSymmetryTest common-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(NSymmetryTest common-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(NSymmetryWithBosonTest common-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(HubbardModelTest common-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(HolsteinAndersonModelTest common-lib ${extlibs} ${GTEST_LIBRARY})
+target_link_libraries(SpinResolvedStorageTest common-lib ${extlibs} ${GTEST_LIBRARY})

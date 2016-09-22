@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "SzSymmetry.h"
+#include "edlib/SzSymmetry.h"
 
 
 TEST(SzSymmetryTest, Combinatorics) {

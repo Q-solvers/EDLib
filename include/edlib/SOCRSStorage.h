@@ -19,7 +19,8 @@ namespace EDLib {
     class SOCRSStorage : public Storage < prec > {
     public:
       using Storage < prec >::n;
-#ifdef ALPS_HAVE_MPI
+      using Storage < prec >::ntot;
+#ifdef USE_MPI
       SOCRSStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm),
 #else
       SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p),
@@ -37,9 +38,9 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
         _model.symmetry().init();
+#ifdef _OPENMP
 #pragma omp parallel
         {
-#ifdef _OPENMP
           size_t _vind=_vind_offset[omp_get_thread_num()];
           size_t _vind_byte=_vind_offset_byte[omp_get_thread_num()];
           size_t _vind_bit=_vind_offset_bit[omp_get_thread_num()];
@@ -79,7 +80,9 @@ namespace EDLib {
               _vind += test;
             }
           }
+#ifdef _OPENMP
         }
+#endif
       }
 
       void reset(size_t sector_size) {
@@ -92,6 +95,7 @@ namespace EDLib {
         _vind_byte = 0;
         _vind_bit = 0;
         n() = 0;
+        ntot() = sector_size;
       }
 
       void fill() {

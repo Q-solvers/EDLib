@@ -1,15 +1,10 @@
-#include <iostream>
-
+//
+// Created by iskakoff on 19/07/16.
+//
 
 #include "edlib/EDParams.h"
 #include "edlib/Hamiltonian.h"
-#include "edlib/SzSymmetry.h"
-#include "edlib/SOCRSStorage.h"
-#include "edlib/CRSStorage.h"
-#include "edlib/HubbardModel.h"
 #include "edlib/GreensFunction.h"
-#include "edlib/SpinResolvedStorage.h"
-#include "edlib/HolsteinAndersonModel.h"
 
 
 int main(int argc, const char ** argv) {
@@ -22,18 +17,14 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   try {
-//  CSRHubbardHamiltonian_float ham(params);
 #ifdef USE_MPI
     EDLib::SRSHubbardHamiltonian ham(params, comm);
 #else
     EDLib::SRSHubbardHamiltonian ham(params);
 #endif
-//  SOCSRHubbardHamiltonian_float ham(params);
     ham.diag();
-//  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
-//    EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
-//    greensFunction.compute();
-//    EDLib::CSRSIAMHamiltonian ham2(params);
+    EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
+    greensFunction.compute();
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();

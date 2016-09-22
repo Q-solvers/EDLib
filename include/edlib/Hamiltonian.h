@@ -9,7 +9,7 @@
 #include <type_traits>
 
 #include <fstream>
-#include <SpinResolvedStorage.h>
+#include "SpinResolvedStorage.h"
 #include "Symmetry.h"
 #include "EigenPair.h"
 #include "EDParams.h"
@@ -28,15 +28,14 @@ namespace EDLib {
      * Initialize Hamiltonian for specific model and allocate storage
      * \param [in] p - alps::parameters
      */
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
     Hamiltonian(EDParams &p, alps::mpi::communicator& comm) :
       _model(p),
       _storage(p, _model, comm) {};
-#else
+#endif
     Hamiltonian(EDParams &p) :
       _model(p),
       _storage(p, _model) {};
-#endif
     /**
      * fill current sector
      */

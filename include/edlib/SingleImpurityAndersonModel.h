@@ -10,6 +10,7 @@
 namespace EDLib {
   namespace Model {
     namespace SingleImpurityAnderson {
+      template<typename prec>
       class InnerState {
       public:
         virtual int valid(long long, int) const {return 0;};
@@ -51,15 +52,20 @@ namespace EDLib {
           isign = (sign % 2) == 0 ? 1 : -1;
           k = jold + (1ll << (Ip - i - 1));
         }
+
+        const virtual inline prec value() const { return 0.0; }
       };
       template<typename prec>
-      class InnerHybridizationState : public InnerState {
+      class InnerHybridizationState : public InnerState<prec> {
+        using InnerState<prec>::checkState;
+        using InnerState<prec>::a;
+        using InnerState<prec>::adag;
       public:
         InnerHybridizationState(int ii, int jj, int spin, prec val) : _indicies(ii, jj), _spin(spin), _value(val) {};
 
         const inline std::pair < int, int > &indicies() const { return _indicies; }
 
-        const inline prec &value() const { return _value; }
+        const virtual inline prec value() const { return _value; }
 
         const inline int spin() const { return _spin; }
         virtual int valid(long long nst, int Ns) const {
@@ -80,7 +86,10 @@ namespace EDLib {
         prec _value;
       };
       template<typename prec>
-      class InnerInteractionState : public InnerState {
+      class InnerInteractionState : public InnerState<prec> {
+        using InnerState<prec>::checkState;
+        using InnerState<prec>::a;
+        using InnerState<prec>::adag;
       public:
         InnerInteractionState(int i, int j, int k, int l, int sigma, int sigmaprime, prec U) :
           _i(i), _j(j), _k(k), _l(l), _sigma(sigma), _sigmaprime(sigmaprime), _U(U) {}
@@ -163,7 +172,7 @@ namespace EDLib {
     class SingleImpurityAndersonModel : public FermionicModel {
     public:
       typedef typename Symmetry::ImpuritySzSymmetry SYMMETRY;
-      typedef typename SingleImpurityAnderson::InnerState St;
+      typedef typename SingleImpurityAnderson::InnerState<precision> St;
       typedef typename SingleImpurityAnderson::InnerHybridizationState<precision> HSt;
       typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
       typedef typename Symmetry::ImpuritySzSymmetry::Sector Sector;
@@ -268,6 +277,32 @@ namespace EDLib {
       const int interacting_orbitals() const {
         return _ml;
       }
+      const int spins() const {
+        return _ms;
+      }
+
+      /**
+       * @brief Perform the annihilator operator action to the eigenstate
+       *
+       * @param orbital - the orbital to destroy a particle
+       * @param spin - the spin of a particle to destroy
+       * @param invec - current eigenstate
+       * @param outvec - Op-vec product
+       * @param expectation_value - expectation value of a*a
+       * @return true if the particle has been destroyed
+       */
+      bool annihilate_particle(int orbital, int spin, const std::shared_ptr < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {return false;}
+      /**
+       * @brief Perform the create operator action to the eigenstate
+       *
+       * @param orbital - the orbital to create a particle
+       * @param spin - the spin of a particle to create
+       * @param invec - current eigenstate
+       * @param outvec - Op-vec product
+       * @param expectation_value - expectation value of aa*
+       * @return true if the particle has been created
+       */
+      bool create_particle(int orbital, int spin, const std::shared_ptr < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {return false;}
 
     private:
       SYMMETRY _symmetry;

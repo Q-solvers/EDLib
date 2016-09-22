@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "NSymmetry.h"
+#include "edlib/NSymmetry.h"
 
 TEST(NSymmetryTest, Initialization) {
   EDLib::EDParams p;

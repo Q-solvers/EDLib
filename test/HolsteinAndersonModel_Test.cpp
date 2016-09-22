@@ -3,9 +3,9 @@
 //
 
 #include <gtest/gtest.h>
-#include "Hamiltonian.h"
-#include "HolsteinAndersonModel.h"
-#include "Storage.h"
+#include "edlib/Hamiltonian.h"
+#include "edlib/HolsteinAndersonModel.h"
+#include "edlib/Storage.h"
 
 TEST(HubbardModelTest, Filling) {
 //  const char *string = "--NSITES=16 --INPUT_FILE=../input/input.h5";

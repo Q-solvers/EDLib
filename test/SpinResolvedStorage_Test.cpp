@@ -3,15 +3,11 @@
 //
 
 #include <gtest/gtest.h>
-#include <HubbardModel.h>
+#include "edlib/HubbardModel.h"
 
-#include "SpinResolvedStorage.h"
-#include "SingleImpurityAndersonModel.h"
-
-
-#include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptor/transformed.hpp>
-#include <CRSStorage.h>
+#include "edlib/SpinResolvedStorage.h"
+#include "edlib/SingleImpurityAndersonModel.h"
+#include "edlib/CRSStorage.h"
 
 TEST(SpinResolvedStorageTest, Init) {
   EDLib::EDParams p;
@@ -32,16 +28,8 @@ TEST(SpinResolvedStorageTest, Init) {
     storage2.fill();
     storage.av(v.data(), w.data(), m.symmetry().sector().size());
     storage2.av(v.data(), w2.data(), m.symmetry().sector().size());
-//    std::cout<< boost::algorithm::join( v | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
-//    std::cout<< boost::algorithm::join( w | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
-//    std::cout<< boost::algorithm::join( w2 | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
     for(int i = 0; i< w.size(); ++i) {
       ASSERT_EQ(w[i], w2[i]);
     }
   }
-//  std::cout<< boost::algorithm::join( v | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
-//  std::cout<< boost::algorithm::join( w | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
-//  std::cout<< boost::algorithm::join( w2 | boost::adaptors::transformed( static_cast<std::string(*)(double)>(std::to_string) ), ", " )<<std::endl;
-//  storage.print();
-//  storage2.print();
 }

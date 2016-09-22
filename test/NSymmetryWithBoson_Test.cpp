@@ -4,7 +4,7 @@
 
 #include "gtest/gtest.h"
 
-#include "NSymmetryWithBoson.h"
+#include "edlib/NSymmetryWithBoson.h"
 
 TEST(NSymmetryWithBosonTest, Initialization) {
   EDLib::EDParams p;

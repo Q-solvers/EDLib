@@ -16,8 +16,9 @@ namespace EDLib {
     template<typename prec, class Model>
     class CRSStorage : public Storage < prec > {
       using Storage < prec >::n;
+      using Storage < prec >::ntot;
     public:
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       CRSStorage(EDParams &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
 #else
       CRSStorage(EDParams &p, Model &s) : Storage < prec >(p),
@@ -45,6 +46,7 @@ namespace EDLib {
         values[_vind] = v;
         ++_vind;
         ++n();
+        ++ntot();
       }
 
       /**

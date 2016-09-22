@@ -90,10 +90,9 @@ namespace EDLib {
       }
 
       inline long long state_by_index(int ind) {
-        long long res = 0;
         int u = ind / _comb.c_n_k(_Ns, _current_sector.ndown());
         int d = ind % _comb.c_n_k(_Ns, _current_sector.ndown());
-        res = basis[_current_sector.nup()][u];
+        long long res = basis[_current_sector.nup()][u];
         res <<= _Ns;
         res += basis[_current_sector.ndown()][d];
         return res;
@@ -146,7 +145,7 @@ namespace EDLib {
       inline const Combination &comb() const {
         return _comb;
       }
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       void set_offset(size_t offset) {_ind += offset;}
 #endif
     private:

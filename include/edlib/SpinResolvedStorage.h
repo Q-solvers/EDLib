@@ -10,8 +10,8 @@
 #include <boost/typeof/typeof.hpp>
 
 #include "Storage.h"
-#include <SzSymmetry.h>
-#include <NSymmetry.h>
+#include "SzSymmetry.h"
+#include "NSymmetry.h"
 
 namespace EDLib {
   namespace Storage {
@@ -21,7 +21,10 @@ namespace EDLib {
     BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value);
     public:
       using Storage < prec >::n;
+      using Storage < prec >::ntot;
+#ifdef USE_MPI
       using Storage < prec >::comm;
+#endif
       using Storage < prec >::prepare_work_arrays;
       using Storage < prec >::finalize;
 
@@ -82,7 +85,7 @@ namespace EDLib {
 
       typedef CRSMatrix < prec > Matrix;
 
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       SpinResolvedStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
                                                    _loc_symmetry(m.interacting_orbitals()) {
@@ -92,10 +95,7 @@ namespace EDLib {
 #else
       SpinResolvedStorage(EDParams &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
-                                                   _loc_symmetry(m.interacting_orbitals()) {
-        _nprocs = _comm.size();
-        _myid = _comm.rank();
-      }
+                                                   _loc_symmetry(m.interacting_orbitals()) {}
 #endif
 
       virtual void zero_eigenapair() {
@@ -105,7 +105,7 @@ namespace EDLib {
       }
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
           MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, 0, _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
@@ -129,7 +129,7 @@ namespace EDLib {
         }
         //
         // Iteration over rows.
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
         MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOPUT | MPI_MODE_NOSTORE, _win);
 #endif
         for (int i = 0; i < _up_size; ++i) {
@@ -151,7 +151,7 @@ namespace EDLib {
         _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
         H_up.init(_up_symmetry.sector().size());
         H_down.init(_down_symmetry.sector().size());
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
         MPI_Comm run_comm;
         int up_size = _up_symmetry.sector().size();
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
@@ -178,10 +178,6 @@ namespace EDLib {
           _up_size = 0;
           _locsize=0;
         }
-        int a = _myid;
-//        std::cout<<"Before barrier "<<a<<std::endl;
-//        alps::mpi::broadcast(_run_comm, &a, 1, 0);
-//        std::cout<<"After barrier "<<a<<std::endl;
 #else
         _locsize = sector.size();
         _up_size = _up_symmetry.sector().size();
@@ -190,6 +186,7 @@ namespace EDLib {
         _diagonal.assign(_locsize, prec(0.0));
         _vecval.assign(sector.size(), prec(0.0));
         n() = _locsize;
+        ntot() = sector.size();
       }
 
       void fill() {
@@ -208,12 +205,12 @@ namespace EDLib {
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
         }
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
         find_neighbours();
 #endif
       }
 
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       void find_neighbours() {
         int ci, cid;
         for(int i = 0; i< _up_size; ++ i) {
@@ -327,7 +324,7 @@ namespace EDLib {
       }
 
     protected:
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       virtual alps::mpi::communicator & comm() {
         return _run_comm;
       }
@@ -368,11 +365,11 @@ namespace EDLib {
 
       size_t _up_size;
       size_t _up_shift;
+      size_t _locsize;
 
-#ifdef ALPS_HAVE_MPI
+#ifdef USE_MPI
       alps::mpi::communicator _comm;
       alps::mpi::communicator _run_comm;
-      size_t _locsize;
       size_t _offset;
       int _nprocs;
       std::vector<int> _proc_offset;
