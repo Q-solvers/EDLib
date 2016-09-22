@@ -39,7 +39,6 @@
       <sourceFolder url="file://$MODULE_DIR$/lib/CRSStorage.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/EnableGtests.cmake" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/cmake/FindEigen3.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindARPACK.cmake" isTestSource="false" />
     </content>
     <content url="file://$USER_HOME$/Library/Caches/CLion2016.2/cmake/generated/EDLib-944d921b/944d921b/__default__0/gtest">

@@ -7,7 +7,9 @@
 
 #include <vector>
 #include <iomanip>
+#ifdef _OPENMP
 #include <omp.h>
+#endif
 #include "Storage.h"
 
 namespace EDLib {
@@ -53,7 +55,7 @@ namespace EDLib {
           for(int i = 0; i < n; ++i)
 #endif
           {
-            long long nst = _model.symmetry().state_indexed(i);
+            long long nst = _model.symmetry().state_by_index(i);
             // Diagonal contribution.
             w[i] = dvalues[i] * v[i] + (clear ? 0.0 : w[i]);
             // Offdiagonal contribution.
@@ -121,7 +123,7 @@ namespace EDLib {
           for(int i = 0; i < _model.symmetry().sector().size(); ++i)
 #endif
           {
-            long long nst = _model.symmetry().state_indexed(i);
+            long long nst = _model.symmetry().state_by_index(i);
             // Compute diagonal element for current i state
             addDiagonal(i, _model.diagonal(nst));
             // non-diagonal terms calculation

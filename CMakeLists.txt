@@ -5,7 +5,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
 find_package(ARPACK)
-find_package(Eigen3)
 find_package(BLAS)
 find_package(LAPACK)
 find_package(MPI)
@@ -13,7 +12,6 @@ set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
 
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
-include_directories(${EIGEN3_INCLUDE_DIR})
 
 
 include(EnableGtests)

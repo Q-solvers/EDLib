@@ -78,34 +78,21 @@ namespace EDLib {
       virtual ~SzSymmetry() {};
 
       virtual bool next_state() {
-        long long res = 0;
         if (_first) {
           _first = false;
         }
         if (_ind >= _current_sector.size()) {
           return false;
         }
-        int u = 0, d = 0;
-        u = _ind / _comb.c_n_k(_Ns, _current_sector.ndown());
-        d = _ind % _comb.c_n_k(_Ns, _current_sector.ndown());
-        res = basis[_current_sector.nup()][u];
-        res <<= _Ns;
-        res += basis[_current_sector.ndown()][d];
+        state() = state_by_index(_ind);
         _ind++;
-        state() = res;
         return true;
       }
 
-      virtual long long state_indexed(int ind) {
+      inline long long state_by_index(int ind) {
         long long res = 0;
-/* FIXME ?
-        if (ind >= _current_sector.size()) {
-          throw;
-        }
-*/
-        int u = 0, d = 0;
-        u = ind / _comb.c_n_k(_Ns, _current_sector.ndown());
-        d = ind % _comb.c_n_k(_Ns, _current_sector.ndown());
+        int u = ind / _comb.c_n_k(_Ns, _current_sector.ndown());
+        int d = ind % _comb.c_n_k(_Ns, _current_sector.ndown());
         res = basis[_current_sector.nup()][u];
         res <<= _Ns;
         res += basis[_current_sector.ndown()][d];
