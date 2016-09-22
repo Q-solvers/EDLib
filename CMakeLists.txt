@@ -7,17 +7,6 @@ find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
 find_package(ARPACK)
 find_package(BLAS)
 find_package(LAPACK)
-if(USE_MPI)
-  if(!ALPS_HAVE_MPI)
-      MESSAGE(FATAL_ERROR "Enable MPI support in ALPSCore.")
-  endif(!ALPS_HAVE_MPI)
-  find_package(MPI REQUIRED)
-  if(MPI_FOUND)
-      SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MPI")
-  endif(MPI_FOUND)
-endif(USE_MPI)
-set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
-
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
 
@@ -42,12 +31,26 @@ set(extlibs
     ${MPI_Fortran_LIBRARIES}
     )
 
+
+include_directories(${Hubbard_SOURCE_DIR}/test)
+add_subdirectory(test)
+
+if(USE_MPI)
+    if(!ALPS_HAVE_MPI)
+        MESSAGE(FATAL_ERROR "Enable MPI support in ALPSCore.")
+    endif(!ALPS_HAVE_MPI)
+    find_package(MPI REQUIRED)
+    if(MPI_FOUND)
+        SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_MPI")
+    endif(MPI_FOUND)
+    set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
+endif(USE_MPI)
+
 include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
-include_directories(${Hubbard_SOURCE_DIR}/test)
 
 add_subdirectory(lib)
-add_subdirectory(test)
+add_subdirectory(include/edlib)
 add_subdirectory(examples)
 
 enable_testing()

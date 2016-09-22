@@ -10,6 +10,26 @@
       <sourceFolder url="file://$MODULE_DIR$/test/SzSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Storage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/fortranbinding.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Symmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetryWithBoson.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/EigenPair.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/CRSStorage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SpinResolvedStorage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/GreensFunction.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/HubbardModel.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Combination.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/HolsteinAndersonModel.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SzSymmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/FermionicModel.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetry.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/EDParams.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SOCRSStorage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SingleImpurityAndersonModel.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Lanczos.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Hamiltonian.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
