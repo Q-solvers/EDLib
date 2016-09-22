@@ -45,14 +45,15 @@ namespace EDLib {
         int n = _n;
         if(n==0) {
 #ifdef ALPS_HAVE_MPI
-//          std::cout<<"Wait"<<comm().rank()<<std::endl;
-          MPI_Barrier(_comm);
+          broadcast_evals(true);
 #endif
           return 0;
         }
         if (n*comm().size() == 1) {
           zero_eigenapair();
-          MPI_Barrier(MPI_COMM_WORLD);
+#ifdef ALPS_HAVE_MPI
+          broadcast_evals();
+#endif
           return 0;
         }
         std::cout<<"diag matrix:"<<n<<std::endl;
@@ -96,7 +97,8 @@ namespace EDLib {
         }
         int rvec = 1-_eval_only;
         char howmny[2] = "A";
-        evals.resize(nev);
+        int nconv = iparam[4];
+        evals.resize(nconv);
         seupd(&rvec, howmny, &select[0], &evals[0], &v[0], &ldv, &sigma, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0],
               &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
         // TODO: need to recover the eigenvectors from v
@@ -110,7 +112,6 @@ namespace EDLib {
         }
         // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
         if(_eval_only == 0) {
-          int nconv = iparam[4];
           evecs.assign(nconv, std::vector < prec >(n, prec(0.0)));
           for (int i = 0; i < nconv; ++i) {
             int offset = i * n;
@@ -122,7 +123,7 @@ namespace EDLib {
         };
         finalize();
 #ifdef ALPS_HAVE_MPI
-        MPI_Barrier(_comm);
+        broadcast_evals();
 #endif
         return 0;
       }
@@ -168,6 +169,21 @@ namespace EDLib {
       virtual alps::mpi::communicator & comm() {
         return _comm;
       }
+
+      void broadcast_evals(bool empty = false) {
+        MPI_Barrier(_comm);
+        int nconv = evals.size();
+        MPI_Bcast(&nconv, 1, MPI_INT, 0, _comm);
+        if(_comm.rank() != 0) {
+          evals.resize(nconv);
+          if(empty) {
+            evecs.assign(nconv, std::vector<prec>(0, prec(0.0)));
+          }
+        }
+        std::cout<<_comm.rank()<<" "<<evals.size();
+        MPI_Bcast(evals.data(), nconv, alps::mpi::detail::mpi_type<prec>(), 0, _comm);
+      }
+
 #endif
     private:
       int _n;
