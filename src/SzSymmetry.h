@@ -96,6 +96,22 @@ namespace EDLib {
         return true;
       }
 
+      virtual long long state_indexed(int ind) {
+        long long res = 0;
+/* FIXME ?
+        if (ind >= _current_sector.size()) {
+          throw;
+        }
+*/
+        int u = 0, d = 0;
+        u = ind / _comb.c_n_k(_Ns, _current_sector.ndown());
+        d = ind % _comb.c_n_k(_Ns, _current_sector.ndown());
+        res = basis[_current_sector.nup()][u];
+        res <<= _Ns;
+        res += basis[_current_sector.ndown()][d];
+        return res;
+      }
+
       int index(long long state, const SzSymmetry::Sector &sector) {
         long long up = state >> _Ns;
         long long down = state & ((1ll << _Ns) - 1);

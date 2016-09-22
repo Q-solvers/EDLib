@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <iomanip>
+#include <omp.h>
 #include "Storage.h"
 
 namespace EDLib {
@@ -22,6 +23,9 @@ namespace EDLib {
       SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p),
 #endif
                                             _vind(0), _max_size(p["storage.MAX_SIZE"]),
+#ifdef _OPENMP
+                                            _nthreads(omp_get_max_threads()), _row_offset(_nthreads + 1), _vind_offset(_nthreads), _vind_offset_byte(_nthreads), _vind_offset_bit(_nthreads),
+#endif
                                             _max_dim(p["storage.MAX_DIM"]), _model(m) {
         /** init what you need from parameters*/
         col_ind.assign(_max_size, 0);
@@ -31,34 +35,47 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
         _model.symmetry().init();
-        _vind = 0;
-        _vind_byte = 0;
-        _vind_bit = 0;
-        // Iteration over rows.
-        for (int i = 0; i < n; ++i) {
-          _model.symmetry().next_state();
-          long long nst = _model.symmetry().state();
-          // Diagonal contribution.
-          w[i] = dvalues[i] * v[i] + (clear ? 0.0 : w[i]);
-          // Offdiagonal contribution.
-          // Iteration over columns(unordered).
-          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
-            int test = _model.valid(_model.T_states()[kkk], nst);
-            // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
-            w[i] += test * _model.T_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
-            _vind_bit += test;
-            _vind_byte += _vind_bit / sizeof(char);
-            _vind_bit %= sizeof(char);
-            _vind += test;
-          }
-          for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
-            int test = _model.valid(_model.V_states()[kkk], nst);
-            // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
-            w[i] += test * _model.V_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
-            _vind_bit += test;
-            _vind_byte += _vind_bit / sizeof(char);
-            _vind_bit %= sizeof(char);
-            _vind += test;
+#pragma omp parallel
+        {
+#ifdef _OPENMP
+          size_t _vind=_vind_offset[omp_get_thread_num()];
+          size_t _vind_byte=_vind_offset_byte[omp_get_thread_num()];
+          size_t _vind_bit=_vind_offset_bit[omp_get_thread_num()];
+#else
+          _vind = 0;
+          _vind_byte = 0;
+          _vind_bit = 0;
+#endif
+          // Iteration over rows.
+#ifdef _OPENMP
+          for(int i = _row_offset[omp_get_thread_num()]; i < _row_offset[omp_get_thread_num() + 1]; ++i)
+#else
+          for(int i = 0; i < n; ++i)
+#endif
+          {
+            long long nst = _model.symmetry().state_indexed(i);
+            // Diagonal contribution.
+            w[i] = dvalues[i] * v[i] + (clear ? 0.0 : w[i]);
+            // Offdiagonal contribution.
+            // Iteration over columns(unordered).
+            for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
+              int test = _model.valid(_model.T_states()[kkk], nst);
+              // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
+              w[i] += test * _model.T_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
+              _vind_bit += test;
+              _vind_byte += _vind_bit / sizeof(char);
+              _vind_bit %= sizeof(char);
+              _vind += test;
+            }
+            for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
+              int test = _model.valid(_model.V_states()[kkk], nst);
+              // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
+              w[i] += test * _model.V_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
+              _vind_bit += test;
+              _vind_byte += _vind_bit / sizeof(char);
+              _vind_bit %= sizeof(char);
+              _vind += test;
+            }
           }
         }
       }
@@ -81,17 +98,41 @@ namespace EDLib {
         int i = 0;
         long long k = 0;
         int isign = 0;
-        while (_model.symmetry().next_state()) {
-          long long nst = _model.symmetry().state();
-          // Compute diagonal element for current i state
-
-          addDiagonal(i, _model.diagonal(nst));
-          // non-diagonal terms calculation
-          off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
-          off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
-          i++;
+#ifdef _OPENMP
+        // Size chunks equally.
+        int step = (int)std::floor(_model.symmetry().sector().size() / _nthreads);
+        for (int i = 0; i <= _nthreads; i++){
+          _row_offset[i] = step * i;
         }
+        // Put the rest into some of the first threads.
+        int more = _model.symmetry().sector().size() - _row_offset[_nthreads];
+        for (int i = 0; i < more; i++){
+          _row_offset[i] += i;
+        }
+        for (int i = more; i <= _nthreads; i++){
+          _row_offset[i] += more;
+        }
+        for(int myid = 0; myid < _nthreads; ++myid){
+          _vind_offset[myid] = _vind;
+          _vind_offset_byte[myid] = _vind_byte;
+          _vind_offset_bit[myid] = _vind_bit;
+          for(int i = _row_offset[myid]; i < _row_offset[myid + 1]; ++i)
+#else
+          for(int i = 0; i < _model.symmetry().sector().size(); ++i)
+#endif
+          {
+            long long nst = _model.symmetry().state_indexed(i);
+            // Compute diagonal element for current i state
+            addDiagonal(i, _model.diagonal(nst));
+            // non-diagonal terms calculation
+            off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
+            off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
+          }
+#ifdef _OPENMP
+        }
+#endif
       }
+
       template<typename T_states>
       inline void off_diagonal(long long nst, int i, T_states& states) {
         long long k = 0;
@@ -184,6 +225,10 @@ namespace EDLib {
         Storage < prec >::eigenvectors().assign(1, std::vector < prec >(1, prec(1.0)));
       }
 
+#ifdef _OPENMP
+      int &nprocs() { return _nthreads; }
+#endif
+
     private:
       // Internal storage structure
       std::vector < prec > dvalues;
@@ -193,6 +238,14 @@ namespace EDLib {
       // the maximum sizes of all the objects
       size_t _max_size;
       size_t _max_dim;
+
+#ifdef _OPENMP
+      int _nthreads;
+      std::vector < int > _row_offset;
+      std::vector < int > _vind_offset;
+      std::vector < int > _vind_offset_bit;
+      std::vector < int > _vind_offset_byte;
+#endif
 
       // internal indicies
       size_t _vind;
