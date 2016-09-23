@@ -177,7 +177,8 @@ namespace EDLib {
       typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
       typedef typename Symmetry::ImpuritySzSymmetry::Sector Sector;
 
-      SingleImpurityAndersonModel(EDParams &p): _symmetry(p, p["NSITES"], p["siam.NORBITALS"]), _Ns(p["NSITES"]), _ml(p["siam.NORBITALS"]) {
+      SingleImpurityAndersonModel(EDParams &p): FermionicModel(p["NSITES"], p["NSPINS"], int(p["NSITES"])*int(p["NSPINS"])), _symmetry(p, p["NSITES"], p["siam.NORBITALS"]),
+                                                _ml(p["siam.NORBITALS"]) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
         input_data >> alps::make_pvp("NSPINS", _ms);
@@ -277,40 +278,11 @@ namespace EDLib {
       const int interacting_orbitals() const {
         return _ml;
       }
-      const int spins() const {
-        return _ms;
-      }
-
-      /**
-       * @brief Perform the annihilator operator action to the eigenstate
-       *
-       * @param orbital - the orbital to destroy a particle
-       * @param spin - the spin of a particle to destroy
-       * @param invec - current eigenstate
-       * @param outvec - Op-vec product
-       * @param expectation_value - expectation value of a*a
-       * @return true if the particle has been destroyed
-       */
-      bool annihilate_particle(int orbital, int spin, const std::shared_ptr < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {return false;}
-      /**
-       * @brief Perform the create operator action to the eigenstate
-       *
-       * @param orbital - the orbital to create a particle
-       * @param spin - the spin of a particle to create
-       * @param invec - current eigenstate
-       * @param outvec - Op-vec product
-       * @param expectation_value - expectation value of aa*
-       * @return true if the particle has been created
-       */
-      bool create_particle(int orbital, int spin, const std::shared_ptr < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {return false;}
 
     private:
       SYMMETRY _symmetry;
-      int _Ns;
-      int _ms;
       int _ml;
       int _Nk;
-      int _Ip;
       precision _xmu;
       std::vector < std::vector < precision > > _Eps;
       std::vector < std::vector < std::vector < precision > > > _Vk;

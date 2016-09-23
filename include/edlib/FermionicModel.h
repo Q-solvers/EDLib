@@ -16,6 +16,7 @@ namespace EDLib {
  */
     class FermionicModel {
     public:
+      FermionicModel(int Ns, int ms, int Ip) : _Ns(Ns), _ms(ms), _Ip(Ip) {}
 
       /**
        * @brief Check that im state is occupated
@@ -29,6 +30,60 @@ namespace EDLib {
       int inline checkState(long long nst, const int &im, int Ip) const {
         return (int) ((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
       }
+      /**
+       * @brief Anihilate particle
+       * @param i [in] - site to anihilate particle
+       * @param jold [in] - current state
+       * @param k [out] - resulting state
+       * @param isign [out] - fermionic sign
+       */
+      void inline a(int i, long long jold, long long &k, int &isign) {
+        long long sign = 0;
+        for (int ll = 0; ll < i; ++ll) {
+          sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
+        }
+        isign = (sign % 2) == 0 ? 1 : -1;
+        k = jold - (1ll << (_Ip - i - 1));
+      }
+
+      /**
+       * @brief Create particle
+       * \param i [in] - site to create particle
+       * \param jold [in] - current state
+       * \param k [out] - resulting state
+       * \param isign [out] - fermionic sign
+       */
+      void inline adag(int i, long long jold, long long &k, int &isign) {
+        long long sign = 0;
+        for (int ll = 0; ll < i; ++ll) {
+          sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
+        }
+        isign = (sign % 2) == 0 ? 1 : -1;
+        k = jold + (1ll << (_Ip - i - 1));
+      }
+
+
+      const int orbitals() const {
+        return _Ns;
+      }
+
+      const int max_total_electrons() const {
+        return _Ip;
+      }
+
+      const int spins() const {
+        return _ms;
+      }
+
+    protected:
+      /**
+       * _Ns - number of lattice sites
+       * _ms - number of electron spins
+       * _Ip - maximum number of electrons
+       */
+      int _Ns;
+      int _ms;
+      int _Ip;
     };
   }
 }
