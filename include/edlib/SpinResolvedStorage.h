@@ -7,6 +7,7 @@
 
 #include <bitset>
 #include <iomanip>
+#include <boost/type_traits.hpp>
 #include <boost/typeof/typeof.hpp>
 
 #include "Storage.h"
@@ -18,7 +19,7 @@ namespace EDLib {
 
     template<typename prec, class Model>
     class SpinResolvedStorage : public Storage < prec > {
-    BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value);
+    BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value && bool('Model have wrong symmetry.'));
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;
@@ -146,51 +147,6 @@ namespace EDLib {
         }
       }
 
-      void reset() {
-        const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
-        const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
-        _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
-        _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
-        H_up.init(_up_symmetry.sector().size());
-        H_down.init(_down_symmetry.sector().size());
-#ifdef USE_MPI
-        MPI_Comm run_comm;
-        int up_size = _up_symmetry.sector().size();
-        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
-        MPI_Comm_split(_comm, color, _myid, &run_comm);
-        if(color == 1) {
-          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
-          int size = _run_comm.size();
-          int locsize = up_size / size;
-          int myid = _run_comm.rank();
-          if ((up_size % size) > myid) {
-            locsize += 1;
-            _offset =  myid * locsize* _down_symmetry.sector().size();
-          } else {
-            _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
-          }
-          _up_size = locsize;
-          _up_shift = _offset / _down_symmetry.sector().size();
-          _locsize = locsize * _down_symmetry.sector().size();
-          _model.symmetry().set_offset(_offset);
-          _procs.assign(size, 0);
-          _proc_offset.assign(size, 0);
-          _proc_size.assign(size, 0);
-        } else {
-          _up_size = 0;
-          _locsize=0;
-        }
-#else
-        _locsize = sector.size();
-        _up_size = _up_symmetry.sector().size();
-        _up_shift = 0;
-#endif
-        _diagonal.assign(_locsize, prec(0.0));
-        _vecval.assign(sector.size(), prec(0.0));
-        n() = _locsize;
-        ntot() = sector.size();
-      }
-
       void fill() {
         _model.symmetry().init();
         reset();
@@ -212,73 +168,6 @@ namespace EDLib {
 #endif
       }
 
-#ifdef USE_MPI
-      void find_neighbours() {
-        int ci, cid;
-        for(int i = 0; i< _up_size; ++ i) {
-          for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
-            calcIndex(ci, cid, H_up.col_ind()[j]);
-            if(_procs[cid]==0)  {_procs[cid]=1;}
-          }
-        }
-        int oset = 0;
-        int nprocs = _run_comm.size();
-        for(int i=0; i < nprocs; i++) {
-          if(_procs[i]!=0) {
-            _procs[i]=1;
-            _proc_offset[i]=oset * _down_symmetry.sector().size();
-            int ls=_up_symmetry.sector().size()/nprocs;
-            if((_up_symmetry.sector().size()% nprocs) > i) {
-              ls++;
-//              loc_offset[i] = i * ls;
-            }else{
-//              loc_offset[i] = i * ls + (Nstates[nup][ndo] % nprocs);
-            }
-            _proc_size[i]=ls * _down_symmetry.sector().size();
-            oset+=ls;
-          }
-        }
-//        std::cout<<_run_comm.rank()<<"  neighbours: ";
-//        for(int i=0; i < nprocs; i++) {
-//          std::cout<<" "<<i<<" "<<bool(_procs[i])<<" "<<_proc_size[i]<<" "<<_proc_offset[i]<<" ";
-//        }
-      }
-
-      void calcIndex(int &ci, int &cid, int i) {
-        //       local variables
-        int tmp1, tmp2, tmp3, tmp4;
-        int nprocs = _run_comm.size();
-        tmp1 = _up_symmetry.sector().size() / nprocs + 1;
-        tmp2 = _up_symmetry.sector().size() % nprocs;
-        tmp3 = _up_symmetry.sector().size() / nprocs;
-        tmp4 = (i - 1) - (tmp1 * tmp2);
-        if (i > (tmp1 * tmp2)) {
-          ci = (tmp4%tmp3);
-          cid = (i - 1 - tmp2) / tmp3;
-        } else {
-          ci = ((i - 1)% (tmp3 + 1));
-          cid = (i - 1) / (tmp3 + 1);
-        }
-      }
-#endif
-
-      void fill_spin(Symmetry::NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix) {
-        long long k = 0;
-        int isign = 0;
-        int i = 0;
-        while (spin_symmetry.next_state()) {
-          long long nst = spin_symmetry.state();
-          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
-            if (_model.valid(_model.T_states()[kkk], nst << shift)) {
-              _model.set(_model.T_states()[kkk], nst << shift, k, isign);
-              int j = spin_symmetry.index(k >> shift);
-              spin_matrix.addElement(i, j, _model.T_states()[kkk].value(), isign);
-            }
-          }
-          spin_matrix.endLine(i);
-          ++i;
-        }
-      }
 
       void print() {
         std::cout << std::setprecision(2) << std::fixed;
@@ -380,8 +269,121 @@ namespace EDLib {
       int _myid;
       MPI_Win _win;
 #endif
-    };
 
+
+#ifdef USE_MPI
+      void find_neighbours() {
+        int ci, cid;
+        for(int i = 0; i< _up_size; ++ i) {
+          for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
+            calcIndex(ci, cid, H_up.col_ind()[j]);
+            if(_procs[cid]==0)  {_procs[cid]=1;}
+          }
+        }
+        int oset = 0;
+        int nprocs = _run_comm.size();
+        for(int i=0; i < nprocs; i++) {
+          if(_procs[i]!=0) {
+            _procs[i]=1;
+            _proc_offset[i]=oset * _down_symmetry.sector().size();
+            int ls=_up_symmetry.sector().size()/nprocs;
+            if((_up_symmetry.sector().size()% nprocs) > i) {
+              ls++;
+//              loc_offset[i] = i * ls;
+            }else{
+//              loc_offset[i] = i * ls + (Nstates[nup][ndo] % nprocs);
+            }
+            _proc_size[i]=ls * _down_symmetry.sector().size();
+            oset+=ls;
+          }
+        }
+//        std::cout<<_run_comm.rank()<<"  neighbours: ";
+//        for(int i=0; i < nprocs; i++) {
+//          std::cout<<" "<<i<<" "<<bool(_procs[i])<<" "<<_proc_size[i]<<" "<<_proc_offset[i]<<" ";
+//        }
+      }
+
+      void calcIndex(int &ci, int &cid, int i) {
+        //       local variables
+        int tmp1, tmp2, tmp3, tmp4;
+        int nprocs = _run_comm.size();
+        tmp1 = _up_symmetry.sector().size() / nprocs + 1;
+        tmp2 = _up_symmetry.sector().size() % nprocs;
+        tmp3 = _up_symmetry.sector().size() / nprocs;
+        tmp4 = (i - 1) - (tmp1 * tmp2);
+        if (i > (tmp1 * tmp2)) {
+          ci = (tmp4%tmp3);
+          cid = (i - 1 - tmp2) / tmp3;
+        } else {
+          ci = ((i - 1)% (tmp3 + 1));
+          cid = (i - 1) / (tmp3 + 1);
+        }
+      }
+#endif
+
+      void fill_spin(Symmetry::NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix) {
+        long long k = 0;
+        int isign = 0;
+        int i = 0;
+        while (spin_symmetry.next_state()) {
+          long long nst = spin_symmetry.state();
+          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
+            if (_model.valid(_model.T_states()[kkk], nst << shift)) {
+              _model.set(_model.T_states()[kkk], nst << shift, k, isign);
+              int j = spin_symmetry.index(k >> shift);
+              spin_matrix.addElement(i, j, _model.T_states()[kkk].value(), isign);
+            }
+          }
+          spin_matrix.endLine(i);
+          ++i;
+        }
+      }
+
+      void reset() {
+        const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
+        const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
+        _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
+        _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
+        H_up.init(_up_symmetry.sector().size());
+        H_down.init(_down_symmetry.sector().size());
+#ifdef USE_MPI
+        MPI_Comm run_comm;
+        int up_size = _up_symmetry.sector().size();
+        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
+        MPI_Comm_split(_comm, color, _myid, &run_comm);
+        if(color == 1) {
+          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
+          int size = _run_comm.size();
+          int locsize = up_size / size;
+          int myid = _run_comm.rank();
+          if ((up_size % size) > myid) {
+            locsize += 1;
+            _offset =  myid * locsize* _down_symmetry.sector().size();
+          } else {
+            _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
+          }
+          _up_size = locsize;
+          _up_shift = _offset / _down_symmetry.sector().size();
+          _locsize = locsize * _down_symmetry.sector().size();
+          _model.symmetry().set_offset(_offset);
+          _procs.assign(size, 0);
+          _proc_offset.assign(size, 0);
+          _proc_size.assign(size, 0);
+        } else {
+          _up_size = 0;
+          _locsize=0;
+        }
+#else
+        _locsize = sector.size();
+        _up_size = _up_symmetry.sector().size();
+        _up_shift = 0;
+#endif
+        _diagonal.assign(_locsize, prec(0.0));
+        _vecval.assign(sector.size(), prec(0.0));
+        n() = _locsize;
+        ntot() = sector.size();
+      }
+    };
   }
 }
 #endif //HUBBARD_SPINRESOLVEDSTORAGE_H

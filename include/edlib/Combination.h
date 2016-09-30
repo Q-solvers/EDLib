@@ -25,8 +25,8 @@ namespace EDLib {
     }
 
     /**
-    *
-    */
+     *
+     */
     inline void init_state(int ik, std::vector < int > &vec) {
       for (int i = 0; i < ik; i++) {
         vec[i] = i;
