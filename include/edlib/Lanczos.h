@@ -22,7 +22,7 @@ namespace EDLib {
       const alps::gf::matsubara_positive_mesh &omega() const {
         return _omega;
       }
-
+    protected:
       int lanczos(std::vector < precision > &v) {
         int nlanc = 0;
         unsigned long size = v.size();
@@ -64,7 +64,7 @@ namespace EDLib {
       /**
        * Compute lanczos continues fraction
        */
-      void computefrac(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, alps::gf::omega_gf &gf) {
+      void compute_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, alps::gf::omega_gf &gf) {
         double expb = 0;
         double shift;
         if (_omega.beta() * (excited_state - groundstate) > 25)

@@ -16,7 +16,7 @@ namespace EDLib {
       using Lanczos < precision, Hamiltonian >::hamiltonian;
       using Lanczos < precision, Hamiltonian >::lanczos;
       using Lanczos < precision, Hamiltonian >::omega;
-      using Lanczos < precision, Hamiltonian >::computefrac;
+      using Lanczos < precision, Hamiltonian >::compute_continues_fraction;
     public:
       GreensFunction(EDParams &p, Hamiltonian &h) : Lanczos < precision, Hamiltonian >(p, h), _model(h.model()),
                                                     gf(p["NSPINS"],
@@ -47,13 +47,13 @@ namespace EDLib {
               if (create_particle(i, is, hamiltonian().eigenpairs()[kkk].eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                computefrac(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, 1, gf[is][i]);
+                compute_continues_fraction(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, 1, gf[is][i]);
               }
               _model.symmetry().set_sector(hamiltonian().eigenpairs()[kkk].sector());
               if (annihilate_particle(i, is, hamiltonian().eigenpairs()[kkk].eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                computefrac(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, -1, gf[is][i]);
+                compute_continues_fraction(expectation_value, hamiltonian().eigenpairs()[kkk].eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, -1, gf[is][i]);
               }
             }
           }

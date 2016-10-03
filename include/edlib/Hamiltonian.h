@@ -23,6 +23,7 @@ namespace EDLib {
   class Hamiltonian {
   public:
     typedef Model ModelType;
+    typedef Storage StorageType;
 
     /*
      * Initialize Hamiltonian for specific model and allocate storage
