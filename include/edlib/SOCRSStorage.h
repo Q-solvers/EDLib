@@ -247,10 +247,10 @@ namespace EDLib {
 
 #ifdef _OPENMP
       int _nthreads;
-      std::vector < int > _row_offset;
-      std::vector < int > _vind_offset;
-      std::vector < int > _vind_offset_bit;
-      std::vector < int > _vind_offset_byte;
+      std::vector < size_t > _row_offset;
+      std::vector < size_t > _vind_offset;
+      std::vector < size_t > _vind_offset_bit;
+      std::vector < size_t > _vind_offset_byte;
 #endif
 
       // internal indicies
