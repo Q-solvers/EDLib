@@ -66,12 +66,19 @@ namespace EDLib {
         }
       }
       std::sort(_eigenpairs.begin(), _eigenpairs.end());
-      std::cout << "Here is the list of eigenvalues:" << std::endl;
-      for (int kkk = 0; kkk < _eigenpairs.size(); ++kkk) {
-        std::cout << _eigenpairs[kkk].eigenvalue() << " ";
-        _eigenpairs[kkk].sector().print();
-        std::cout << std::endl;
+#ifdef USE_MPI
+      alps::mpi::communicator world;
+      if (world.rank() == 0){
+#endif
+        std::cout << "Here is the list of eigenvalues:" << std::endl;
+        for (int kkk = 0; kkk < _eigenpairs.size(); ++kkk) {
+          std::cout << _eigenpairs[kkk].eigenvalue() << " ";
+          _eigenpairs[kkk].sector().print();
+          std::cout << std::endl;
+        }
+#ifdef USE_MPI
       }
+#endif
     }
 
     Storage &storage() {
