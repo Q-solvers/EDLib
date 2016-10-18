@@ -21,7 +21,7 @@ namespace EDLib {
       using Storage < prec >::n;
       using Storage < prec >::ntot;
 #ifdef USE_MPI
-      SOCRSStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm),
+      SOCRSStorage(alps::params &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm),
 #else
       SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p),
 #endif
@@ -229,6 +229,18 @@ namespace EDLib {
         Storage < prec >::eigenvalues().resize(1);
         Storage < prec >::eigenvalues()[0] = dvalues[0];
         Storage < prec >::eigenvectors().assign(1, std::vector < prec >(1, prec(1.0)));
+      }
+
+      size_t vector_size(typename Model::Sector sector) {
+        return sector.size();
+      }
+
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
+        prec alf = prec(0.0);
+        for (int k = 0; k < v.size(); ++k) {
+          alf += w[k] * v[k];
+        }
+        return alf;
       }
 
 #ifdef _OPENMP

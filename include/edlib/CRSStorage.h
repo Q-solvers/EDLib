@@ -19,11 +19,13 @@ namespace EDLib {
       using Storage < prec >::ntot;
     public:
 #ifdef USE_MPI
-      CRSStorage(EDParams &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
+      CRSStorage(alps::params &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
 #else
       CRSStorage(EDParams &p, Model &s) : Storage < prec >(p),
 #endif
-                                          _vind(0), _max_size(p["storage.MAX_SIZE"]), _max_dim(p["storage.MAX_DIM"]), _model(s) {
+                                          _vind(0), _model(s) {
+        _max_size = p["storage.MAX_SIZE"];
+        _max_dim = p["storage.MAX_DIM"];
         // init what you need from parameters
       };
 
@@ -155,7 +157,16 @@ namespace EDLib {
         Storage < prec >::eigenvalues()[0] = values[0];
         Storage < prec >::eigenvectors().assign(1, std::vector < prec >(1, prec(1.0)));
       }
-
+      size_t vector_size(typename Model::Sector sector) {
+        return sector.size();
+      }
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
+        prec alf = prec(0.0);
+        for (int k = 0; k < v.size(); ++k) {
+          alf += w[k] * v[k];
+        }
+        return alf;
+      }
 
     private:
       std::vector < prec > values;

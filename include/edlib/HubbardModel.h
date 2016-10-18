@@ -7,7 +7,7 @@
 
 #include <vector>
 
-#include "EDParams.h"
+#include <alps/params.hpp>
 #include "SzSymmetry.h"
 #include "FermionicModel.h"
 
@@ -39,11 +39,12 @@ namespace EDLib {
       typedef typename Hubbard::InnerState < precision > St;
       typedef typename Symmetry::SzSymmetry::Sector Sector;
 
-      HubbardModel(EDParams &p) : FermionicModel(p["NSITES"], p["NSPINS"], int(p["NSITES"])*int(p["NSPINS"])),_symmetry(p),
-                                  Eps(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0))),
-                                  t(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0))),
-                                  U(p["NSITES"], precision(0.0)),
-                                  _xmu(p["NSITES"], precision(0.0)) {
+      HubbardModel(alps::params &p) : FermionicModel(p), _symmetry(p) {
+        define_parameters(p);
+        Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
+        t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
+        U.assign(p["NSITES"], precision(0.0));
+        _xmu.assign(p["NSITES"], precision(0.0));
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
         input_data >> alps::make_pvp("BETA", _beta);
@@ -124,6 +125,8 @@ namespace EDLib {
       // Non-diagonal states iterator
       std::vector < St > _states;
       std::vector < St > _V_states;
+
+      void define_parameters(alps::params &p) {}
     };
 
   }

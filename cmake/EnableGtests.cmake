@@ -9,7 +9,7 @@ option(TestXMLOutput "Output tests to xml" OFF)
 # Find gtest or otherwise fetch it into the build_dir/gtest
 # Adapted from alpscore
 function(UseGtest)  
-    set (gtest_root ${ARGN})
+    set (gtest_root ${GTEST_ROOT})
     if (DEFINED gtest_root)
         message(STATUS "gtest source specified at ${gtest_root}")
         find_path(gtest_root NAMES "include/gtest/gtest.h" HINTS ${gtest_root})

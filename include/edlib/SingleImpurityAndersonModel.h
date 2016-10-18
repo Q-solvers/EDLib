@@ -171,18 +171,19 @@ namespace EDLib {
     template<typename precision>
     class SingleImpurityAndersonModel : public FermionicModel {
     public:
-      typedef typename Symmetry::ImpuritySzSymmetry SYMMETRY;
+      typedef typename Symmetry::SzSymmetry SYMMETRY;
       typedef typename SingleImpurityAnderson::InnerState<precision> St;
       typedef typename SingleImpurityAnderson::InnerHybridizationState<precision> HSt;
       typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
-      typedef typename Symmetry::ImpuritySzSymmetry::Sector Sector;
+      typedef typename Symmetry::SzSymmetry::Sector Sector;
 
-      SingleImpurityAndersonModel(EDParams &p): FermionicModel(p["NSITES"], p["NSPINS"], int(p["NSITES"])*int(p["NSPINS"])), _symmetry(p, p["NSITES"], p["siam.NORBITALS"]),
-                                                _ml(p["siam.NORBITALS"]) {
+      SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p) {
+        define_parameters(p);
+        _ml = p["siam.NORBITALS"];
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
         input_data >> alps::make_pvp("NSPINS", _ms);
-        _symmetry = SYMMETRY(p, _Ns, _ml);
+//        _symmetry = SYMMETRY(p, _Ns, _ml);
         if ((_Ns - _ml) % _ml != 0 || _ml > _Ns) {
           throw std::logic_error("Incorrect values for the total number of sites and the number of orbitals. Please check input file.");
         }
@@ -293,6 +294,10 @@ namespace EDLib {
       std::vector < St > _T_states;
       // Interaction part of the off-diagonal Hamiltonian elements
       std::vector < St > _V_states;
+
+      void define_parameters(alps::params &p) {
+        p.define < int >("siam.NORBITALS", 1, "Number of orbitals in single impurity Anderson Model.");
+      }
     };
 
   }

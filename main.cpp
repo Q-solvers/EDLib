@@ -1,7 +1,7 @@
 #include <iostream>
 
 
-#include "edlib/EDParams.h"
+#include "alps/params.hpp"
 #include "edlib/Hamiltonian.h"
 #include "edlib/SzSymmetry.h"
 #include "edlib/SOCRSStorage.h"
@@ -9,7 +9,6 @@
 #include "edlib/HubbardModel.h"
 #include "edlib/GreensFunction.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/HolsteinAndersonModel.h"
 
 
 int main(int argc, const char ** argv) {
@@ -17,7 +16,7 @@ int main(int argc, const char ** argv) {
   MPI_Init(&argc, (char ***) &argv);
   alps::mpi::communicator comm;
 #endif
-  EDLib::EDParams params(argc, argv);
+  alps::params params(argc, argv);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
@@ -31,8 +30,8 @@ int main(int argc, const char ** argv) {
 //  SOCSRHubbardHamiltonian_float ham(params);
     ham.diag();
 //  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
-//    EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
-//    greensFunction.compute();
+    EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
+    greensFunction.compute();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI

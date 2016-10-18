@@ -35,7 +35,7 @@ namespace EDLib {
         CRSMatrix() {
         }
 
-        void init(int N) {
+        void init(size_t N) {
           _values.assign(N * N, p(0));
           _col_ind.assign(N * N, 0);
           _row_ptr.assign(N + 1, 0);
@@ -87,7 +87,7 @@ namespace EDLib {
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(EDParams &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
                                                    _loc_symmetry(m.interacting_orbitals()) {
         _nprocs = _comm.size();
@@ -214,6 +214,51 @@ namespace EDLib {
       void endMatrix() {
       }
 
+      size_t vector_size(typename Model::Sector sector) {
+        size_t sector_size = sector.size();
+        int myid,size;
+#ifdef USE_MPI
+        myid = _comm.rank();
+        size = _comm.size();
+        size_t up_size = _model.symmetry().comb().c_n_k(_Ns, sector.nup());
+        size_t down_size = sector_size / up_size;
+        size = up_size>size ? size : up_size;
+        if(myid >= size) {
+          return 0;
+        }
+        size_t locsize = up_size / size;
+        if ((up_size % size) > myid) {
+          locsize += 1;
+        }
+        return locsize * down_size;
+#else
+        return sector_size;
+#endif
+      }
+
+      prec norm(const std::vector<prec>& vec) {
+
+      }
+
+
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
+#ifdef USE_MPI
+        prec alf = prec(0.0);
+        prec temp = prec(0.0);
+        for (int k = 0; k < v.size(); ++k) {
+          temp += w[k] * v[k];
+        }
+        MPI_Allreduce(&temp, &alf, 1, alps::mpi::detail::mpi_type<prec>(), MPI_SUM, comm());
+        return alf;
+#else
+        prec alf = prec(0.0);
+        for (int k = 0; k < v.size(); ++k) {
+          alf += w[k] * v[k];
+        }
+        return alf;
+#endif
+      }
+
     protected:
 #ifdef USE_MPI
       virtual alps::mpi::communicator & comm() {
@@ -297,6 +342,7 @@ namespace EDLib {
             oset+=ls;
           }
         }
+        _vecval.assign(oset * _down_symmetry.sector().size(), prec(0.0));
 //        std::cout<<_run_comm.rank()<<"  neighbours: ";
 //        for(int i=0; i < nprocs; i++) {
 //          std::cout<<" "<<i<<" "<<bool(_procs[i])<<" "<<_proc_size[i]<<" "<<_proc_offset[i]<<" ";
@@ -344,11 +390,12 @@ namespace EDLib {
         const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
         _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
         _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
-        H_up.init(_up_symmetry.sector().size());
-        H_down.init(_down_symmetry.sector().size());
+        size_t up_size = _up_symmetry.sector().size();
+        size_t down_size = _down_symmetry.sector().size();
+        H_up.init(up_size);
+        H_down.init(down_size);
 #ifdef USE_MPI
         MPI_Comm run_comm;
-        int up_size = _up_symmetry.sector().size();
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
         MPI_Comm_split(_comm, color, _myid, &run_comm);
         if(color == 1) {
@@ -363,8 +410,8 @@ namespace EDLib {
             _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
           }
           _up_size = locsize;
-          _up_shift = _offset / _down_symmetry.sector().size();
-          _locsize = locsize * _down_symmetry.sector().size();
+          _up_shift = _offset / down_size;
+          _locsize = locsize * down_size;
           _model.symmetry().set_offset(_offset);
           _procs.assign(size, 0);
           _proc_offset.assign(size, 0);
@@ -374,12 +421,11 @@ namespace EDLib {
           _locsize=0;
         }
 #else
-        _locsize = sector.size();
-        _up_size = _up_symmetry.sector().size();
+        _locsize = up_size*down_size;
+        _up_size = up_size;
         _up_shift = 0;
 #endif
         _diagonal.assign(_locsize, prec(0.0));
-        _vecval.assign(sector.size(), prec(0.0));
         n() = _locsize;
         ntot() = sector.size();
       }

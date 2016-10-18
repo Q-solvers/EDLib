@@ -9,11 +9,9 @@ add_custom_target(edlib SOURCES Combination.h
     fortranbinding.h
     GreensFunction.h
     Hamiltonian.h
-    HolsteinAndersonModel.h
     HubbardModel.h
     Lanczos.h
     NSymmetry.h
-    NSymmetryWithBoson.h
     SingleImpurityAndersonModel.h
     SOCRSStorage.h
     SpinResolvedStorage.h

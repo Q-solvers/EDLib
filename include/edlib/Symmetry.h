@@ -5,7 +5,7 @@
 #ifndef HUBBARD_SYMMETRY_H
 #define HUBBARD_SYMMETRY_H
 
-#include "EDParams.h"
+#include <alps/params.hpp>
 
 namespace EDLib {
   namespace Symmetry {
@@ -15,6 +15,14 @@ namespace EDLib {
     class Symmetry {
     public:
       Symmetry() : _state(0) {};
+
+      void define_parameter(alps::params &params) {
+        params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
+      }
+
+      Symmetry(alps::params &p) {
+        define_parameter(p);
+      }
 
       virtual ~Symmetry() {};
 

@@ -5,7 +5,6 @@
 #ifndef HUBBARD_EIGENPAIR_H
 #define HUBBARD_EIGENPAIR_H
 
-#include <memory>
 #include <vector>
 
 namespace EDLib {
@@ -14,10 +13,8 @@ namespace EDLib {
   class EigenPair {
   public:
     EigenPair(const precision &eval, const std::vector < precision > &evec, SectorType sec) : _eigenvalue(eval), _sector(sec),
-                                                                                              _eigenvector(new precision[evec.size()], std::default_delete < precision[] >()) {
-      ;
-      std::cout<<"evec:"<<evec.size()<<std::endl;
-      std::memcpy(_eigenvector.get(), &evec[0], evec.size() * sizeof(precision));
+                                                                                              _eigenvector(evec) {
+      std::cout<<"eval:"<<eval<<"  evec:"<<evec.size()<<std::endl;
     };
 
     virtual ~EigenPair() {
@@ -28,7 +25,7 @@ namespace EDLib {
       return _eigenvalue;
     }
 
-    const std::shared_ptr < precision > &eigenvector() const {
+    const std::vector < precision > &eigenvector() const {
       return _eigenvector;
     }
 
@@ -45,7 +42,7 @@ namespace EDLib {
     };
   private:
     precision _eigenvalue;
-    std::shared_ptr < precision > _eigenvector;
+    std::vector < precision > _eigenvector;
     SectorType _sector;
   };
 

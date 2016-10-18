@@ -7,6 +7,7 @@
 
 #include <alps/gf/mesh.hpp>
 #include <alps/gf/gf.hpp>
+#include <alps/params.hpp>
 
 #include <cmath>
 
@@ -15,7 +16,21 @@ namespace EDLib {
     template<typename precision, class Hamiltonian>
     class Lanczos {
     public:
-      Lanczos(EDParams &p, Hamiltonian &h) : _omega(p["lanc.BETA"], p["lanc.NOMEGA"]), _Nl(p["lanc.NLANC"]), ham(h), alfalanc(_Nl), betalanc(_Nl + 1), det(_Nl), dl(_Nl) {
+      void define_parameters(alps::params &params) {
+        params.define < int >("lanc.NOMEGA", 32, "Number of fermionic frequencies");
+        params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
+        params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
+        params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
+      }
+
+      Lanczos(alps::params &p, Hamiltonian &h) : ham(h), _omega(0.0, 0)  {
+        define_parameters(p);
+        _omega = alps::gf::matsubara_positive_mesh(p["lanc.BETA"], p["lanc.NOMEGA"]);
+        _Nl = p["lanc.NLANC"];
+        alfalanc.assign(_Nl, 0.0);
+        betalanc.assign(_Nl + 1, 0.0);
+        det.assign(_Nl, 0);
+        dl.assign(_Nl, 0.0);
 
       }
 
@@ -41,16 +56,12 @@ namespace EDLib {
           alf = 0.0;
           bet = 0.0;
           ham.storage().av(v.data(), w.data(), size, false);
-          for (int k = 0; k < v.size(); ++k) {
-            alf += w[k] * v[k];
-          }
+          alf = ham.storage().vv(v, w);
           alfalanc[iter - 1] = alf;
           for (int j = 0; j < size; ++j) {
             w[j] -= alf * v[j];
           }
-          for (int k = 0; k < v.size(); ++k) {
-            bet += w[k] * w[k];
-          }
+          bet = ham.storage().vv(w, w);
           bet = std::sqrt(bet);
 
           if (iter != _Nl) betalanc[iter] = bet;

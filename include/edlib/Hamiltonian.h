@@ -12,7 +12,6 @@
 #include "SpinResolvedStorage.h"
 #include "Symmetry.h"
 #include "EigenPair.h"
-#include "EDParams.h"
 #include "HubbardModel.h"
 #include "CRSStorage.h"
 #include "SOCRSStorage.h"
@@ -30,11 +29,11 @@ namespace EDLib {
      * \param [in] p - alps::parameters
      */
 #ifdef USE_MPI
-    Hamiltonian(EDParams &p, alps::mpi::communicator& comm) :
+    Hamiltonian(alps::params &p, alps::mpi::communicator& comm) :
       _model(p),
       _storage(p, _model, comm) {};
 #endif
-    Hamiltonian(EDParams &p) :
+    Hamiltonian(alps::params &p) :
       _model(p),
       _storage(p, _model) {};
     /**

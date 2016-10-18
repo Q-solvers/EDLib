@@ -5,6 +5,8 @@
 #ifndef HUBBARD_FERMIONICMODEL_H
 #define HUBBARD_FERMIONICMODEL_H
 
+#include <alps/params.hpp>
+
 namespace EDLib {
   namespace Model {
 /**
@@ -16,7 +18,12 @@ namespace EDLib {
  */
     class FermionicModel {
     public:
-      FermionicModel(int Ns, int ms, int Ip) : _Ns(Ns), _ms(ms), _Ip(Ip) {}
+      FermionicModel(alps::params &p) {
+        define_parameters(p);
+        int Ns = p["NSITES"];
+        int ms = p["NSPINS"];
+        _Ns = Ns, _ms = ms, _Ip = Ns*ms;
+      }
 
       /**
        * @brief Check that im state is occupated
@@ -84,6 +91,17 @@ namespace EDLib {
       int _Ns;
       int _ms;
       int _Ip;
+    private:
+      /**
+       * Define parameters for fermionic models
+       *
+       * @param params - alps parameters
+       */
+      void define_parameters(alps::params &params) {
+        params.define < int >("NSITES", 4, "Number of sites");
+        params.define < int >("NSPINS", 2, "Number of spins");
+        params.define < std::string >("INPUT_FILE", "input.h5", "File with initial data");
+      }
     };
   }
 }
