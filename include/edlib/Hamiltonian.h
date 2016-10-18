@@ -64,7 +64,6 @@ namespace EDLib {
           }
         }
       }
-//      std::sort(_eigenpairs.begin(), _eigenpairs.end());
 #ifdef USE_MPI
       alps::mpi::communicator world;
       if (world.rank() == 0){

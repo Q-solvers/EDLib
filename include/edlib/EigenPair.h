@@ -8,14 +8,6 @@
 #include <vector>
 
 namespace EDLib {
-  template<typename EPType>
-  class customLess {
-  public:
-    bool operator()(const EPType* a, const EPType* b)
-    {
-      return &a < &b;
-    }
-  };
   template<typename precision, class SectorType>
   class EigenPair {
   public:
