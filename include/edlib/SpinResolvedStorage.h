@@ -88,8 +88,7 @@ namespace EDLib {
 
 #ifdef USE_MPI
       SpinResolvedStorage(alps::params &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
-                                                   _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
-                                                   _loc_symmetry(m.interacting_orbitals()) {
+                                                   _loc_symmetry(m.interacting_orbitals()), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])) {
         _nprocs = _comm.size();
         _myid = _comm.rank();
       }

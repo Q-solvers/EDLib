@@ -8,26 +8,26 @@
 
 #include <alps/params.hpp>
 namespace EDLib {
-  class EDParams : public alps::params {
-  public:
-    EDParams() : params() {
-      define_parameters();
-    }
-
-    EDParams(int argc, const char **argv) : alps::params(argc, argv) {
-      define_parameters();
-    }
-
-  private:
-    /**
-   * Define parameters used in programm
-   */
-    void define_parameters() {
-
-      define < int >("NSITES_BOSE", 2, "Number of bosonic sites. Should be 2^K - 1");
-    }
-
-  };
-
+  void define_parameters(alps::params &params) {
+    // General parameters
+    params.define < int >("NSITES", 4, "Number of sites");
+    params.define < int >("NSPINS", 2, "Number of spins");
+    params.define < std::string >("INPUT_FILE", "input.h5", "File with initial data");
+    // Symmetry parameters
+    params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
+    // Storage parameters
+    params.define < size_t >("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
+    params.define < size_t >("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
+    params.define < int >("storage.EIGENVALUES_ONLY", 0, "Compute only eigenvalues.");
+    params.define < int >("spinstorage.ORBITAL_NUMBER", 1, "Number of orbitals with interaction");
+    // ARPACK parameters
+    params.define < int >("arpack.NEV", 2, "Number of eigenvalues to find");
+    params.define < int >("arpack.NCV", "Number of convergent values");
+    // Lanczos parameters
+    params.define < int >("lanc.NOMEGA", 32, "Number of fermionic frequencies");
+    params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
+    params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
+    params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
+  }
 }
 #endif //HUBBARD_EDPARAMS_H

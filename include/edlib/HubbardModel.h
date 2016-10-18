@@ -40,7 +40,6 @@ namespace EDLib {
       typedef typename Symmetry::SzSymmetry::Sector Sector;
 
       HubbardModel(alps::params &p) : FermionicModel(p), _symmetry(p) {
-        define_parameters(p);
         Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
         t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
         U.assign(p["NSITES"], precision(0.0));
@@ -125,8 +124,6 @@ namespace EDLib {
       // Non-diagonal states iterator
       std::vector < St > _states;
       std::vector < St > _V_states;
-
-      void define_parameters(alps::params &p) {}
     };
 
   }

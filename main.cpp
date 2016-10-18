@@ -1,7 +1,6 @@
 #include <iostream>
 
-
-#include "alps/params.hpp"
+#include <edlib/EDParams.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/SzSymmetry.h"
 #include "edlib/SOCRSStorage.h"
@@ -20,7 +19,8 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  try {
+  EDLib::define_parameters(params);
+//  try {
 //  CSRHubbardHamiltonian_float ham(params);
 #ifdef USE_MPI
     EDLib::SRSHubbardHamiltonian ham(params, comm);
@@ -33,13 +33,13 @@ int main(int argc, const char ** argv) {
     EDLib::gf::GreensFunction < double, EDLib::SRSHubbardHamiltonian > greensFunction(params, ham);
     greensFunction.compute();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
-  } catch (std::exception & e) {
+  /*} catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
 #else
     std::cerr<<e.what();
 #endif
-  }
+  }*/
 #ifdef USE_MPI
   MPI_Finalize();
 #endif

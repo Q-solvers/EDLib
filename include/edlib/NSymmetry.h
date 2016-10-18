@@ -41,7 +41,7 @@ namespace EDLib {
 
       NSymmetry(int N) : Symmetry(), _N(N), _totstate(_N, 0.0), _current_sector(-1, 0), _comb(_N) {}
 
-      NSymmetry(alps::params &p) : Symmetry(p), _N(2 * int(p["NSITES"])), _totstate(_N, 0.0), _current_sector(-1, 0),
+      NSymmetry(alps::params &p) : Symmetry(), _N(2 * int(p["NSITES"])), _totstate(_N, 0.0), _current_sector(-1, 0),
                                _comb(_N) {
         if (p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
           std::vector < std::vector < int > > sectors;

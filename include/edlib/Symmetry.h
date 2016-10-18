@@ -16,14 +16,6 @@ namespace EDLib {
     public:
       Symmetry() : _state(0) {};
 
-      void define_parameter(alps::params &params) {
-        params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
-      }
-
-      Symmetry(alps::params &p) {
-        define_parameter(p);
-      }
-
       virtual ~Symmetry() {};
 
       virtual bool next_state() = 0;

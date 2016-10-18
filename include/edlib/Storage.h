@@ -16,23 +16,10 @@ namespace EDLib {
     class Storage {
     public:
 #ifdef USE_MPI
-
-      void define_parameters(alps::params &params) {
-        params.define < size_t >("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
-        params.define < size_t >("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
-        params.define < int >("storage.EIGENVALUES_ONLY", 0, "Compute only eigenvalues.");
-        params.define < int >("spinstorage.ORBITAL_NUMBER", 1, "Number of orbitals with interaction");
-        params.define < int >("arpack.NEV", 2, "Number of eigenvalues to find");
-        params.define < int >("arpack.NCV", "Number of convergent values");
-      }
-
-      Storage(alps::params &p, alps::mpi::communicator& comm) : _comm(comm) {
+      Storage(alps::params &p, alps::mpi::communicator& comm) : _comm(comm), _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
 #else
       Storage(EDParams &p) {
 #endif
-        define_parameters(p);
-        _nev = p["arpack.NEV"];
-        _eval_only = p["storage.EIGENVALUES_ONLY"];
         v.reserve(size_t(p["storage.MAX_DIM"]));
         resid.reserve(size_t(p["storage.MAX_DIM"]));
         workd.reserve(3 * size_t(p["storage.MAX_DIM"]));
