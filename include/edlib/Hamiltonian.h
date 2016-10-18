@@ -5,7 +5,7 @@
 #ifndef HUBBARD_HAMILTONIAN_H
 #define HUBBARD_HAMILTONIAN_H
 
-#include <vector>
+#include <set>
 #include <type_traits>
 
 #include <fstream>
@@ -60,19 +60,19 @@ namespace EDLib {
           const std::vector < prec > &evals = _storage.eigenvalues();
           const std::vector < std::vector < prec > > &evecs = _storage.eigenvectors();
           for (int i = 0; i < evals.size(); ++i) {
-            _eigenpairs.push_back(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], _model.symmetry().sector()));
+            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], _model.symmetry().sector()));
           }
         }
       }
-      std::sort(_eigenpairs.begin(), _eigenpairs.end());
+//      std::sort(_eigenpairs.begin(), _eigenpairs.end());
 #ifdef USE_MPI
       alps::mpi::communicator world;
       if (world.rank() == 0){
 #endif
         std::cout << "Here is the list of eigenvalues:" << std::endl;
-        for (int kkk = 0; kkk < _eigenpairs.size(); ++kkk) {
-          std::cout << _eigenpairs[kkk].eigenvalue() << " ";
-          _eigenpairs[kkk].sector().print();
+        for (typename std::set<EigenPair<prec, typename Model::Sector> >::iterator kkk = _eigenpairs.begin(); kkk != _eigenpairs.end(); kkk++) {
+          std::cout << kkk->eigenvalue() << " ";
+          kkk->sector().print();
           std::cout << std::endl;
         }
 #ifdef USE_MPI
@@ -84,7 +84,7 @@ namespace EDLib {
       return _storage;
     }
 
-    const std::vector < EigenPair < prec, typename Model::Sector > > &eigenpairs() const {
+    const std::set < EigenPair < prec, typename Model::Sector > > &eigenpairs() const {
       return _eigenpairs;
     };
 
@@ -97,7 +97,7 @@ namespace EDLib {
     Storage _storage;
 
     // Eigen-pairs
-    std::vector < EigenPair < prec, typename Model::Sector > > _eigenpairs;
+    std::set < EigenPair < prec, typename Model::Sector > > _eigenpairs;
 
     /**
      * Model to diagonalize

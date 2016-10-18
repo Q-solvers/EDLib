@@ -28,12 +28,16 @@ namespace EDLib {
       }
 
       void compute() {
-        for (int kkk = 0; kkk < hamiltonian().eigenpairs().size(); ++kkk) {
-          _Z += std::exp(-(hamiltonian().eigenpairs()[kkk].eigenvalue() - hamiltonian().eigenpairs()[0].eigenvalue()) * omega().beta());
+        if(hamiltonian().eigenpairs().empty())
+          return;
+        const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
+        for (typename std::set<EigenPair<precision, typename Hamiltonian::ModelType::Sector> >::iterator kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
+          const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
+          _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
-        for (int kkk = 0; kkk < hamiltonian().eigenpairs().size(); ++kkk) {
-          const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &pair = hamiltonian().eigenpairs()[kkk];
-          precision boltzmann_f = std::exp(-(pair.eigenvalue() - hamiltonian().eigenpairs()[0].eigenvalue()) * omega().beta());
+        for (typename std::set<EigenPair<precision, typename Hamiltonian::ModelType::Sector> >::iterator kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
+          const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
+          precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
           if (boltzmann_f < _cutoff) {
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
             continue;
@@ -48,13 +52,13 @@ namespace EDLib {
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continues_fraction(expectation_value, pair.eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, 1, gf[is][i]);
+                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf[is][i]);
               }
               _model.symmetry().set_sector(pair.sector());
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continues_fraction(expectation_value, pair.eigenvalue(), hamiltonian().eigenpairs()[0].eigenvalue(), nlanc, -1, gf[is][i]);
+                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf[is][i]);
               }
             }
           }

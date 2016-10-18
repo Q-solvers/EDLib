@@ -8,10 +8,18 @@
 #include <vector>
 
 namespace EDLib {
-
+  template<typename EPType>
+  class customLess {
+  public:
+    bool operator()(const EPType* a, const EPType* b)
+    {
+      return &a < &b;
+    }
+  };
   template<typename precision, class SectorType>
   class EigenPair {
   public:
+
     EigenPair(const precision &eval, const std::vector < precision > &evec, SectorType sec) : _eigenvalue(eval), _sector(sec),
                                                                                               _eigenvector(evec) {
       std::cout<<"eval:"<<eval<<"  evec:"<<evec.size()<<std::endl;
