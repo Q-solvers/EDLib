@@ -10,7 +10,7 @@
 #include "edlib/CRSStorage.h"
 
 TEST(SpinResolvedStorageTest, Init) {
-  EDLib::EDParams p;
+  alps::params p;
   p["NSITES"]=8;
   p["storage.MAX_SIZE"] = 80000;
   p["storage.MAX_DIM"] = 4900;

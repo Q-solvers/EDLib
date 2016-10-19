@@ -21,7 +21,7 @@ namespace EDLib {
 #ifdef USE_MPI
       CRSStorage(alps::params &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
 #else
-      CRSStorage(EDParams &p, Model &s) : Storage < prec >(p),
+      CRSStorage(alps::params &p, Model &s) : Storage < prec >(p),
 #endif
                                           _vind(0), _model(s) {
         _max_size = p["storage.MAX_SIZE"];

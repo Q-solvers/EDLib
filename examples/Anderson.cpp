@@ -10,7 +10,7 @@ int main(int argc, const char ** argv) {
   MPI_Init(&argc, (char ***) &argv);
   alps::mpi::communicator comm;
 #endif
-  EDLib::EDParams params(argc, argv);
+  alps::params params(argc, argv);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
