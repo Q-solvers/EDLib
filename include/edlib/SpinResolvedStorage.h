@@ -19,9 +19,7 @@ namespace EDLib {
 
     template<typename prec, class Model>
     class SpinResolvedStorage : public Storage < prec > {
-    //BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value && bool('Model have wrong symmetry.'));
-    // FIXME Tried to fix this, didn't work out.
-    //BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value && bool(), "Model have wrong symmetry.");
+    BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value && bool('Model have wrong symmetry.'));
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;
