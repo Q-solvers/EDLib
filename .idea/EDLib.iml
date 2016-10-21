@@ -2,40 +2,36 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/test/NSymmetryWithBoson_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/HolsteinAndersonModel_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/NSymmetry_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/HubbardModel_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/SpinResolvedStorage_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/SzSymmetry_Test.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/HubbardModel_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/NSymmetry_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/Storage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/fortranbinding.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Symmetry.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetryWithBoson.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Lanczos.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/EigenPair.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/CRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SpinResolvedStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/GreensFunction.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/HubbardModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Combination.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/HolsteinAndersonModel.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SpinResolvedStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/SzSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/FermionicModel.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/EDParams.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/SOCRSStorage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Symmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/SingleImpurityAndersonModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Lanczos.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/Hamiltonian.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/Combination.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lib/dummy.f90" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/CMakeLists.txt" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/examples/Anderson.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/examples/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples/Hubbard.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/examples/Anderson.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/EnableGtests.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindARPACK.cmake" isTestSource="false" />
     </content>
@@ -53,7 +49,7 @@
           <root url="file:///System/Library/Frameworks/DVComponentGlue.framework/Headers" />
           <root url="file:///System/Library/Frameworks/AppleScriptObjC.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DirectoryService.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/ImageIO.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/SecurityInterface.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Scripting.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DVDPlayback.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreAudioKit.framework/Headers" />
@@ -92,8 +88,7 @@
           <root url="file:///System/Library/Frameworks/Tk.framework/PrivateHeaders" />
           <root url="file:///System/Library/Frameworks/vmnet.framework/Headers" />
           <root url="file:///System/Library/Frameworks/FinderSync.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/LocalAuthentication.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/SecurityInterface.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/SyncServices.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Frameworks/QuartzFilters.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Frameworks/QuickLookUI.framework/Headers" />
@@ -109,13 +104,13 @@
           <root url="file:///System/Library/Frameworks/CoreFoundation.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DiscRecordingUI.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreMedia.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/SyncServices.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/ImageIO.framework/Headers" />
           <root url="file:///System/Library/Frameworks/JavaScriptCore.framework/Headers" />
           <root url="file:///System/Library/Frameworks/WebKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/QuickTime.framework/Headers" />
           <root url="file:///System/Library/Frameworks/IOBluetooth.framework/Headers" />
           <root url="file:///System/Library/Frameworks/IOBluetooth.framework/Frameworks/CoreBluetooth.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/Automator.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/LocalAuthentication.framework/Headers" />
           <root url="file:///System/Library/Frameworks/AGL.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreWLAN.framework/Headers" />
           <root url="file:///System/Library/Frameworks/OpenCL.framework/Headers" />
@@ -192,6 +187,7 @@
           <root url="file:///System/Library/Frameworks/VideoDecodeAcceleration.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Ruby.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DiscRecording.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/MediaLibrary.framework/Headers" />
           <root url="file:///System/Library/Frameworks/OSAKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CloudKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/NotificationCenter.framework/Headers" />
@@ -207,7 +203,7 @@
           <root url="file:///System/Library/Frameworks/ExceptionHandling.framework/Headers" />
           <root url="file:///System/Library/Frameworks/MediaAccessibility.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Kernel.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/MediaLibrary.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/Automator.framework/Headers" />
           <root url="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include" />
           <root url="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/7.0.2/include" />
           <root url="file://$USER_HOME$/work/Michigan/modules/alpscore/0.5.4/include" />
@@ -223,7 +219,7 @@
           <root url="file:///System/Library/Frameworks/DVComponentGlue.framework/Headers" />
           <root url="file:///System/Library/Frameworks/AppleScriptObjC.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DirectoryService.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/ImageIO.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/SecurityInterface.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Scripting.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DVDPlayback.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreAudioKit.framework/Headers" />
@@ -262,8 +258,7 @@
           <root url="file:///System/Library/Frameworks/Tk.framework/PrivateHeaders" />
           <root url="file:///System/Library/Frameworks/vmnet.framework/Headers" />
           <root url="file:///System/Library/Frameworks/FinderSync.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/LocalAuthentication.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/SecurityInterface.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/SyncServices.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Frameworks/QuartzFilters.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Quartz.framework/Frameworks/QuickLookUI.framework/Headers" />
@@ -279,13 +274,13 @@
           <root url="file:///System/Library/Frameworks/CoreFoundation.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DiscRecordingUI.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreMedia.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/SyncServices.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/ImageIO.framework/Headers" />
           <root url="file:///System/Library/Frameworks/JavaScriptCore.framework/Headers" />
           <root url="file:///System/Library/Frameworks/WebKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/QuickTime.framework/Headers" />
           <root url="file:///System/Library/Frameworks/IOBluetooth.framework/Headers" />
           <root url="file:///System/Library/Frameworks/IOBluetooth.framework/Frameworks/CoreBluetooth.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/Automator.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/LocalAuthentication.framework/Headers" />
           <root url="file:///System/Library/Frameworks/AGL.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CoreWLAN.framework/Headers" />
           <root url="file:///System/Library/Frameworks/OpenCL.framework/Headers" />
@@ -362,6 +357,7 @@
           <root url="file:///System/Library/Frameworks/VideoDecodeAcceleration.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Ruby.framework/Headers" />
           <root url="file:///System/Library/Frameworks/DiscRecording.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/MediaLibrary.framework/Headers" />
           <root url="file:///System/Library/Frameworks/OSAKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/CloudKit.framework/Headers" />
           <root url="file:///System/Library/Frameworks/NotificationCenter.framework/Headers" />
@@ -377,7 +373,7 @@
           <root url="file:///System/Library/Frameworks/ExceptionHandling.framework/Headers" />
           <root url="file:///System/Library/Frameworks/MediaAccessibility.framework/Headers" />
           <root url="file:///System/Library/Frameworks/Kernel.framework/Headers" />
-          <root url="file:///System/Library/Frameworks/MediaLibrary.framework/Headers" />
+          <root url="file:///System/Library/Frameworks/Automator.framework/Headers" />
           <root url="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include" />
           <root url="file:///Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/7.0.2/include" />
           <root url="file://$USER_HOME$/work/Michigan/modules/alpscore/0.5.4/include" />

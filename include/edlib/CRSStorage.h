@@ -20,15 +20,18 @@ namespace EDLib {
     public:
 #ifdef USE_MPI
       CRSStorage(alps::params &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
-#else
-      CRSStorage(EDParams &p, Model &s) : Storage < prec >(p),
-#endif
-                                          _vind(0), _model(s) {
+                                                                              _vind(0), _model(s) {
         _max_size = p["storage.MAX_SIZE"];
         _max_dim = p["storage.MAX_DIM"];
         // init what you need from parameters
       };
-
+#else
+      CRSStorage(alps::params &p, Model &s) : Storage < prec >(p), _vind(0), _model(s) {
+        _max_size = p["storage.MAX_SIZE"];
+        _max_dim = p["storage.MAX_DIM"];
+        // init what you need from parameters
+      };
+#endif
       void reset(size_t sector_size) {
         if (sector_size > _max_dim) {
           std::stringstream s;
