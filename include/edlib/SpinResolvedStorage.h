@@ -93,7 +93,7 @@ namespace EDLib {
         _myid = _comm.rank();
       }
 #else
-      SpinResolvedStorage(EDParams &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])),
                                                    _loc_symmetry(m.interacting_orbitals()) {}
 #endif

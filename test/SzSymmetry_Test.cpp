@@ -8,7 +8,7 @@
 
 
 TEST(SzSymmetryTest, Combinatorics) {
-  EDLib::EDParams p;
+  alps::params p;
   EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 
@@ -17,13 +17,13 @@ TEST(SzSymmetryTest, Combinatorics) {
 
 
 TEST(SzSymmetryTest, States) {
-  EDLib::EDParams p;
+  alps::params p;
   EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 }
 
 TEST(SzSymmetryTest, Initialization) {
-  EDLib::EDParams p;
+  alps::params p;
   EDLib::Symmetry::SzSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();

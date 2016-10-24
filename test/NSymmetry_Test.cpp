@@ -7,7 +7,7 @@
 #include "edlib/NSymmetry.h"
 
 TEST(NSymmetryTest, Initialization) {
-  EDLib::EDParams p;
+  alps::params p;
   EDLib::Symmetry::NSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();

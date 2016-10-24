@@ -18,7 +18,7 @@ namespace EDLib {
 #ifdef USE_MPI
       Storage(alps::params &p, alps::mpi::communicator& comm) : _comm(comm), _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
 #else
-      Storage(EDParams &p) {
+      Storage(alps::params &p) {
 #endif
         v.reserve(size_t(p["storage.MAX_DIM"]));
         resid.reserve(size_t(p["storage.MAX_DIM"]));

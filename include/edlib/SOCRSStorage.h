@@ -23,7 +23,7 @@ namespace EDLib {
 #ifdef USE_MPI
       SOCRSStorage(alps::params &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm),
 #else
-      SOCRSStorage(EDParams &p, Model &m) : Storage < prec >(p),
+      SOCRSStorage(alps::params &p, Model &m) : Storage < prec >(p),
 #endif
                                             _max_size(p["storage.MAX_SIZE"]),
 #ifdef _OPENMP
