@@ -50,19 +50,26 @@ namespace EDLib {
               precision expectation_value = 0;
               _model.symmetry().set_sector(pair.sector());
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
+                hamiltonian().storage().prepare_work_arrays(outvec.data());
                 int nlanc = lanczos(outvec);
+                hamiltonian().storage().finalize();
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf[is][i]);
               }
               _model.symmetry().set_sector(pair.sector());
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
+                hamiltonian().storage().prepare_work_arrays(outvec.data());
                 int nlanc = lanczos(outvec);
+                hamiltonian().storage().finalize();
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf[is][i]);
               }
             }
           }
         }
+#ifdef USE_MPI
+        if(hamiltonian().storage().comm().rank() == 0)
+#endif
         for (int i = 0; i < 1/*_model.orbitals()*/; ++i) {
           for (int is = 0; is < _model.spins(); ++is) {
             gf[is][i] /= _Z;
@@ -101,25 +108,16 @@ namespace EDLib {
         if ((spin == 0 && _model.symmetry().sector().nup() == _model.orbitals()) || (spin == 1 && _model.symmetry().sector().ndown() == _model.orbitals())) {
           return false;
         }
-        _model.symmetry().init();
+        hamiltonian().storage().reset();
         long long k = 0;
         int sign = 0;
         int nup_new = _model.symmetry().sector().nup() + (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() + spin;
         typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
-        double norm = 0.0;
         int i = 0;
-        while (_model.symmetry().next_state()) {
-          long long nst = _model.symmetry().state();
-          if (_model.checkState(nst, orbital + spin * _model.orbitals(), _model.max_total_electrons()) == 0) {
-            _model.adag(orbital + spin * _model.orbitals(), nst, k, sign);
-            int i1 = _model.symmetry().index(k, next_sec);
-            outvec[i1] = sign * invec[i];
-            norm += std::norm(outvec[i1]);
-          }
-          ++i;
-        };
+        hamiltonian().storage().a_adag(orbital + spin * _model.orbitals(), invec, outvec, next_sec, false);
+        double norm = hamiltonian().storage().vv(outvec, outvec);
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }
@@ -143,27 +141,17 @@ namespace EDLib {
         if ((spin == 0 && _model.symmetry().sector().nup() == 0) || (spin == 1 && _model.symmetry().sector().ndown() == 0)) {
           return false;
         }
-        _model.symmetry().init();
+        hamiltonian().storage().reset();
         long long k = 0;
         int sign = 0;
         int nup_new = _model.symmetry().sector().nup() - (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() - spin;
         typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
-        outvec.assign(next_sec.size(), precision(0.0));
-        double norm = 0.0;
+        outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0.0));
         int i = 0;
-        while (_model.symmetry().next_state()) {
-          long long nst = _model.symmetry().state();
-          if (_model.checkState(nst, orbital + spin * _model.orbitals(), _model.max_total_electrons())) {
-            _model.a(orbital + spin * _model.orbitals(), nst, k, sign);
-            int i1 = _model.symmetry().index(k, next_sec);
-            outvec[i1] = sign * invec[i];
-            // v_i * v_i^{\star}
-            norm += std::norm(outvec[i1]);
-          }
-          ++i;
-        };
-        for (int j = 0; j < next_sec.size(); ++j) {
+        hamiltonian().storage().a_adag(orbital + spin * _model.orbitals(), invec, outvec, next_sec, true);
+        double norm = hamiltonian().storage().vv(outvec, outvec);
+        for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }
         _model.symmetry().set_sector(next_sec);

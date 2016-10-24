@@ -80,7 +80,7 @@ namespace EDLib {
         resid.assign(size_t(n), prec(0.0));
         workd.assign(3 * size_t(n), prec(0.0));
         workl.assign(lworkl, prec(0.0));
-        prepare_work_arrays(&workd[0]);
+        prepare_work_arrays(&workd[0], size_t(2*n));
         do {
           saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
           if (ido == -1 || ido == 1) {
@@ -149,7 +149,7 @@ namespace EDLib {
        * Should be implemented based on storage type
        */
       virtual void av(prec *v, prec *w, int n, bool clear = true) = 0;
-      virtual void prepare_work_arrays(prec *w){};
+      virtual void prepare_work_arrays(prec *w, size_t shift = 0){};
       virtual void finalize(){};
 
       void saupd(int *ido, char *bmat, int *n, char *which, int *nev, prec *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
@@ -161,16 +161,16 @@ namespace EDLib {
                         prec *tol, prec *resid, int *ncv, prec *v,
                         int *ldv, int *iparam, int *ipntr, prec *workd,
                         prec *workl, int *lworkl, int *ierr) {};
-
+#ifdef USE_MPI
+      virtual alps::mpi::communicator & comm() {
+        return _comm;
+      }
+#endif
     protected:
       int &n() { return _n; }
       int &ntot() { return _ntot; }
 
 #ifdef USE_MPI
-      virtual alps::mpi::communicator & comm() {
-        return _comm;
-      }
-
       void broadcast_evals(bool empty = false) {
         MPI_Barrier(_comm);
         int nconv = evals.size();

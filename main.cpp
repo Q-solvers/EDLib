@@ -11,7 +11,7 @@
 
 
 int main(int argc, const char ** argv) {
-  typedef EDLib::CSRHubbardHamiltonian HamType;
+  typedef EDLib::SRSHubbardHamiltonian HamType;
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
   alps::mpi::communicator comm;

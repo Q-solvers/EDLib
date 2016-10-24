@@ -14,12 +14,12 @@
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/EigenPair.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/CRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/CMakeLists.txt" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SpinResolvedStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/GreensFunction.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/HubbardModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/SpinResolvedStorage.h" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/SzSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/FermionicModel.h" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/include/edlib/NSymmetry.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/EDParams.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/SOCRSStorage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/Symmetry.h" isTestSource="false" />
@@ -32,6 +32,7 @@
       <sourceFolder url="file://$MODULE_DIR$/examples/Hubbard.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/examples/Anderson.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/cmake/CXXStandard.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/EnableGtests.cmake" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/cmake/FindARPACK.cmake" isTestSource="false" />
     </content>

@@ -5,6 +5,7 @@
 #include "gtest/gtest.h"
 
 #include "edlib/SzSymmetry.h"
+#include "edlib/EDParams.h"
 
 
 TEST(SzSymmetryTest, Combinatorics) {
@@ -24,6 +25,7 @@ TEST(SzSymmetryTest, States) {
 
 TEST(SzSymmetryTest, Initialization) {
   alps::params p;
+  EDLib::define_parameters(p);
   EDLib::Symmetry::SzSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();

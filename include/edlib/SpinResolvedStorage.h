@@ -7,8 +7,7 @@
 
 #include <bitset>
 #include <iomanip>
-#include <boost/type_traits.hpp>
-#include <boost/typeof/typeof.hpp>
+#include <type_traits>
 
 #include "Storage.h"
 #include "SzSymmetry.h"
@@ -19,7 +18,7 @@ namespace EDLib {
 
     template<typename prec, class Model>
     class SpinResolvedStorage : public Storage < prec > {
-    BOOST_STATIC_ASSERT(boost::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value && bool('Model have wrong symmetry.'));
+      static_assert(std::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value, "Model have wrong symmetry.");
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;
@@ -147,7 +146,6 @@ namespace EDLib {
       }
 
       void fill() {
-        _model.symmetry().init();
         reset();
         if(n()==0) {
           // Do nothing if the matrix size is zero;
@@ -213,6 +211,53 @@ namespace EDLib {
       void endMatrix() {
       }
 
+
+      void reset() {
+        _model.symmetry().init();
+        const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
+        const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
+        _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
+        _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
+        size_t up_size = _up_symmetry.sector().size();
+        size_t down_size = _down_symmetry.sector().size();
+        H_up.init(up_size);
+        H_down.init(down_size);
+#ifdef USE_MPI
+        MPI_Comm run_comm;
+        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
+        MPI_Comm_split(_comm, color, _myid, &run_comm);
+        if(color == 1) {
+          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
+          int size = _run_comm.size();
+          int locsize = up_size / size;
+          int myid = _run_comm.rank();
+          if ((up_size % size) > myid) {
+            locsize += 1;
+            _offset =  myid * locsize* _down_symmetry.sector().size();
+          } else {
+            _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
+          }
+          _up_size = locsize;
+          _up_shift = _offset / down_size;
+          _locsize = locsize * down_size;
+          _model.symmetry().set_offset(_offset);
+          _procs.assign(size, 0);
+          _proc_offset.assign(size, 0);
+          _proc_size.assign(size, 0);
+        } else {
+          _up_size = 0;
+          _locsize=0;
+        }
+#else
+        _locsize = up_size*down_size;
+        _up_size = up_size;
+        _up_shift = 0;
+#endif
+        _diagonal.assign(_locsize, prec(0.0));
+        n() = _locsize;
+        ntot() = sector.size();
+      }
+
       size_t vector_size(typename Model::Sector sector) {
         size_t sector_size = sector.size();
         int myid,size;
@@ -229,6 +274,7 @@ namespace EDLib {
         if ((up_size % size) > myid) {
           locsize += 1;
         }
+        std::cout<<"Vec size:"<<locsize * down_size<<std::endl;
         return locsize * down_size;
 #else
         return sector_size;
@@ -237,6 +283,66 @@ namespace EDLib {
 
       prec norm(const std::vector<prec>& vec) {
 
+      }
+
+
+      void a_adag(int i, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
+        size_t locsize = invec.size();
+        size_t locsize_max = locsize;
+        size_t next_size = next_sec.size();
+        size_t up_size = _model.symmetry().comb().c_n_k(_Ns, next_sec.nup());
+        size_t down_size = next_size / up_size;
+        long long k;
+        int sign;
+        int ci;
+        int cid;
+#ifdef USE_MPI
+        int myid = _comm.rank();
+        int size = _comm.size();
+        int t = 0;
+        bool fence;
+
+        if(_up_symmetry.sector().size()%size != 0) {
+          locsize_max+= _down_symmetry.sector().size();
+        }
+        std::vector<prec> buff(1000, 0.0);
+
+        MPI_Win eigwin;
+        MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, MPI_COMM_WORLD, &eigwin);
+        MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
+#endif
+        for (int ind = 0; ind < locsize_max; ++ind) {
+#ifdef USE_MPI
+          if(fence)
+            MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
+          fence=false;
+#endif
+          if(ind<locsize) {
+            _model.symmetry().next_state();
+            long long nst = _model.symmetry().state();
+            if (_model.checkState(nst, i, _model.max_total_electrons()) == (a ? 1 : 0)) {
+              if (a) _model.a(i, nst, k, sign);
+              else _model.adag(i, nst, k, sign);
+              int i1 = _model.symmetry().index(k, next_sec);
+#ifdef USE_MPI
+              calcIndex(ci, cid, i1, up_size, down_size, _run_comm.size());
+              if(myid == cid) {
+                outvec[ci] = sign * invec[ind];
+              } else {
+                buff[t]=sign*invec[ind];
+                MPI_Put(&buff[t],1,alps::mpi::detail::mpi_type<prec>(),cid,ci,1,alps::mpi::detail::mpi_type<prec>(), eigwin);
+              }
+#endif
+            }
+          }
+          if((t+1)==buff.size()){fence=true;t=0;}
+          if(fence)
+            MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
+        }
+#ifdef USE_MPI
+        MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, eigwin);
+        MPI_Win_free(&eigwin);
+#endif
       }
 
 
@@ -258,26 +364,28 @@ namespace EDLib {
 #endif
       }
 
-    protected:
 #ifdef USE_MPI
-      virtual alps::mpi::communicator & comm() {
-        return _run_comm;
-      }
-
-      virtual void prepare_work_arrays(prec * data) {
+      virtual void prepare_work_arrays(prec * data, size_t shift = 0) {
         MPI_Info info;
         MPI_Info_create( &info );
         MPI_Info_set( info, "no_locks", "true");
-        MPI_Win_create(&data[2*n()], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
+        MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
         MPI_Info_free(&info);
+      }
+
+      virtual alps::mpi::communicator & comm() {
+        return _run_comm;
       }
 
       virtual void finalize(){
         MPI_Win_free(&_win);
         MPI_Comm run_comm = _run_comm;
         MPI_Comm_free(&run_comm);
+        _run_comm = Storage<prec>::comm();
       }
 #endif
+
+    protected:
 
     private:
       std::vector < Matrix > H_loc;
@@ -349,19 +457,23 @@ namespace EDLib {
       }
 
       void calcIndex(int &ci, int &cid, int i) {
+        calcIndex(ci, cid, i*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), _run_comm.size());
+      }
+      void calcIndex(int &ci, int &cid, int i, size_t u_s, size_t d_s, int nprocs) {
         //       local variables
         int tmp1, tmp2, tmp3, tmp4;
-        int nprocs = _run_comm.size();
-        tmp1 = _up_symmetry.sector().size() / nprocs + 1;
-        tmp2 = _up_symmetry.sector().size() % nprocs;
-        tmp3 = _up_symmetry.sector().size() / nprocs;
-        tmp4 = (i - 1) - (tmp1 * tmp2);
-        if (i > (tmp1 * tmp2)) {
-          ci = (tmp4%tmp3);
-          cid = (i - 1 - tmp2) / tmp3;
+        int i_rest = i % d_s;
+        int i_up = i / d_s;
+        tmp1 = u_s / nprocs + 1;
+        tmp2 = u_s % nprocs;
+        tmp3 = u_s / nprocs;
+        tmp4 = (i_up) - (tmp1 * tmp2);
+        if (i_up > (tmp1 * tmp2)) {
+          ci = ((tmp4%tmp3))*d_s + i_rest;
+          cid = (i_up - tmp2) / tmp3;
         } else {
-          ci = ((i - 1)% (tmp3 + 1));
-          cid = (i - 1) / (tmp3 + 1);
+          ci = (i_up%(tmp3 + 1))*d_s + i_rest;
+          cid = (i_up)/ (tmp3 + 1);
         }
       }
 #endif
@@ -382,51 +494,6 @@ namespace EDLib {
           spin_matrix.endLine(i);
           ++i;
         }
-      }
-
-      void reset() {
-        const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
-        const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
-        _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
-        _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
-        size_t up_size = _up_symmetry.sector().size();
-        size_t down_size = _down_symmetry.sector().size();
-        H_up.init(up_size);
-        H_down.init(down_size);
-#ifdef USE_MPI
-        MPI_Comm run_comm;
-        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
-        MPI_Comm_split(_comm, color, _myid, &run_comm);
-        if(color == 1) {
-          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
-          int size = _run_comm.size();
-          int locsize = up_size / size;
-          int myid = _run_comm.rank();
-          if ((up_size % size) > myid) {
-            locsize += 1;
-            _offset =  myid * locsize* _down_symmetry.sector().size();
-          } else {
-            _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
-          }
-          _up_size = locsize;
-          _up_shift = _offset / down_size;
-          _locsize = locsize * down_size;
-          _model.symmetry().set_offset(_offset);
-          _procs.assign(size, 0);
-          _proc_offset.assign(size, 0);
-          _proc_size.assign(size, 0);
-        } else {
-          _up_size = 0;
-          _locsize=0;
-        }
-#else
-        _locsize = up_size*down_size;
-        _up_size = up_size;
-        _up_shift = 0;
-#endif
-        _diagonal.assign(_locsize, prec(0.0));
-        n() = _locsize;
-        ntot() = sector.size();
       }
     };
   }

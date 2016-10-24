@@ -29,7 +29,7 @@ namespace EDLib {
         std::vector < precision > w(size, precision(0.0));
         precision alf = 0, bet = 0;
         ham.fill();
-        for (int iter = 1; iter <= _Nl; iter++) {
+        for (int iter = 1; iter <= _Nl; ++iter) {
           ++nlanc;
           if (iter != 1) {
             for (int j = 0; j < size; ++j) {
@@ -53,6 +53,9 @@ namespace EDLib {
           if (std::abs(bet) < 1e-10 /*|| iter >= (2 * ham.model().symmetry().sector().size())*/) {
             break;
           }
+        }
+        for (int k = 0; k < nlanc; ++k) {
+          std::cout<<betalanc[k]<<"\n";
         }
         return nlanc;
       }

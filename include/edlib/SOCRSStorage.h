@@ -77,7 +77,9 @@ namespace EDLib {
         }
       }
 
-      void reset(size_t sector_size) {
+      void reset() {
+        _model.symmetry().init();
+        size_t sector_size = _model.symmetry().sector().size();
         if (sector_size > _max_dim) {
           std::stringstream s;
           s << "New sector request more memory than allocated. Increase MAX_DIM parameter. Requested " << sector_size << ", allocated " << _max_dim << ".";
@@ -98,8 +100,7 @@ namespace EDLib {
       }
 
       void fill() {
-        _model.symmetry().init();
-        reset(_model.symmetry().sector().size());
+        reset();
         int i = 0;
         long long k = 0;
         int isign = 0;
@@ -240,6 +241,22 @@ namespace EDLib {
           alf += w[k] * v[k];
         }
         return alf;
+      }
+
+      void a_adag(int iii, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
+        long long k;
+        int sign;
+        int i = 0;
+        while (_model.symmetry().next_state()) {
+          long long nst = _model.symmetry().state();
+          if (_model.checkState(nst, iii, _model.max_total_electrons()) == (a ? 1 : 0)) {
+            if(a) _model.a(iii, nst, k, sign);
+            else _model.adag(iii, nst, k, sign);
+            int i1 = _model.symmetry().index(k, next_sec);
+            outvec[i1] = sign * invec[i];
+          }
+          ++i;
+        };
       }
 
 #ifdef _OPENMP

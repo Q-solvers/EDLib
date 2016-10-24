@@ -3,6 +3,9 @@ project(Hubbard C CXX Fortran)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
+include(CXXStandard)
+use_cxx11()
+
 find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
 find_package(ARPACK)
 find_package(BLAS)
