@@ -54,9 +54,6 @@ namespace EDLib {
             break;
           }
         }
-        for (int k = 0; k < nlanc; ++k) {
-          std::cout<<betalanc[k]<<"\n";
-        }
         return nlanc;
       }
 
