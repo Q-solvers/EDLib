@@ -332,7 +332,10 @@ namespace EDLib {
                 buff[t]=sign*invec[ind];
                 MPI_Put(&buff[t],1,alps::mpi::detail::mpi_type<prec>(),cid,ci,1,alps::mpi::detail::mpi_type<prec>(), eigwin);
               }
+#else
+              outvec[i1] = sign * invec[ind];
 #endif
+
             }
           }
           if((t+1)==buff.size()){fence=true;t=0;}
