@@ -18,10 +18,7 @@ namespace EDLib {
  */
     class FermionicModel {
     public:
-      FermionicModel(alps::params &p) {
-        int Ns = p["NSITES"];
-        int ms = p["NSPINS"];
-        _Ns = Ns, _ms = ms, _Ip = Ns*ms;
+      FermionicModel(alps::params &p) : _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(int(p["NSPINS"]) * int(p["NSITES"])) {
       }
 
       /**

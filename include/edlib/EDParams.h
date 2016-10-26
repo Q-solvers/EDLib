@@ -28,6 +28,9 @@ namespace EDLib {
     params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
     params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
     params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
+
+    // Anderson model
+    params.define < int >("siam.NORBITALS", 1, "Number of orbitals in single impurity Anderson Model.");
   }
 }
 #endif //HUBBARD_EDPARAMS_H

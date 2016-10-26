@@ -154,7 +154,7 @@ namespace EDLib {
         // fill off-diagonal matrix for each spin
         fill_spin(_up_symmetry, _Ns, H_up);
         fill_spin(_down_symmetry, 0, H_down);
-        // fill diagonal;
+        // fill local part;
         for(int i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();

@@ -177,40 +177,62 @@ namespace EDLib {
       typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
       typedef typename Symmetry::SzSymmetry::Sector Sector;
 
-      SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p) {
-        define_parameters(p);
-        _ml = p["siam.NORBITALS"];
+      SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
+                                                    _Epsk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
+                                                    _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
+                                                    _bath_ind(p["siam.NORBITALS"], 0) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
-        input_data >> alps::make_pvp("NSPINS", _ms);
-//        _symmetry = SYMMETRY(p, _Ns, _ml);
-        if ((_Ns - _ml) % _ml != 0 || _ml > _Ns) {
-          throw std::logic_error("Incorrect values for the total number of sites and the number of orbitals. Please check input file.");
+        if (_ml > _Ns) {
+          throw std::invalid_argument("Incorrect values for the total number of sites and the number of orbitals. Please check input file.");
         }
         if(_ms != 2) {
-          throw std::logic_error("Incorrect values for the number of spins. Please check input file.");
+          throw std::invalid_argument("Incorrect values for the number of spins. Please check input file.");
         }
         _Ip = _ms * _Ns;
-        _Nk = (_Ns - _ml) / _ml;
-        _Eps.assign(_ml, std::vector < precision >(_ms, precision(0.0)));
-        _Epsk.assign(_ml, std::vector < std::vector < precision > >(_Nk, std::vector < precision >(_ms, precision(0.0)))),
-          _Vk.assign(_ml, std::vector < std::vector < precision > >(_Nk, std::vector < precision >(_ms, precision(0.0)))),
-          _U.assign(_ml, std::vector < std::vector < std::vector < precision > > >
-            (_ml, std::vector < std::vector < precision > >
-              (_ml, std::vector < precision >(_ml, precision(0.0)))));
-        input_data >> alps::make_pvp("hopping/values", _Vk);
-        input_data >> alps::make_pvp("hopping/values", _Epsk);
-        input_data >> alps::make_pvp("hopping/values", _Eps);
-        input_data >> alps::make_pvp("XMU", _xmu);
+        for (int im = 0; im < _ml; ++im) {
+          std::stringstream s;
+          s<<"Bath/Vk_"<<im<<"/values";
+          input_data >> alps::make_pvp(s.str().c_str(), _Vk[im]);
+          s.str("");
+          s<<"Bath/Epsk_"<<im<<"/values";
+          input_data >> alps::make_pvp(s.str().c_str(), _Epsk[im]);
+        }
+        input_data >> alps::make_pvp("Eps0/values", _Eps);
+        input_data >> alps::make_pvp("mu", _xmu);
         input_data >> alps::make_pvp("interaction/values", _U);
         input_data.close();
+        if(_U.size() != _ml) {
+          throw std::invalid_argument("Incorrect number of orbitals. Please check input file.");
+        }
+        int b_ind = 0;
+        for(int im = 0; im< _ml; ++im ){
+          _bath_ind[im] = b_ind;
+          std::cout<<"shift: "<<_bath_ind[im]<<" ";
+          b_ind += _Vk[im].size();
+        }
+        if(b_ind != _Ns - _ml) {
+          throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
+        }
+
         for (int im = 0; im < _ml; ++im) {
-          for (int ik = 0; ik < _Nk; ++ik) {
+          for (int ik = 0; ik < _Vk[im].size(); ++ik) {
             for (int is = 0; is < _ms; ++is) {
               if (std::abs(_Vk[im][ik][is]) > 1e-10) {
-                _T_states.push_back(HSt(im, ik, is, _Vk[im][ik][is]));
+                int imk = ik + _bath_ind[im] + _ml;
+                _T_states.push_back(HSt(im, imk, is, _Vk[im][ik][is]));
               }
             }
+          }
+        }
+        std::cout<<"Epsk: \n";
+        for (int im = 0; im < _ml; ++im) {
+          std::cout<<"im "<<im<<"\n";
+          for (int ik = 0; ik < _Vk[im].size(); ++ik) {
+            for (int is = 0; is < _ms; ++is) {
+              std::cout<<_Epsk[im][ik][is]<<" ";
+            }
+            std::cout<<"\n";
           }
         }
         for (int is1 = 0; is1 < _ms; ++is1) {
@@ -219,8 +241,8 @@ namespace EDLib {
               for (int j = 0; j < _ml; ++j) {
                 for (int k = 0; k < _ml; ++k) {
                   for (int l = 0; l < _ml; ++l) {
-                    if (i == j && i == k && i == l) {
-                      // skip diagonal contribution
+                    // skip density-density contribution
+                    if ( ( (i == l) && (j == k) ) || ( (i == k) && (j == l) ) ) {
                       continue;
                     }
                     _V_states.push_back(USt(i, j, k, l, is1, is2, _U[i][j][k][l]));
@@ -236,13 +258,20 @@ namespace EDLib {
         precision xtemp = 0.0;
         for (int im = 0; im < _ml; ++im) {
           for (int is = 0; is < _ms; ++is) {
-            for (int ik = 0; ik < _Nk; ++ik) {
-              int ikm = ik + (im) * _Nk + _ml;
+            for (int ik = 0; ik < _Epsk[im].size(); ++ik) {
+              int ikm = ik + _bath_ind[im] + _ml;
               xtemp+=(_Epsk[im][ik][is] * checkState(state, ikm + is * _Ns, _Ip));
             }
             xtemp += (_Eps[im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
+          for(int jm = 0; jm < _ml; ++jm) {
+            for (int s1 = 0; s1 < _ms; ++s1) {
+              for (int s2 = 0; s2 < _ms; ++s2) {
+                xtemp += 0.5 * (_U[im][jm][im][jm] - _U[im][jm][jm][im]) * checkState(state, im + s1*_Ns, _Ip) * checkState(state, im + s2*_Ns, _Ip);
+              }
+            }
+          }
         }
         return xtemp;
       }
@@ -289,15 +318,12 @@ namespace EDLib {
       std::vector < std::vector < std::vector < precision > > > _Vk;
       std::vector < std::vector < std::vector < precision > > > _Epsk;
       std::vector < std::vector < std::vector < std::vector < precision > > > > _U;
+      std::vector<int> _bath_ind;
 
       // Kinetic part of the off-diagonal Hamiltonian elements
       std::vector < St > _T_states;
       // Interaction part of the off-diagonal Hamiltonian elements
       std::vector < St > _V_states;
-
-      void define_parameters(alps::params &p) {
-        p.define < int >("siam.NORBITALS", 1, "Number of orbitals in single impurity Anderson Model.");
-      }
     };
 
   }

@@ -2,6 +2,7 @@
 // Created by iskakoff on 19/07/16.
 //
 
+#include <edlib/EDParams.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/GreensFunction.h"
 
@@ -11,6 +12,7 @@ int main(int argc, const char ** argv) {
   alps::mpi::communicator comm;
 #endif
   alps::params params(argc, argv);
+  EDLib::define_parameters(params);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
