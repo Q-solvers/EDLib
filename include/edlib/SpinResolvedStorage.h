@@ -155,10 +155,19 @@ namespace EDLib {
         fill_spin(_up_symmetry, _Ns, H_up);
         fill_spin(_down_symmetry, 0, H_down);
         // fill local part;
+        int isign;
+        long long k;
         for(int i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
+//          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
+//            if (_model.valid(_model.T_states()[kkk], nst)) {
+//              _model.set(_model.V_states()[kkk], nst, k, isign);
+//              int j = _model.symmetry().index(k);
+//              H_loc[0].addElement(i, j, _model.T_states()[kkk].value(), isign);
+//            }
+//          }
         }
 #ifdef USE_MPI
         find_neighbours();
@@ -338,9 +347,11 @@ namespace EDLib {
 
             }
           }
+#ifdef USE_MPI
           if((t+1)==buff.size()){fence=true;t=0;}
           if(fence)
             MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
+#endif
         }
 #ifdef USE_MPI
         MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, eigwin);
