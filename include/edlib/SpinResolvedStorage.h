@@ -338,9 +338,11 @@ namespace EDLib {
 
             }
           }
+#ifdef USE_MPI
           if((t+1)==buff.size()){fence=true;t=0;}
           if(fence)
             MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
+#endif
         }
 #ifdef USE_MPI
         MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, eigwin);
