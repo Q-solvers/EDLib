@@ -21,7 +21,7 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   EDLib::define_parameters(params);
-//  try {
+  try {
 //  CSRHubbardHamiltonian_float ham(params);
 #ifdef USE_MPI
 //    EDLib::SRSHubbardHamiltonian ham(params, comm);
@@ -34,13 +34,13 @@ int main(int argc, const char ** argv) {
     EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
     greensFunction.compute();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
-  /*} catch (std::exception & e) {
+  } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
 #else
     std::cerr<<e.what();
 #endif
-  }*/
+  }
 #ifdef USE_MPI
   MPI_Finalize();
 #endif
