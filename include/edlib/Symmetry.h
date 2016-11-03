@@ -20,7 +20,7 @@ namespace EDLib {
 
       virtual bool next_state() = 0;
 
-      const long long state() const {
+      long long state() const {
         return _state;
       };
 
