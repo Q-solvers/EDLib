@@ -128,8 +128,8 @@ namespace EDLib {
           return false;
         _current_sector = _sectors.front();
         _sectors.pop();
-        std::cout << "Diagonalizating Sz-symmetry sector with nup: " << _current_sector.nup() << " ndown: " << _current_sector.ndown() << " size: " << _current_sector.size()
-                  << std::endl;
+//        std::cout << "Diagonalizating Sz-symmetry sector with nup: " << _current_sector.nup() << " ndown: " << _current_sector.ndown() << " size: " << _current_sector.size()
+//                  << std::endl;
         return true;
       }
 

@@ -30,6 +30,7 @@ namespace EDLib {
      */
 #ifdef USE_MPI
     Hamiltonian(alps::params &p, MPI_Comm comm) :
+      _comm(comm),
       _model(p),
       _storage(p, _model, comm) {};
 #endif
@@ -65,8 +66,9 @@ namespace EDLib {
         }
       }
 #ifdef USE_MPI
-      alps::mpi::communicator world;
-      if (world.rank() == 0){
+      int rank;
+      MPI_Comm_rank(_comm, &rank);
+      if (rank == 0){
 #endif
         std::cout << "Here is the list of eigenvalues:" << std::endl;
         for (typename std::set<EigenPair<prec, typename Model::Sector> >::iterator kkk = _eigenpairs.begin(); kkk != _eigenpairs.end(); kkk++) {
@@ -102,6 +104,10 @@ namespace EDLib {
      * Model to diagonalize
      */
     Model _model;
+
+#ifdef USE_MPI
+    MPI_Comm _comm;
+#endif
 
   };
 

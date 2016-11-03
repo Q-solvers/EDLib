@@ -43,7 +43,7 @@ namespace EDLib {
       int diag() {
         int ido = 0;
         int n = _n;
-        if(n==0) {
+        if (n == 0) {
 #ifdef USE_MPI
           broadcast_evals(true);
 #endif
@@ -56,7 +56,7 @@ namespace EDLib {
 #endif
           return 0;
         }
-        std::cout<<"diag matrix:"<<n<<std::endl;
+        std::cout << "diag matrix:" << n << std::endl;
         int ncv = std::min(_ncv, _ntot);
         int nev = std::min(_nev, ncv - 1);
         char which[3] = "SA";
@@ -80,7 +80,7 @@ namespace EDLib {
         resid.assign(size_t(n), prec(0.0));
         workd.assign(3 * size_t(n), prec(0.0));
         workl.assign(lworkl, prec(0.0));
-        prepare_work_arrays(&workd[0], size_t(2*n));
+        prepare_work_arrays(&workd[0], size_t(2 * n));
         do {
           saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
           if (ido == -1 || ido == 1) {
@@ -95,7 +95,7 @@ namespace EDLib {
           finalize();
           return info;
         }
-        int rvec = 1-_eval_only;
+        int rvec = 1 - _eval_only;
         char howmny[2] = "A";
         int nconv = iparam[4];
         evals.resize(nconv);
@@ -111,7 +111,7 @@ namespace EDLib {
           return info;
         }
         // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
-        if(_eval_only == 0) {
+        if (_eval_only == 0) {
           evecs.assign(nconv, std::vector < prec >(n, prec(0.0)));
           for (int i = 0; i < nconv; ++i) {
             int offset = i * n;
@@ -124,6 +124,14 @@ namespace EDLib {
         finalize();
 #ifdef USE_MPI
         broadcast_evals();
+        int myid;
+        MPI_Comm_rank(comm(), &myid);
+        if (myid == 0) {
+          std::cout<<"Here is eigenvalues"<<std::endl;
+          for (int j = 0; j < evals.size(); ++j) {
+            std::cout<<evals[j]<<std::endl<<std::flush;
+          }
+        }
 #endif
         return 0;
       }
@@ -183,7 +191,6 @@ namespace EDLib {
             evecs.assign(nconv, std::vector<prec>(0, prec(0.0)));
           }
         }
-        std::cout<<rank<<" "<<evals.size();
         MPI_Bcast(evals.data(), nconv, alps::mpi::detail::mpi_type<prec>(), 0, _comm);
       }
 
