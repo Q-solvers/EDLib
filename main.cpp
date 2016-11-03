@@ -37,7 +37,7 @@ int main(int argc, const char ** argv) {
 #ifdef USE_MPI
     int rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == 0) std::cerr<<e.what();
+    if(rank == 0) std::cerr<<e.what()<<std::endl;
 #else
     std::cerr<<e.what();
 #endif

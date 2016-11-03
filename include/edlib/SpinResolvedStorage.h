@@ -107,6 +107,7 @@ namespace EDLib {
 #ifdef USE_MPI
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
+          if(_procs[i]!=0)
           MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, 0, _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
         }
 #endif
@@ -254,6 +255,7 @@ namespace EDLib {
           _model.symmetry().set_offset(_offset);
           _procs.assign(size, 0);
           _proc_offset.assign(size, 0);
+          _loc_offset.assign(size, 0);
           _proc_size.assign(size, 0);
         } else {
           _up_size = 0;
@@ -436,6 +438,7 @@ namespace EDLib {
       size_t _offset;
       int _nprocs;
       std::vector<int> _proc_offset;
+      std::vector<int> _loc_offset;
       std::vector<int> _procs;
       std::vector<int> _proc_size;
       int _myid;
@@ -462,19 +465,22 @@ namespace EDLib {
             int ls=_up_symmetry.sector().size()/nprocs;
             if((_up_symmetry.sector().size()% nprocs) > i) {
               ls++;
-//              loc_offset[i] = i * ls;
+              _loc_offset[i] = (i * ls);
             }else{
-//              loc_offset[i] = i * ls + (Nstates[nup][ndo] % nprocs);
+              _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs);
             }
             _proc_size[i]=ls * _down_symmetry.sector().size();
             oset+=ls;
           }
         }
         _vecval.assign(oset * _down_symmetry.sector().size(), prec(0.0));
-//        std::cout<<_run_comm.rank()<<"  neighbours: ";
-//        for(int i=0; i < nprocs; i++) {
-//          std::cout<<" "<<i<<" "<<bool(_procs[i])<<" "<<_proc_size[i]<<" "<<_proc_offset[i]<<" ";
-//        }
+        // adjust indexes
+        for (int i = 0; i < _up_size; ++i) {
+          for (int j = H_up.row_ptr()[i + _up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
+            calcIndex(ci, cid, H_up.col_ind()[j]);
+            H_up.col_ind()[j] -= (_loc_offset[cid] - _proc_offset[cid]/_down_symmetry.sector().size());
+          }
+        }
       }
 
       void calcIndex(int &ci, int &cid, int i) {
