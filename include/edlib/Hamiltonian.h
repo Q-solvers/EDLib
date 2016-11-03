@@ -29,7 +29,7 @@ namespace EDLib {
      * \param [in] p - alps::parameters
      */
 #ifdef USE_MPI
-    Hamiltonian(alps::params &p, alps::mpi::communicator& comm) :
+    Hamiltonian(alps::params &p, MPI_Comm comm) :
       _model(p),
       _storage(p, _model, comm) {};
 #endif

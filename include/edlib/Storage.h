@@ -16,7 +16,7 @@ namespace EDLib {
     class Storage {
     public:
 #ifdef USE_MPI
-      Storage(alps::params &p, alps::mpi::communicator& comm) : _comm(comm), _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
+      Storage(alps::params &p, MPI_Comm comm) : _comm(comm), _nev(p["arpack.NEV"]), _eval_only(p["storage.EIGENVALUES_ONLY"]) {
 #else
       Storage(alps::params &p) {
 #endif
@@ -162,7 +162,7 @@ namespace EDLib {
                         int *ldv, int *iparam, int *ipntr, prec *workd,
                         prec *workl, int *lworkl, int *ierr) {};
 #ifdef USE_MPI
-      virtual alps::mpi::communicator & comm() {
+      virtual MPI_Comm comm() {
         return _comm;
       }
 #endif
@@ -175,13 +175,15 @@ namespace EDLib {
         MPI_Barrier(_comm);
         int nconv = evals.size();
         MPI_Bcast(&nconv, 1, MPI_INT, 0, _comm);
-        if(_comm.rank() != 0) {
+        int rank;
+        MPI_Comm_rank(_comm, &rank);
+        if(rank != 0) {
           evals.resize(nconv);
           if(empty) {
             evecs.assign(nconv, std::vector<prec>(0, prec(0.0)));
           }
         }
-        std::cout<<_comm.rank()<<" "<<evals.size();
+        std::cout<<rank<<" "<<evals.size();
         MPI_Bcast(evals.data(), nconv, alps::mpi::detail::mpi_type<prec>(), 0, _comm);
       }
 
@@ -200,7 +202,7 @@ namespace EDLib {
       std::vector < prec > evals;
       std::vector < std::vector < prec > > evecs;
 #ifdef USE_MPI
-      alps::mpi::communicator &_comm;
+      MPI_Comm _comm;
 #endif
     };
 

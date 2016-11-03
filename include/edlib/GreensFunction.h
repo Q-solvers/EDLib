@@ -68,7 +68,9 @@ namespace EDLib {
           }
         }
 #ifdef USE_MPI
-        if(hamiltonian().storage().comm().rank() == 0)
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+        if(rank == 0)
 #endif
         for (int i = 0; i < 1/*_model.orbitals()*/; ++i) {
           for (int is = 0; is < _model.spins(); ++is) {

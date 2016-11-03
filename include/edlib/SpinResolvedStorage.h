@@ -86,10 +86,10 @@ namespace EDLib {
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(alps::params &p, Model &m, alps::mpi::communicator &comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _loc_symmetry(m.interacting_orbitals()), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])) {
-        _nprocs = _comm.size();
-        _myid = _comm.rank();
+        MPI_Comm_size(_comm, &_nprocs);
+        MPI_Comm_rank(_comm, &_myid);
       }
 #else
       SpinResolvedStorage(alps::params &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
@@ -237,9 +237,11 @@ namespace EDLib {
         MPI_Comm_split(_comm, color, _myid, &run_comm);
         if(color == 1) {
           _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
-          int size = _run_comm.size();
+          int myid;
+          MPI_Comm_rank(_run_comm,&myid);
+          int size;
+          MPI_Comm_size(_run_comm,&size);
           int locsize = up_size / size;
-          int myid = _run_comm.rank();
           if ((up_size % size) > myid) {
             locsize += 1;
             _offset =  myid * locsize* _down_symmetry.sector().size();
@@ -271,8 +273,8 @@ namespace EDLib {
         size_t sector_size = sector.size();
         int myid,size;
 #ifdef USE_MPI
-        myid = _comm.rank();
-        size = _comm.size();
+        MPI_Comm_rank(_comm,&myid);
+        MPI_Comm_size(_comm,&size);
         size_t up_size = _model.symmetry().comb().c_n_k(_Ns, sector.nup());
         size_t down_size = sector_size / up_size;
         size = up_size>size ? size : up_size;
@@ -306,8 +308,10 @@ namespace EDLib {
         int ci;
         int cid;
 #ifdef USE_MPI
-        int myid = _comm.rank();
-        int size = _comm.size();
+        int myid;
+        MPI_Comm_rank(_comm,&myid);
+        int size;
+        MPI_Comm_size(_comm,&size);
         int t = 0;
         bool fence;
 
@@ -334,7 +338,9 @@ namespace EDLib {
               else _model.adag(i, nst, k, sign);
               int i1 = _model.symmetry().index(k, next_sec);
 #ifdef USE_MPI
-              calcIndex(ci, cid, i1, up_size, down_size, _run_comm.size());
+              int size;
+              MPI_Comm_size(_run_comm, &size);
+              calcIndex(ci, cid, i1, up_size, down_size, size);
               if(myid == cid) {
                 outvec[ci] = sign * invec[ind];
               } else {
@@ -387,7 +393,7 @@ namespace EDLib {
         MPI_Info_free(&info);
       }
 
-      virtual alps::mpi::communicator & comm() {
+      virtual MPI_Comm comm() {
         return _run_comm;
       }
 
@@ -425,8 +431,8 @@ namespace EDLib {
       size_t _locsize;
 
 #ifdef USE_MPI
-      alps::mpi::communicator _comm;
-      alps::mpi::communicator _run_comm;
+      MPI_Comm _comm;
+      MPI_Comm _run_comm;
       size_t _offset;
       int _nprocs;
       std::vector<int> _proc_offset;
@@ -447,7 +453,8 @@ namespace EDLib {
           }
         }
         int oset = 0;
-        int nprocs = _run_comm.size();
+        int nprocs;
+        MPI_Comm_size(_run_comm, &nprocs);
         for(int i=0; i < nprocs; i++) {
           if(_procs[i]!=0) {
             _procs[i]=1;
@@ -471,7 +478,9 @@ namespace EDLib {
       }
 
       void calcIndex(int &ci, int &cid, int i) {
-        calcIndex(ci, cid, i*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), _run_comm.size());
+        int size;
+        MPI_Comm_size(_run_comm, &size);
+        calcIndex(ci, cid, i*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
       }
       void calcIndex(int &ci, int &cid, int i, size_t u_s, size_t d_s, int nprocs) {
         //       local variables
