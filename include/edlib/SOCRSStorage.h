@@ -171,6 +171,11 @@ namespace EDLib {
             throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
           }
         }
+        if (_vind[chunk] >= _vind_offset[chunk+1]) {
+          std::stringstream s;
+          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter.";
+          throw std::runtime_error(s.str().c_str());
+        }
         // Store sign in CRS-like array, one bit per sign.
         col_ind[_vind[chunk]] = j;
         signs[_vind_byte[chunk]] &= ~(1ll << _vind_bit[chunk]);
@@ -179,12 +184,6 @@ namespace EDLib {
         ++_vind[chunk];
         _vind_byte[chunk] += _vind_bit[chunk] / sizeof(char);
         _vind_bit[chunk] %= sizeof(char);
-        if (_vind[chunk] > _max_size) {
-// FIXME For OMP, check every chunk!
-          std::stringstream s;
-          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested " << _vind[chunk] << ", allocated " << _max_size << ".";
-          throw std::runtime_error(s.str().c_str());
-        }
       }
 
       void endMatrix() {
