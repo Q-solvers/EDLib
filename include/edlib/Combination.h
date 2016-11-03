@@ -20,7 +20,7 @@ namespace EDLib {
       }
     }
 
-    inline const int c_n_k(int n, int k) const {
+    inline int c_n_k(int n, int k) const {
       return _c_n_k[n][k];
     }
 
