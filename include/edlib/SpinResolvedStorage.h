@@ -86,10 +86,10 @@ namespace EDLib {
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _model(m), _interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _loc_symmetry(m.interacting_orbitals()), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])) {
-        MPI_Comm_size(_comm, &_nprocs);
-        MPI_Comm_rank(_comm, &_myid);
+//        MPI_Comm_size(_comm, &_nprocs);
+//        MPI_Comm_rank(_comm, &_myid);
       }
 #else
       SpinResolvedStorage(alps::params &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
@@ -236,7 +236,7 @@ namespace EDLib {
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
         MPI_Comm_split(_comm, color, _myid, &run_comm);
         if(color == 1) {
-          _run_comm = alps::mpi::communicator(run_comm, alps::mpi::comm_attach);
+          _run_comm = run_comm;
           int myid;
           MPI_Comm_rank(_run_comm,&myid);
           int size;
