@@ -43,7 +43,6 @@ namespace EDLib {
       int diag() {
         int ido = 0;
         int n = _n;
-        std::cout<<"Gonna to diag:"<<n<<" "<<_n<<"\n";
         if (n == 0) {
 #ifdef USE_MPI
           broadcast_evals(true);
@@ -60,7 +59,6 @@ namespace EDLib {
         std::cout << "diag matrix:" << n << std::endl;
         int ncv = std::min(_ncv, _ntot);
         int nev = std::min(_nev, ncv - 1);
-std::cout<<"nev:"<<nev<<" "<<_nev<<" ncv:"<<ncv<<" "<<_ncv<<"\n";
         char which[3] = "SA";
         prec sigma = 0.0;
         char bmat[2] = "I";
