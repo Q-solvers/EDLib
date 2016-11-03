@@ -88,8 +88,8 @@ namespace EDLib {
 #ifdef USE_MPI
       SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _model(m), _interaction_size(m.interacting_orbitals()),
                                                    _loc_symmetry(m.interacting_orbitals()), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])) {
-//        MPI_Comm_size(_comm, &_nprocs);
-//        MPI_Comm_rank(_comm, &_myid);
+        MPI_Comm_size(_comm, &_nprocs);
+        MPI_Comm_rank(_comm, &_myid);
       }
 #else
       SpinResolvedStorage(alps::params &p, Model &m) : Storage < prec >(p), _model(m), _interaction_size(m.interacting_orbitals()),
