@@ -23,7 +23,7 @@ namespace EDLib {
 
         const inline prec &value() const { return _value; }
 
-        const inline int spin() const { return _spin; }
+        inline int spin() const { return _spin; }
 
       private:
         std::pair < int, int > _indicies;
@@ -76,7 +76,7 @@ namespace EDLib {
         sign = -isign1 * isign2;
       }
 
-      inline const precision diagonal(long long state) const {
+      inline precision diagonal(long long state) const {
         precision xtemp = 0.0;
         for (int im = 0; im < _Ns; ++im) {
           for (int is = 0; is < _ms; ++is) {
@@ -95,7 +95,7 @@ namespace EDLib {
       // We have only diagonal interaction
       const std::vector < St > &V_states() const { return _V_states; };
 
-      const int interacting_orbitals() const {
+      int interacting_orbitals() const {
         return 1;
       }
 

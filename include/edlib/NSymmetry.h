@@ -136,7 +136,7 @@ namespace EDLib {
         return res;
       }
 
-      inline const int num(long long b, int n, int m) const {
+      inline int num(long long b, int n, int m) const {
         int res = 0;
         if (((b & (1ll << (_N - n))) == 0) and ((n - 1) > 0) and (m > 0) and (m < n))
           res = num(b, n - 1, m);

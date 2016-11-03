@@ -53,7 +53,7 @@ namespace EDLib {
           k = jold + (1ll << (Ip - i - 1));
         }
 
-        const virtual inline prec value() const { return 0.0; }
+        virtual inline prec value() const { return 0.0; }
       };
       template<typename prec>
       class InnerHybridizationState : public InnerState<prec> {
@@ -65,9 +65,9 @@ namespace EDLib {
 
         const inline std::pair < int, int > &indicies() const { return _indicies; }
 
-        const virtual inline prec value() const { return _value; }
+        virtual inline prec value() const { return _value; }
 
-        const inline int spin() const { return _spin; }
+        inline int spin() const { return _spin; }
         virtual int valid(long long nst, int Ns) const {
           return (checkState(nst, _indicies.first + _spin * Ns, Ns) * (1 - checkState(nst, _indicies.second + _spin * Ns, Ns)));
         }
