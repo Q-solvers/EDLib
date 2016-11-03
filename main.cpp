@@ -14,7 +14,6 @@ int main(int argc, const char ** argv) {
   typedef EDLib::SRSHubbardHamiltonian HamType;
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
-  alps::mpi::communicator comm;
 #endif
   alps::params params(argc, argv);
   if(params.help_requested(std::cout)) {
@@ -25,7 +24,7 @@ int main(int argc, const char ** argv) {
 //  CSRHubbardHamiltonian_float ham(params);
 #ifdef USE_MPI
 //    EDLib::SRSHubbardHamiltonian ham(params, comm);
-    HamType ham(params, comm);
+    HamType ham(params, MPI_COMM_WORLD);
 #else
     EDLib::SRSHubbardHamiltonian ham(params);
 #endif
@@ -36,7 +35,9 @@ int main(int argc, const char ** argv) {
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
-    if(comm.rank() == 0) std::cerr<<e.what();
+    int rank;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if(rank == 0) std::cerr<<e.what();
 #else
     std::cerr<<e.what();
 #endif
