@@ -305,7 +305,7 @@ namespace EDLib {
         return _V_states;
       }
 
-      const int interacting_orbitals() const {
+      int interacting_orbitals() const {
         return _ml;
       }
 

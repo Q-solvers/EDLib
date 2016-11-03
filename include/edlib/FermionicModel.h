@@ -66,15 +66,15 @@ namespace EDLib {
       }
 
 
-      const int orbitals() const {
+      int orbitals() const {
         return _Ns;
       }
 
-      const int max_total_electrons() const {
+      int max_total_electrons() const {
         return _Ip;
       }
 
-      const int spins() const {
+      int spins() const {
         return _ms;
       }
 
