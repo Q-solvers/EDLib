@@ -2,11 +2,12 @@
 <module type="CPP_MODULE" version="4">
   <component name="NewModuleRootManager">
     <content url="file://$MODULE_DIR$">
-      <sourceFolder url="file://$MODULE_DIR$/test/SpinResolvedStorage_Test.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/SzSymmetry_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/HubbardModel_Test.cpp" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/test/NSymmetry_Test.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/HubbardModel_Test.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/SpinResolvedStorage_Test.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/SRS.cpp" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/test/CMakeLists.txt" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/main.cpp" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/Storage.h" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/include/edlib/fortranbinding.h" isTestSource="false" />

@@ -127,10 +127,12 @@ namespace EDLib {
         int myid;
         MPI_Comm_rank(comm(), &myid);
         if (myid == 0) {
+#endif
           std::cout<<"Here is eigenvalues"<<std::endl;
           for (int j = 0; j < evals.size(); ++j) {
             std::cout<<evals[j]<<std::endl<<std::flush;
           }
+#ifdef USE_MPI
         }
 #endif
         return 0;
