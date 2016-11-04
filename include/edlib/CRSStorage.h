@@ -19,7 +19,7 @@ namespace EDLib {
       using Storage < prec >::ntot;
     public:
 #ifdef USE_MPI
-      CRSStorage(alps::params &p, Model &s, alps::mpi::communicator & comm) : Storage < prec >(p, comm),
+      CRSStorage(alps::params &p, Model &s, MPI_Comm comm) : Storage < prec >(p, comm),
 #else
       CRSStorage(alps::params &p, Model &s) : Storage < prec >(p),
 #endif

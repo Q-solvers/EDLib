@@ -465,9 +465,9 @@ namespace EDLib {
             int ls=_up_symmetry.sector().size()/nprocs;
             if((_up_symmetry.sector().size()% nprocs) > i) {
               ls++;
-              _loc_offset[i] = (i * ls);
+              _loc_offset[i] = (i * ls) - oset;
             }else{
-              _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs);
+              _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
             _proc_size[i]=ls * _down_symmetry.sector().size();
             oset+=ls;
@@ -478,7 +478,7 @@ namespace EDLib {
         for (int i = 0; i < _up_size; ++i) {
           for (int j = H_up.row_ptr()[i + _up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             calcIndex(ci, cid, H_up.col_ind()[j]);
-            H_up.col_ind()[j] -= (_loc_offset[cid] - _proc_offset[cid]/_down_symmetry.sector().size());
+            H_up.col_ind()[j] -= _loc_offset[cid];
           }
         }
       }

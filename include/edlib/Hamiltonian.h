@@ -8,6 +8,7 @@
 #include <set>
 #include <type_traits>
 
+#include <iomanip>
 #include <fstream>
 #include "SpinResolvedStorage.h"
 #include "Symmetry.h"
@@ -72,6 +73,7 @@ namespace EDLib {
 #endif
         std::cout << "Here is the list of eigenvalues:" << std::endl;
         for (typename std::set<EigenPair<prec, typename Model::Sector> >::iterator kkk = _eigenpairs.begin(); kkk != _eigenpairs.end(); kkk++) {
+	  std::cout<<std::setprecision(14);
           std::cout << kkk->eigenvalue() << " ";
           kkk->sector().print();
           std::cout << std::endl;

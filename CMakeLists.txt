@@ -35,8 +35,8 @@ set(extlibs
     )
 
 
-include_directories(${Hubbard_SOURCE_DIR}/test)
-add_subdirectory(test)
+#include_directories(${Hubbard_SOURCE_DIR}/test)
+#add_subdirectory(test)
 
 if(USE_MPI)
     if(!ALPS_HAVE_MPI)
@@ -49,6 +49,9 @@ if(USE_MPI)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
 endif(USE_MPI)
 
+include_directories(${Hubbard_SOURCE_DIR}/test)
+add_subdirectory(test)
+
 include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
 
@@ -56,9 +59,9 @@ add_subdirectory(lib)
 add_subdirectory(include/edlib)
 add_subdirectory(examples)
 
-enable_testing()
+#enable_testing()
 
-add_test(SzSymmetryTest test/SzSymmetryTest)
+#add_test(SzSymmetryTest test/SzSymmetryTest)
 
 set(SOURCE_FILES main.cpp)
 
