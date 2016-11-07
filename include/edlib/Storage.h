@@ -121,6 +121,9 @@ namespace EDLib {
           int nconv = iparam[4];
           evecs.assign(nconv, std::vector < prec >(1, prec(0.0)));
         };
+        int lout = 6, on = 2, idigit = -6;
+        char ifmt[4] = {'R','i', 't', 'z'};
+//        mout(&lout, &nconv, &on, &evals[0], &ncv, &idigit, ifmt);
         finalize();
 #ifdef USE_MPI
         broadcast_evals();
@@ -132,6 +135,22 @@ namespace EDLib {
           for (int j = 0; j < evals.size(); ++j) {
             std::cout<<evals[j]<<std::endl<<std::flush;
           }
+          if ( info == 1) {
+            std::cout<<"Maximum number of iterations reached."<<std::endl;
+          }
+          else if ( info == 3) {
+            std::cout<<" No shifts could be applied during implicit Arnoldi update, try increasing NCV."<<std::endl;
+          }
+          std::cout<<" ========================= "<<std::endl;
+          std::cout<<" Size of the matrix is "<<_ntot<<std::endl;
+          std::cout<<" The number of Ritz values requested is: "<<nev<<std::endl;
+          std::cout<<" The number of Arnoldi vectors generated: "<<ncv<<std::endl;
+          std::cout<<" What portion of the spectrum: "<<which<<std::endl;
+          std::cout<<" The number of converged Ritz values is:  "<<nconv<<std::endl;
+          std::cout<<" The number of Implicit Arnoldi update iterations taken is: "<<iparam[2]<<std::endl;
+          std::cout<<" The number of OP*x is: "<<iparam[8]<<std::endl;
+          std::cout<<" The convergence criterion is:  "<<tol<<std::endl;
+          std::cout<<" ========================= "<<std::endl;
 #ifdef USE_MPI
         }
 #endif
@@ -171,6 +190,7 @@ namespace EDLib {
                         prec *tol, prec *resid, int *ncv, prec *v,
                         int *ldv, int *iparam, int *ipntr, prec *workd,
                         prec *workl, int *lworkl, int *ierr) {};
+      void mout(int* lout, int *m, int*n, prec*A, int*lda, int* idigit,char* ifmt);
 #ifdef USE_MPI
       virtual MPI_Comm comm() {
         return _comm;
@@ -270,6 +290,24 @@ namespace EDLib {
               ldv, iparam, ipntr, workd, workl, lworkl, ierr);
 #endif
     }
+//    template<>
+//    void Storage<float>::mout(int* lout, int *m, int*n, float*A, int*lda, int* idigit,char* ifmt) {
+//#ifdef USE_MPI
+//      int scomm = PMPI_Comm_c2f(comm());
+//      psmout(&scomm, lout, m, n, A, lda, idigit,ifmt);
+//#else
+//      smout(lout, m, n, A, lda, idigit,ifmt);
+//#endif
+//    }
+//    template<>
+//    void Storage<double>::mout(int* lout, int *m, int*n, double*A, int*lda, int* idigit,char* ifmt) {
+//#ifdef USE_MPI
+//      int scomm = PMPI_Comm_c2f(comm());
+//      pdmout(&scomm, lout, m, n, A, lda, idigit,ifmt);
+//#else
+//      dmout(lout, m, n, A, lda, idigit,ifmt);
+//#endif
+//    }
   }
 }
 #endif //HUBBARD_STORAGE_H
