@@ -85,7 +85,7 @@ namespace EDLib {
             xtemp += (Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += U[im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
-          xtemp += Hmag[im] * (checkState(state, im, _Ip) - checkState(state, im + _Ns, _Ip));
+          xtemp += Hmag[im] * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
         }
         return xtemp;
       }
