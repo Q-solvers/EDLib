@@ -62,7 +62,7 @@ namespace EDLib {
           const std::vector < prec > &evals = _storage.eigenvalues();
           const std::vector < std::vector < prec > > &evecs = _storage.eigenvectors();
           for (int i = 0; i < evals.size(); ++i) {
-            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], _model.symmetry().sector()));
+            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], i, _model.symmetry().sector()));
           }
         }
       }

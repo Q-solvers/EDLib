@@ -44,14 +44,14 @@ namespace EDLib {
         t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
         U.assign(p["NSITES"], precision(0.0));
         _xmu.assign(p["NSITES"], precision(0.0));
-        Hmag.assign(p["NSITES"], precision(0.0));
+        Hmag = 0.0;
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
         input_data >> alps::make_pvp("BETA", _beta);
+        input_data >> alps::make_pvp("magnetic_field", Hmag);
         input_data >> alps::make_pvp("hopping/values", t);
         input_data >> alps::make_pvp("interaction/values", U);
         input_data >> alps::make_pvp("chemical_potential/values", _xmu);
-        input_data >> alps::make_pvp("magnetic_field/values", Hmag);
         input_data.close();
         for (int ii = 0; ii < _Ns; ++ii) {
           for (int jj = 0; jj < _Ns; ++jj) {
@@ -85,7 +85,7 @@ namespace EDLib {
             xtemp += (Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += U[im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
-          xtemp += Hmag[im] * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
+          xtemp += Hmag * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
         }
         return xtemp;
       }
@@ -120,7 +120,7 @@ namespace EDLib {
       // Chemical potential
       std::vector < precision > _xmu;
       // Magnetic field
-      std::vector < precision > Hmag;
+      precision Hmag;
       // site energy shift
       std::vector < std::vector < precision > > Eps;
       // Inverse temperature

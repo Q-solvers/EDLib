@@ -12,8 +12,8 @@ namespace EDLib {
   class EigenPair {
   public:
 
-    EigenPair(const precision &eval, const std::vector < precision > &evec, SectorType sec) : _eigenvalue(eval), _sector(sec),
-                                                                                              _eigenvector(evec) {
+    EigenPair(const precision &eval, const std::vector < precision > &evec, int id, SectorType sec) : _eigenvalue(eval), _sector(sec),
+                                                                                              _eigenvector(evec), _id(id) {
     };
 
     virtual ~EigenPair() {
@@ -33,15 +33,16 @@ namespace EDLib {
     }
 
     bool operator>(const EigenPair &pair) const {
-      return _eigenvalue > pair._eigenvalue;
+      return (_eigenvalue > pair._eigenvalue) || (_id> pair._id);
     };
 
     bool operator<(const EigenPair &pair) const {
-      return _eigenvalue < pair._eigenvalue;
+      return (_eigenvalue < pair._eigenvalue) || (_id< pair._id);
     };
   private:
     precision _eigenvalue;
     std::vector < precision > _eigenvector;
+    int _id;
     SectorType _sector;
   };
 
