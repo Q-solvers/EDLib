@@ -108,7 +108,7 @@ namespace EDLib {
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
           if(_procs[i]!=0)
-          MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, 0, _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
+          MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, _loc_min[i], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
         }
 #endif
         // Iteration over rows.
@@ -257,6 +257,7 @@ namespace EDLib {
           _proc_offset.assign(size, 0);
           _loc_offset.assign(size, 0);
           _proc_size.assign(size, 0);
+          _loc_min.assign(size, 0);
         } else {
           _up_size = 0;
           _locsize=0;
@@ -440,6 +441,7 @@ namespace EDLib {
       std::vector<int> _proc_offset;
       std::vector<int> _loc_offset;
       std::vector<int> _procs;
+      std::vector<int> _loc_min;
       std::vector<int> _proc_size;
       int _myid;
       MPI_Win _win;
@@ -449,9 +451,13 @@ namespace EDLib {
 #ifdef USE_MPI
       void find_neighbours() {
         int ci, cid;
+        std::vector<int> l_loc_max(_loc_min.size(), INT_MIN);
+        std::vector<int> l_loc_min(_loc_min.size(), INT_MAX);
         for(int i = 0; i< _up_size; ++ i) {
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             calcIndex(ci, cid, H_up.col_ind()[j]);
+            l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
+            l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
             if(_procs[cid]==0)  {_procs[cid]=1;}
           }
         }
@@ -461,7 +467,8 @@ namespace EDLib {
         for(int i=0; i < nprocs; i++) {
           if(_procs[i]!=0) {
             _procs[i]=1;
-            _proc_offset[i]=oset * _down_symmetry.sector().size();
+            _proc_offset[i]=oset * _down_symmetry.sector().size() + l_loc_min[i];
+            _loc_min[i] = l_loc_min[i];
             int ls=_up_symmetry.sector().size()/nprocs;
             if((_up_symmetry.sector().size()% nprocs) > i) {
               ls++;
@@ -469,7 +476,7 @@ namespace EDLib {
             }else{
               _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
-            _proc_size[i]=ls * _down_symmetry.sector().size();
+            _proc_size[i]= l_loc_max[i] + _down_symmetry.sector().size() - l_loc_min[i];
             oset+=ls;
           }
         }
