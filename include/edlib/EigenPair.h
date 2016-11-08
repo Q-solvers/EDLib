@@ -33,11 +33,11 @@ namespace EDLib {
     }
 
     bool operator>(const EigenPair &pair) const {
-      return (_eigenvalue > pair._eigenvalue) || (_id> pair._id);
+      return (_eigenvalue > pair._eigenvalue) || (_id > pair._id);
     };
 
     bool operator<(const EigenPair &pair) const {
-      return (_eigenvalue < pair._eigenvalue) || (_id< pair._id);
+      return (_eigenvalue < pair._eigenvalue) || (_id < pair._id);
     };
   private:
     precision _eigenvalue;

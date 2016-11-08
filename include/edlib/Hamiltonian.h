@@ -50,6 +50,7 @@ namespace EDLib {
      * result will be stored in evals and evecs
      */
     void diag() {
+      int k =0;
       while (_model.symmetry().next_sector()) {
         fill();
         /**
@@ -61,8 +62,8 @@ namespace EDLib {
         } else {
           const std::vector < prec > &evals = _storage.eigenvalues();
           const std::vector < std::vector < prec > > &evecs = _storage.eigenvectors();
-          for (int i = 0; i < evals.size(); ++i) {
-            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], i, _model.symmetry().sector()));
+          for (int i = 0; i < evals.size(); ++i, ++k) {
+            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], k, _model.symmetry().sector()));
           }
         }
       }
