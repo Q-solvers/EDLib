@@ -43,8 +43,13 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
         _model.symmetry().init();
-#pragma omp parallel for schedule(static, 1)
-        for(int myid = 0; myid < _nthreads; ++myid){
+#pragma omp parallel
+        {
+#ifdef _OPENMP
+          int myid = omp_get_thread_num();
+#else
+          int myid = 0;
+#endif
           _vind[myid] = _vind_offset[myid];
           _vind_byte[myid] = _vind[myid] / sizeof(char);
           _vind_bit[myid] = _vind[myid] % sizeof(char);
@@ -120,18 +125,23 @@ namespace EDLib {
         for(int myid = 0; myid <= _nthreads; ++myid){
           _vind_offset[myid] = (_model.T_states().size() + _model.V_states().size()) * _row_offset[myid];
         }
-#pragma omp parallel for schedule(static, 1)
-        for(int myid = 0; myid < _nthreads; ++myid){
+#pragma omp parallel
+        {
+#ifdef _OPENMP
+          int myid = omp_get_thread_num();
+#else
+          int myid = 0;
+#endif
           _vind[myid] = _vind_offset[myid];
           _vind_byte[myid] = _vind[myid] / sizeof(char);
           _vind_bit[myid] = _vind[myid] % sizeof(char);
-          for(int i = _row_offset[myid]; i < _row_offset[myid + 1]; ++i){
+          for (int i = _row_offset[myid]; i < _row_offset[myid + 1]; ++i) {
             long long nst = _model.symmetry().state_by_index(i);
             // Compute diagonal element for current i state
             addDiagonal(i, _model.diagonal(nst), myid);
             // non-diagonal terms calculation
-            off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states(), myid);
-            off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states(), myid);
+            off_diagonal < decltype(_model.T_states()) >(nst, i, _model.T_states(), myid);
+            off_diagonal < decltype(_model.V_states()) >(nst, i, _model.V_states(), myid);
           }
         }
       }
