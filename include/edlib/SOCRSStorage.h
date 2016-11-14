@@ -100,8 +100,8 @@ namespace EDLib {
           _vind_byte[myid] = 0;
           _vind_bit[myid] = 0;
         }
-        n() = 0;
         ntot() = sector_size;
+        n() = ntot();
       }
 
       void fill() {
@@ -164,7 +164,6 @@ namespace EDLib {
        */
       void inline addDiagonal(const int &i, prec v, int chunk) {
         dvalues[i] = v;
-        ++n();
         _vind_start[chunk] = _vind[chunk];
       }
 
