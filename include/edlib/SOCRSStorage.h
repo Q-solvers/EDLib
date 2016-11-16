@@ -50,9 +50,9 @@ namespace EDLib {
 #else
           int myid = 0;
 #endif
-          _vind[myid] = _vind_offset[myid];
-          _vind_byte[myid] = _vind[myid] / sizeof(char);
-          _vind_bit[myid] = _vind[myid] % sizeof(char);
+          size_t _vind = _vind_offset[myid];
+          size_t _vind_byte = _vind / sizeof(char);
+          size_t _vind_bit = _vind % sizeof(char);
           // Iteration over rows.
           for(int i = _row_offset[myid]; (i < _row_offset[myid + 1]) && (i < n); ++i){
             long long nst = _model.symmetry().state_by_index(i);
@@ -63,20 +63,20 @@ namespace EDLib {
             for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
               int test = _model.valid(_model.T_states()[kkk], nst);
               // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
-              w[i] += test * _model.T_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte[myid]] >> _vind_bit[myid]) & 1)) * v[col_ind[_vind[myid]]];
-              _vind_bit[myid] += test;
-              _vind_byte[myid] += _vind_bit[myid] / sizeof(char);
-              _vind_bit[myid] %= sizeof(char);
-              _vind[myid] += test;
+              w[i] += test * _model.T_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
+              _vind_bit += test;
+              _vind_byte += _vind_bit / sizeof(char);
+              _vind_bit %= sizeof(char);
+              _vind += test;
             }
             for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
               int test = _model.valid(_model.V_states()[kkk], nst);
               // If transition between states corresponding to row and column is possible, calculate the offdiagonal element.
-              w[i] += test * _model.V_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte[myid]] >> _vind_bit[myid]) & 1)) * v[col_ind[_vind[myid]]];
-              _vind_bit[myid] += test;
-              _vind_byte[myid] += _vind_bit[myid] / sizeof(char);
-              _vind_bit[myid] %= sizeof(char);
-              _vind[myid] += test;
+              w[i] += test * _model.V_states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1)) * v[col_ind[_vind]];
+              _vind_bit += test;
+              _vind_byte += _vind_bit / sizeof(char);
+              _vind_bit %= sizeof(char);
+              _vind += test;
             }
           }
         }
@@ -132,6 +132,8 @@ namespace EDLib {
 #else
           int myid = 0;
 #endif
+// Variant: serial, but more compact.
+//        for (int myid = 0; myid < _nthreads; ++myid){
           _vind[myid] = _vind_offset[myid];
           _vind_byte[myid] = _vind[myid] / sizeof(char);
           _vind_bit[myid] = _vind[myid] % sizeof(char);
@@ -143,7 +145,9 @@ namespace EDLib {
             off_diagonal < decltype(_model.T_states()) >(nst, i, _model.T_states(), myid);
             off_diagonal < decltype(_model.V_states()) >(nst, i, _model.V_states(), myid);
           }
+//          _vind_offset[myid + 1] = _vind[myid];
         }
+//        }
       }
 
       template<typename T_states>
@@ -207,9 +211,9 @@ namespace EDLib {
         std::cout << std::setprecision(2) << std::fixed;
         std::cout << "[";
         for (int myid = 0; myid < _nthreads; ++myid) {
-          _vind[myid] = _vind_offset[myid];
-          _vind_byte[myid] = _vind[myid] / sizeof(char);
-          _vind_bit[myid] =  _vind[myid] % sizeof(char);
+          size_t _vind = _vind_offset[myid];
+          size_t _vind_byte = _vind / sizeof(char);
+          size_t _vind_bit =  _vind % sizeof(char);
           for (int i = 0; i < n(); ++i) {
             _model.symmetry().next_state();
             long long nst = _model.symmetry().state();
@@ -217,11 +221,11 @@ namespace EDLib {
             line[i] = dvalues[i];
             for (int kkk = 0; kkk < _model.states().size(); ++kkk) {
               int test = _model.valid(_model.states()[kkk], nst);
-              line[col_ind[_vind[myid]]] += test * _model.states()[kkk].value() * (1 - 2 * ((signs[_vind_byte[myid]] >> _vind_bit[myid]) & 1));
-              _vind_bit[myid] += test;
-              _vind_byte[myid] += _vind_bit[myid] / sizeof(char);
-              _vind_bit[myid] %= sizeof(char);
-              _vind[myid] += test;
+              line[col_ind[_vind]] += test * _model.states()[kkk].value() * (1 - 2 * ((signs[_vind_byte] >> _vind_bit) & 1));
+              _vind_bit += test;
+              _vind_byte += _vind_bit / sizeof(char);
+              _vind_bit %= sizeof(char);
+              _vind += test;
             }
             std::cout << "[";
             for (int j = 0; j < n(); ++j) {
@@ -286,7 +290,7 @@ namespace EDLib {
       // OMP chunks offset
       std::vector < size_t > _row_offset;
       std::vector < size_t > _vind_offset;
-      // internal indicies
+      // internal indicies, only used for filling
       std::vector < size_t > _vind;
       // start of current row, used for checks
       std::vector < size_t > _vind_start;
