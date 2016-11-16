@@ -11,7 +11,11 @@
 
 
 int main(int argc, const char ** argv) {
-  typedef EDLib::SRSHubbardHamiltonian HamType;
+#ifdef USE_MPI
+  typedef EDLib::SRSHubbardHamiltonian_float HamType;
+#else
+  typedef EDLib::SOCSRHubbardHamiltonian_float HamType;
+#endif
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
 #endif
@@ -21,17 +25,14 @@ int main(int argc, const char ** argv) {
   }
   EDLib::define_parameters(params);
   try {
-//  CSRHubbardHamiltonian_float ham(params);
 #ifdef USE_MPI
-//    EDLib::SRSHubbardHamiltonian ham(params, comm);
     HamType ham(params, MPI_COMM_WORLD);
 #else
-    EDLib::SRSHubbardHamiltonian ham(params);
+    HamType ham(params);
 #endif
     ham.diag();
-//  GreensFunction<float, CSRHubbardHamiltonian_float > greensFunction(params, ham);
-    EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
-    greensFunction.compute();
+//    EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
+//    greensFunction.compute();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
