@@ -214,7 +214,7 @@ namespace EDLib {
           size_t _vind = _vind_offset[myid];
           size_t _vind_byte = _vind / sizeof(char);
           size_t _vind_bit =  _vind % sizeof(char);
-          for (int i = 0; i < n(); ++i) {
+          for (int i = _row_offset[myid]; i < _row_offset[myid + 1]; ++i) {
             _model.symmetry().next_state();
             long long nst = _model.symmetry().state();
             std::fill(line.begin(), line.end(), prec(0.0));
