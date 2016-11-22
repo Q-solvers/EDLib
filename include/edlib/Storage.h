@@ -85,7 +85,9 @@ namespace EDLib {
         do {
           saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
           if (ido == -1 || ido == 1) {
-            std::cout << "av " << av_it << std::endl << std::flush;
+            if( (av_it % 100) == 0){
+              std::cout << "av() iteration: " << av_it << std::endl << std::flush;
+            }
             av(&workd[ipntr[0] - 1], &workd[ipntr[1] - 1], n);
             av_it++;
           }
