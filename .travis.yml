@@ -42,7 +42,21 @@ matrix:
         - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
         - make
         - make test
-
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+            - gfortran-4.9
+      env: CXX=g++-4.9 FC=gfortran-4.9
+      script:
+        - mkdir build
+        - cd build
+        - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+        - make
+        - make test
     - compiler: gcc
       addons:
         apt:
@@ -58,5 +72,19 @@ matrix:
         - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
         - make
         - make test
-
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - gfortran-5
+      env: CXX=g++-5 FC=gfortran-5
+      script:
+        - mkdir build
+        - cd build
+        - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+        - make
+        - make test
 
