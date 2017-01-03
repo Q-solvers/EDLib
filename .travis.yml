@@ -1,0 +1,46 @@
+# Specify c language to get right CXX compiler (Travis bug https://github.com/travis-ci/travis-ci/issues/3871)
+language: c fortran
+
+# Ubuntu 14.04 Trusty support
+sudo: required
+dist: trusty
+
+compiler:
+  - gcc
+
+before_install:
+  - sudo add-apt-repository 'deb [ arch=amd64 ] http://repo.q-solvers.ru/ trusty alpscore'
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libeigen3-dev
+  - sudo apt-get install -y libboost-all-dev
+  - sudo apt-get install -y --force-yes alpscore
+  - sudo apt-get install -y --force-yes arpack-ng
+
+script:
+  - mkdir build
+  - cd build
+  - cmake -DTesting=ON -DExamples=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+  - make VERBOSE=1
+  - make test
+
+matrix:
+  include:
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-4.9
+            - gfortran-4.9
+      env: CXX=g++-4.9 FC=gfortran-4.9
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
+            - gfortran-5
+      env: CXX=g++-5 FC=gfortran-5
+

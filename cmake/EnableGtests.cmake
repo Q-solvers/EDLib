@@ -9,7 +9,7 @@ option(TestXMLOutput "Output tests to xml" OFF)
 # Find gtest or otherwise fetch it into the build_dir/gtest
 # Adapted from alpscore
 function(UseGtest)  
-    set (gtest_root ${GTEST_ROOT})
+    set (gtest_root ${ARGN})
     if (DEFINED gtest_root)
         message(STATUS "gtest source specified at ${gtest_root}")
         find_path(gtest_root NAMES "include/gtest/gtest.h" HINTS ${gtest_root})
@@ -25,8 +25,8 @@ function(UseGtest)
             set (gtest_root ${gtest_root1})
         else()
             message(STATUS "Trying to fetch gtest via subversion")
-            find_package(Subversion)
-            execute_process(COMMAND "${Subversion_SVN_EXECUTABLE}" "checkout" "https://github.com/google/googletest/tags/release-1.7.0" "gtest" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            find_package(Git)
+            execute_process(COMMAND "${GIT_EXECUTABLE}" "clone" "--branch" "release-1.7.0" "https://github.com/google/googletest.git" "gtest" WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
             set (gtest_root "${CMAKE_BINARY_DIR}/gtest")
         endif()
         unset (gtest_root1)
@@ -45,9 +45,35 @@ function(UseGtest)
     set (GTEST_LIBRARY gtest_main PARENT_SCOPE)
 endfunction()
 
+# custom function to add gtest with xml output
+# arg0 - test (assume the source is ${test}.cpp
+function(add_gtest test)
+    if (TestXMLOutput)
+        set (test_xml_output --gtest_output=xml:${test}.xml)
+    endif(TestXMLOutput)
+
+    if(${ARGC} EQUAL 2)
+        set(source "${ARGV1}/${test}.cpp")
+    else(${ARGC} EQUAL 2)
+        set(source "${test}.cpp")
+    endif(${ARGC} EQUAL 2)
+
+    add_executable(${test} ${source})
+    target_link_libraries(${test} ${LINK_ALL} ${LINK_TEST})
+    add_test(NAME ${test} COMMAND ${test} ${test_xml_output})
+endfunction(add_gtest)
+
+# add test in release mode with gtest
+function(add_gtest_release test)
+    if (CMAKE_BUILD_TYPE STREQUAL Release)
+        add_gtest(${test})
+    endif()
+endfunction(add_gtest_release)
+
+
 # enable testing with gtest - fetch it if needed
 if (NOT tests_are_already_enabled AND Testing ) 
-    find_package(GTest QUIET)
+    find_package(GTest)
 
     if (NOT GTEST_FOUND) 
         #include(UseGtest) # fetch gtest
