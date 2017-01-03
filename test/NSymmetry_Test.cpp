@@ -5,9 +5,11 @@
 #include "gtest/gtest.h"
 
 #include "edlib/NSymmetry.h"
+#include "edlib/EDParams.h"
 
 TEST(NSymmetryTest, Initialization) {
   alps::params p;
+  EDLib::define_parameters(p);
   EDLib::Symmetry::NSymmetry sym(p);
   while(sym.next_sector()) {
     sym.init();

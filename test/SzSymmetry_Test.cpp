@@ -10,6 +10,7 @@
 
 TEST(SzSymmetryTest, Combinatorics) {
   alps::params p;
+  EDLib::define_parameters(p);
   EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 
@@ -19,6 +20,7 @@ TEST(SzSymmetryTest, Combinatorics) {
 
 TEST(SzSymmetryTest, States) {
   alps::params p;
+  EDLib::define_parameters(p);
   EDLib::Symmetry::SzSymmetry sym(p);
   sym.init();
 }
