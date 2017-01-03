@@ -19,7 +19,9 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake -DTesting=ON -DExamples=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+  matrix:
+    - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+    - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
   - make
   - make test
 
