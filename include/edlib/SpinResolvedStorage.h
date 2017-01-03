@@ -391,7 +391,9 @@ namespace EDLib {
       virtual void prepare_work_arrays(prec * data, size_t shift = 0) {
         MPI_Info info;
         MPI_Info_create( &info );
-        MPI_Info_set( info, "no_locks", "true");
+        const char* locks = "no_locks";
+        const char* val = "true";
+        MPI_Info_set( info, locks, val);
         MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
         MPI_Info_free(&info);
       }
@@ -465,7 +467,7 @@ namespace EDLib {
         int nprocs;
         MPI_Comm_size(_run_comm, &nprocs);
         for(int i=0; i < nprocs; i++) {
-          if(_procs[i]!=0) {
+          if(_procs[i]) {
             _procs[i]=1;
             _proc_offset[i]=oset * _down_symmetry.sector().size() + l_loc_min[i];
             _loc_min[i] = l_loc_min[i];
