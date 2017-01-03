@@ -35,10 +35,6 @@ set(extlibs
     ${MPI_Fortran_LIBRARIES}
     )
 
-
-#include_directories(${Hubbard_SOURCE_DIR}/test)
-#add_subdirectory(test)
-
 if(USE_MPI)
     if(!ALPS_HAVE_MPI)
         MESSAGE(FATAL_ERROR "Enable MPI support in ALPSCore.")
@@ -59,7 +55,12 @@ if(Testing)
     add_subdirectory(test)
     include_directories(${GTEST_INCLUDE_DIR})
     enable_testing()
+
+    #add_test(SzSymmetryTest test/SzSymmetryTest)
+    add_test(HubbardModelTest test/HubbardModelTest)
+
 endif (Testing)
+
 
 include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
@@ -67,11 +68,6 @@ include_directories(${Hubbard_SOURCE_DIR}/lib)
 add_subdirectory(lib)
 add_subdirectory(include/edlib)
 add_subdirectory(examples)
-
-enable_testing()
-
-#add_test(SzSymmetryTest test/SzSymmetryTest)
-add_test(HubbardModelTest test/HubbardModelTest)
 
 set(SOURCE_FILES main.cpp)
 
