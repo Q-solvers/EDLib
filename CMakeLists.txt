@@ -14,9 +14,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
 
 
-include(EnableGtests)
-UseGtest()
-include_directories(${GTEST_INCLUDE_DIR})
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -DNDEBUG -g -O3")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m64")
@@ -49,8 +47,16 @@ if(USE_MPI)
     set(CMAKE_Fortran_FLAGS "${CMAKE_Fortran_FLAGS} ${MPI_Fortran_COMPILE_FLAG}")
 endif(USE_MPI)
 
-include_directories(${Hubbard_SOURCE_DIR}/test)
-add_subdirectory(test)
+
+option(Testing "Enable testing" OFF)
+if(Testing)
+    include(EnableGtests)
+    #UseGtest()
+    #include_directories(${Hubbard_SOURCE_DIR}/test)
+    add_subdirectory(test)
+    include_directories(${GTEST_INCLUDE_DIR})
+    enable_testing()
+endif (Testing)
 
 include_directories(${Hubbard_SOURCE_DIR}/include)
 include_directories(${Hubbard_SOURCE_DIR}/lib)
