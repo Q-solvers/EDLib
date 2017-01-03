@@ -391,9 +391,7 @@ namespace EDLib {
       virtual void prepare_work_arrays(prec * data, size_t shift = 0) {
         MPI_Info info;
         MPI_Info_create( &info );
-        const char* locks = "no_locks";
-        const char* val = "true";
-        MPI_Info_set( info, locks, val);
+        MPI_Info_set( info, (char *) "no_locks", (char *) "true");
         MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
         MPI_Info_free(&info);
       }
