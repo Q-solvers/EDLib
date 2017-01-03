@@ -1,12 +1,11 @@
 # Specify c language to get right CXX compiler (Travis bug https://github.com/travis-ci/travis-ci/issues/3871)
-language: c
+language: c fortran
 
 # Ubuntu 14.04 Trusty support
 sudo: required
 dist: trusty
 
 compiler:
-  - clang
   - gcc
 
 before_install:
@@ -19,7 +18,7 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake -DTesting=ON -DExamples=ON .. 
+  - cmake -DTesting=ON -DExamples=ON -DALPSCore_DIR=/usr .. 
   - make
   - make test
 
@@ -32,7 +31,8 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.9
-      env: CXX=g++-4.9
+            - gfortran-4.9
+      env: CXX=g++-4.9 FC=gfortran-4.9
     - compiler: gcc
       addons:
         apt:
@@ -40,23 +40,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-      env: CXX=g++-5
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
-          packages:
-            - clang-3.6
-      env: CXX=clang++-3.6 
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.7
-          packages:
-            - clang-3.7
-      env: CXX=clang++-3.7
+            - gfortran-5
+      env: CXX=g++-5 FC=gfortran-5
 
