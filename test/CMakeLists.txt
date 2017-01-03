@@ -11,3 +11,5 @@ target_link_libraries(SzSymmetryTest common-lib ${extlibs} ${GTEST_LIBRARY})
 target_link_libraries(NSymmetryTest common-lib ${extlibs} ${GTEST_LIBRARY})
 target_link_libraries(HubbardModelTest common-lib ${extlibs} ${GTEST_LIBRARY})
 target_link_libraries(SpinResolvedStorage common-lib ${extlibs} ${GTEST_LIBRARY})
+
+file(COPY input DESTINATION ${CMAKE_BINARY_DIR}/test)

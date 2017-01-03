@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.0)
 project(Hubbard C CXX Fortran)
 
+set(CMAKE_DISABLE_SOURCE_CHANGES ON)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
 
 include(CXXStandard)
 use_cxx11()
 
 find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
-find_package(ARPACK)
+find_package(ARPACK REQUIRED)
 find_package(BLAS)
 find_package(LAPACK)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -59,9 +62,10 @@ add_subdirectory(lib)
 add_subdirectory(include/edlib)
 add_subdirectory(examples)
 
-#enable_testing()
+enable_testing()
 
 #add_test(SzSymmetryTest test/SzSymmetryTest)
+add_test(HubbardModelTest test/HubbardModelTest)
 
 set(SOURCE_FILES main.cpp)
 
