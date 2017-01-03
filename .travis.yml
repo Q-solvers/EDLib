@@ -16,20 +16,12 @@ before_install:
   - sudo apt-get install -y --force-yes alpscore
   - sudo apt-get install -y --force-yes arpack-ng
 
-matrix:
-  include:
-    - script:
-        - mkdir build
-        - cd build
-        - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
-        - make
-        - make test
-    - script:
-        - mkdir build
-        - cd build
-        - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
-        - make
-        - make test
+#script:
+# - mkdir build
+# - cd build
+# - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+# - make
+# - make test
 
 
 
@@ -44,6 +36,13 @@ matrix:
             - g++-4.9
             - gfortran-4.9
       env: CXX=g++-4.9 FC=gfortran-4.9
+      script:
+        - mkdir build
+        - cd build
+        - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+        - make
+        - make test
+
     - compiler: gcc
       addons:
         apt:
@@ -53,4 +52,11 @@ matrix:
             - g++-5
             - gfortran-5
       env: CXX=g++-5 FC=gfortran-5
+      script:
+        - mkdir build
+        - cd build
+        - cmake -DTesting=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
+        - make
+        - make test
+
 
