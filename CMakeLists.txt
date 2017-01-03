@@ -56,7 +56,8 @@ if(Testing)
     include_directories(${GTEST_INCLUDE_DIR})
     enable_testing()
 
-    #add_test(SzSymmetryTest test/SzSymmetryTest)
+    add_test(SzSymmetryTest test/SzSymmetryTest)
+    add_test(NSymmetryTest test/NSymmetryTest)
     add_test(HubbardModelTest test/HubbardModelTest)
 
 endif (Testing)
