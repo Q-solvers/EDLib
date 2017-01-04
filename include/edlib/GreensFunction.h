@@ -30,7 +30,7 @@ namespace EDLib {
         if(hamiltonian().eigenpairs().empty())
           return;
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
-        for (typename std::set<EigenPair<precision, typename Hamiltonian::ModelType::Sector> >::iterator kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
+        for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
