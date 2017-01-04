@@ -1,7 +1,7 @@
 ##### Overview
 EDLib is a C++ template Exact diagonalization solver for quantum electron models. It provides the following classes of objects:
 
-- Hamiltonian<precision, Storage, Model>. 
+- `Hamiltonian<precision, Storage, Model>`.
 There exists a set of implementation of models for common purposes:
     - `HubbardModel<precision>`. The finite Hubbard model cluster.
     - `SingleImpurityAndersonModel<precision>`. The single multi-orbital impurity Anderson Model.
