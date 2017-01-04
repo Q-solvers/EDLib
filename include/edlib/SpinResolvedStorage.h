@@ -162,6 +162,7 @@ namespace EDLib {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
+          // TODO: Add off-diagonal interactions
 //          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
 //            if (_model.valid(_model.T_states()[kkk], nst)) {
 //              _model.set(_model.V_states()[kkk], nst, k, isign);
