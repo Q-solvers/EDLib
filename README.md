@@ -10,7 +10,7 @@ For the Hamiltonian matrix storage there are three implementation of sparse matr
 - `SOCRSStorage<precision, Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
 - `CRSStorage<precision, Model>`. A simple CRS storage.
 
-The following observable can be computed in case of Lehmann representation:
+The following observable can be computed by means of Lanczos continuous fraction of the Lehmann representation:
 - Single-particle Green's function (`GreensFunction<precision, Hamiltonian>` class template).
 - Spin suseptibility (`ChiLoc<precision, Hamiltonian>` class template).
 Greens functions are implemented on top of *ALPSCore* Greens functions module.
