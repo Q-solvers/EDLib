@@ -68,10 +68,11 @@ include_directories(${Hubbard_SOURCE_DIR}/lib)
 
 add_subdirectory(lib)
 add_subdirectory(include/edlib)
-add_subdirectory(examples)
 
-set(SOURCE_FILES main.cpp)
-
-add_executable(Hubbard ${SOURCE_FILES})
-
-target_link_libraries(Hubbard common-lib ${extlibs})
+option(Examples "Enable examples" ON)
+if(Examples)
+    add_subdirectory(examples)
+    set(SOURCE_FILES main.cpp)
+    add_executable(Hubbard ${SOURCE_FILES})
+    target_link_libraries(Hubbard common-lib ${extlibs})
+endif(Examples)

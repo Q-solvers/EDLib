@@ -27,6 +27,9 @@ To compile examples and tests create a build directory and run
 3. `make test` (for running tests)
 4. example will be build in examples subdirectory
 
+To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* library
+should be compiled with *MPI* support.
+
 ##### Dependencies 
 - c++11-compatible compiler (tested with clang >= 3.1, gcc >= 4.8.2, icpc >= 14.0.2)  
 - *ALPSCore* library >= 0.5.6-alpha3
