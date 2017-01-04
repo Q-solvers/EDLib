@@ -214,71 +214,11 @@ namespace EDLib {
 #ifdef USE_MPI
         find_neighbours();
 #endif
-//        print();
-//        std::exit(0);
       }
 
 
       void print() {
-        std::vector<std::vector<prec> > MMM(_locsize, std::vector<prec>(_locsize, 0.0));
-        for(int i = 0; i< _locsize; ++i) {
-          MMM[i][i] = _diagonal[i];
-        }
-        for (int i = 0; i < n(); ++i) {
-          for (int j = 0; j < n(); ++j) {
-            for (int k = H_loc.row_ptr()[i]; k < H_loc.row_ptr()[i + 1]; ++k) {
-              if ((H_loc.col_ind()[k]) == j) {
-                MMM[i][j] += H_loc.values()[k] + 0.0001;
-              }
-            }
-          }
-        }
-
-        std::ofstream hout("ham.txt");
-        for (int i = 0; i < n(); ++i) {
-          hout << "{";
-          for (int j = 0; j < n(); ++j) {
-            hout << std::setw(8) << MMM[i][j] << (j == n() - 1 ? "" : ", ");
-          }
-          hout << "}" << (i == n() - 1 ? "" : ", \n");
-        }
-        hout<<"}\n";
-        hout.close();
-//        for (int i = 0; i < _up_symmetry.sector().size(); ++i) {
-//          std::cout << "{";
-//          for (int j = 0; j < _up_symmetry.sector().size(); ++j) {
-//            bool f = true;
-//            for (int k = H_up.row_ptr()[i]; k < H_up.row_ptr()[i + 1]; ++k) {
-//              if ((H_up.col_ind()[k]) == j) {
-//                std::cout << std::setw(6) << H_up.values()[k] << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
-//                f = false;
-//              }
-//            }
-//            if (f) {
-//              std::cout << std::setw(6) << 0.0 << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
-//            }
-//          }
-//          std::cout << "}" << (i == _up_symmetry.sector().size() - 1 ? "" : ", \n");
-//        }
-//        std::cout << "}" << std::endl;
-//        std::cout << "\n\n{";
-//        for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
-//          std::cout << "{";
-//          for (int j = 0; j < _down_symmetry.sector().size(); ++j) {
-//            bool f = true;
-//            for (int k = H_down.row_ptr()[i]; k < H_down.row_ptr()[i + 1]; ++k) {
-//              if ((H_down.col_ind()[k]) == j) {
-//                std::cout << std::setw(6) << H_down.values()[k] << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
-//                f = false;
-//              }
-//            }
-//            if (f) {
-//              std::cout << std::setw(6) << 0.0 << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
-//            }
-//          }
-//          std::cout << "}" << (i == _down_symmetry.sector().size() - 1 ? "" : ", \n");
-//        }
-//        std::cout << "}" << std::endl;
+        // nothing to do
       }
 
       void endMatrix() {
