@@ -59,44 +59,9 @@ TEST(HubbardModelTest, ReferenceTest) {
   ham.diag();
 
   // [arXiv:cond-mat/0101476 [cond-mat.str-el]]
-  double ref[25][3]={
-    {-11.8443, 2, 2},
-    {-11.5336, 3, 1},
-    {-11.4936, 1, 3},
-    {-10.1129, 2, 1},
-    {-10.1129, 3, 2},
-    {-10.0929, 2, 3},
-    {-10.0929, 1, 2},
-    {-10.04, 4, 0},
-    {-9.96, 0, 4},
-    {-9.53, 3, 0},
-    {-9.53, 4, 1},
-    {-9.47, 0, 3},
-    {-9.47, 1, 4},
-    {-8.34789, 3, 3},
-    {-8.34789, 1, 1},
-    {-7.02, 2, 0},
-    {-7.02, 4, 2},
-    {-6.98, 2, 4},
-    {-6.98, 0, 2},
-    {-4.51, 1, 0},
-    {-4.51, 4, 3},
-    {-4.49, 0, 1},
-    {-4.49, 3, 4},
-    {0, 0, 0},
-    {0, 4, 4},
-  };
-
-  size_t i = 0;
-
-  for(auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); ++pair){
-    ASSERT_NEAR(pair->eigenvalue(), ref[i][0], 1e-3);
-    /* FIXME Sorting of equal eigenvalues is random.
-    ASSERT_EQ(pair->sector().nup(), ref[i][1]);
-    ASSERT_EQ(pair->sector().ndown(), ref[i][2]);
-    */
-    i++;
-  }
+  ASSERT_NEAR(ham.eigenpairs().begin()->eigenvalue(), -11.8443, 1e-4);
+  ASSERT_EQ(ham.eigenpairs().begin()->sector().nup(), 2);
+  ASSERT_EQ(ham.eigenpairs().begin()->sector().ndown(), 2);
 
   while(ham.model().symmetry().next_sector()) {
     std::cout<<ham.model().symmetry().sector().size()<<std::endl;
