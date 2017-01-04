@@ -17,7 +17,7 @@ namespace EDLib {
     class Lanczos {
     public:
       Lanczos(alps::params &p, Hamiltonian &h, const alps::gf::statistics::statistics_type& type = alps::gf::statistics::statistics_type::FERMIONIC) :
-        ham(h), _omega(p["lanc.BETA"], p["lanc.NOMEGA"], type),_Nl(p["lanc.NLANC"]),
+        ham(h), _omega(p["lanc.BETA"].as<double>(), p["lanc.NOMEGA"].as<int>(), type),_Nl(p["lanc.NLANC"]),
         alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0) {}
 
       const alps::gf::matsubara_positive_mesh &omega() const {
