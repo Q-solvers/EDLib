@@ -15,7 +15,7 @@ int main(int argc, const char ** argv) {
 #ifdef USE_MPI
   typedef EDLib::SRSHubbardHamiltonian HamType;
 #else
-  typedef EDLib::SOCSRHubbardHamiltonian_float HamType;
+  typedef EDLib::SOCSRHubbardHamiltonian HamType;
 #endif
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
