@@ -16,15 +16,39 @@ namespace EDLib {
   namespace gf {
     class BosonicOperator{};
 
-    template<typename precision, class ModelType>
+    template<typename precision>
     class SzOperator: public BosonicOperator {
     public:
-      SzOperator(ModelType &m) : _model(m){};
-      precision action(long long state, int iii) const {
-        return 0.5*(_model.checkState(state, iii, _model.max_total_electrons()) - _model.checkState(state, iii - _model.orbitals(), _model.max_total_electrons()));
+      SzOperator() {};
+      template<class ModelType>
+      precision action(long long state, int iii, const ModelType & model) const {
+        /// 0.5 (n_up - n_down)
+        return 0.5*(model.checkState(state, iii, model.max_total_electrons()) -
+                    model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
-    private:
-      const ModelType &_model;
+      /// Current implementation restricted to paramagnetic solution
+      precision average () const {
+        return 0.0;
+      }
+
+      std::string name() const {return "Sz";};
+    };
+
+    template<typename precision>
+    class NOperator: public BosonicOperator {
+    public:
+      NOperator() {};
+      template<class ModelType>
+      precision action(long long state, int iii, const ModelType & model) const {
+        /// (n_up + n_down)
+        return (model.checkState(state, iii, model.max_total_electrons()) +
+                model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
+      }
+      /// Current implementation restricted to half-filled
+      precision average() const {
+        return 1.0;
+      }
+      std::string name() const {return "N";};
     };
 
     template<typename precision, class Hamiltonian>
@@ -42,7 +66,11 @@ namespace EDLib {
         }
       }
 
+      template<typename Op = SzOperator<precision> >
       void compute() {
+        // cleanup
+        gf *= 0.0;
+        _Z = 0.0;
         if(hamiltonian().eigenpairs().empty())
           return;
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
@@ -50,7 +78,7 @@ namespace EDLib {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
-        SzOperator<precision, typename Hamiltonian::ModelType> op(_model);
+        const Op op;
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
@@ -61,16 +89,16 @@ namespace EDLib {
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
                     << boltzmann_f << "; for sector" << pair.sector() << std::endl;
           for (int i = 0; i < _model.orbitals(); ++i) {
-              std::vector < precision > outvec(pair.sector().size(), precision(0.0));
-              precision expectation_value = 0;
-              _model.symmetry().set_sector(pair.sector());
-              if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
-                hamiltonian().storage().prepare_work_arrays(outvec.data());
-                int nlanc = lanczos(outvec);
-                hamiltonian().storage().finalize();
-                std::cout << "orbital: " << i << " <n|O|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_sym_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
-              }
+            std::vector < precision > outvec(pair.sector().size(), precision(0.0));
+            precision expectation_value = 0;
+            _model.symmetry().set_sector(pair.sector());
+            if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
+              hamiltonian().storage().prepare_work_arrays(outvec.data());
+              int nlanc = lanczos(outvec);
+              hamiltonian().storage().finalize();
+              std::cout << "orbital: " << i << " <n|O|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              compute_sym_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
+            }
           }
         }
 #ifdef USE_MPI
@@ -85,10 +113,10 @@ namespace EDLib {
           for (int iomega = 1; iomega < omega().extent(); ++iomega) {
             chiSum = chiSum + gf(alps::gf::matsubara_positive_mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real();
           }
-          gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum;
+          gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + op.average()*omega().beta();
         }
         std::ostringstream Gomega_name;
-        Gomega_name << "Chi_omega";
+        Gomega_name << "Chi"<<op.name()<<"_omega";
         std::ofstream G_omega_file(Gomega_name.str().c_str());
         G_omega_file << std::setprecision(14) << gf;
         Gomega_name << ".h5";
@@ -127,7 +155,7 @@ namespace EDLib {
         int i = 0;
         while (_model.symmetry().next_state()) {
           long long nst = _model.symmetry().state();
-          outvec[i] = o.action(nst, orbital) * invec[i];
+          outvec[i] = o.action(nst, orbital, _model) * invec[i];
           ++i;
         };
         double norm = hamiltonian().storage().vv(outvec, outvec);

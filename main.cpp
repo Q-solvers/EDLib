@@ -36,6 +36,7 @@ int main(int argc, const char ** argv) {
     greensFunction.compute();
     EDLib::gf::ChiLoc<double, HamType> susc(params, ham);
     susc.compute();
+    susc.compute<EDLib::gf::NOperator<double> >();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
