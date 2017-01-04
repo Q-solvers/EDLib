@@ -11,8 +11,8 @@ For the Hamiltonian matrix storage there are three implementation of sparse matr
 - `CRSStorage<precision, Model>`. A simple CRS storage.
 
 The following observable can be computed in case of Lehmann representation:
-- Single-particle Green's function (`GreensFunction<precision, Hamiltonian>' class template).
-- Spin suseptibility (`ChiLoc<precision, Hamiltonian>' class template).
+- Single-particle Green's function (`GreensFunction<precision, Hamiltonian>` class template).
+- Spin suseptibility (`ChiLoc<precision, Hamiltonian>` class template).
 Greens functions are implemented on top of *ALPSCore* Greens functions module.
 
 Look for examples in "examples/" directory for detailed information.
