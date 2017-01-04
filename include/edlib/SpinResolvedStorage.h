@@ -370,21 +370,17 @@ namespace EDLib {
 
 
       prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
-#ifdef USE_MPI
         prec alf = prec(0.0);
         prec temp = prec(0.0);
         for (int k = 0; k < v.size(); ++k) {
           temp += w[k] * v[k];
         }
+#ifdef USE_MPI
         MPI_Allreduce(&temp, &alf, 1, alps::mpi::detail::mpi_type<prec>(), MPI_SUM, comm());
-        return alf;
 #else
-        prec alf = prec(0.0);
-        for (int k = 0; k < v.size(); ++k) {
-          alf += w[k] * v[k];
-        }
-        return alf;
+        alf = temp;
 #endif
+        return alf;
       }
 
 #ifdef USE_MPI
