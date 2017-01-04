@@ -96,6 +96,12 @@ namespace EDLib {
       return _model;
     }
 
+#ifdef USE_MPI
+    MPI_Comm& comm() {
+      return _comm;
+    }
+#endif
+
   private:
     // CSR format Hamiltonian matrix storage
     Storage _storage;

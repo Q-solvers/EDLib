@@ -29,32 +29,40 @@ namespace EDLib {
         unsigned long size = v.size();
         std::vector < precision > w(size, precision(0.0));
         precision alf = 0, bet = 0;
+        std::cout<<"fill"<<std::endl;
         ham.fill();
-        for (int iter = 1; iter <= _Nl; ++iter) {
-          ++nlanc;
-          if (iter != 1) {
+        if(v.size()!=0) {
+          ham.storage().prepare_work_arrays(v.data());
+          for (int iter = 1; iter <= _Nl; ++iter) {
+            ++nlanc;
+            if (iter != 1) {
+              for (int j = 0; j < size; ++j) {
+                precision dummy = v[j];
+                v[j] = w[j] / bet;
+                w[j] = -bet * dummy;
+              }
+            }
+            alf = 0.0;
+            bet = 0.0;
+            ham.storage().av(v.data(), w.data(), size, false);
+            alf = ham.storage().vv(v, w);
+            alfalanc[iter - 1] = alf;
             for (int j = 0; j < size; ++j) {
-              precision dummy = v[j];
-              v[j] = w[j] / bet;
-              w[j] = -bet * dummy;
+              w[j] -= alf * v[j];
+            }
+            bet = ham.storage().vv(w, w);
+            bet = std::sqrt(bet);
+
+            if (iter != _Nl) betalanc[iter] = bet;
+            if (std::abs(bet) < 1e-10 /*|| iter >= (2 * ham.model().symmetry().sector().size())*/) {
+              break;
             }
           }
-          alf = 0.0;
-          bet = 0.0;
-          ham.storage().av(v.data(), w.data(), size, false);
-          alf = ham.storage().vv(v, w);
-          alfalanc[iter - 1] = alf;
-          for (int j = 0; j < size; ++j) {
-            w[j] -= alf * v[j];
-          }
-          bet = ham.storage().vv(w, w);
-          bet = std::sqrt(bet);
-
-          if (iter != _Nl) betalanc[iter] = bet;
-          if (std::abs(bet) < 1e-10 /*|| iter >= (2 * ham.model().symmetry().sector().size())*/) {
-            break;
-          }
+          hamiltonian().storage().finalize();
         }
+#ifdef USE_MPI
+        MPI_Barrier(hamiltonian().comm());
+#endif
         return nlanc;
       }
 

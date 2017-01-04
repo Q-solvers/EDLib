@@ -39,10 +39,10 @@ namespace EDLib {
         size_t _size;
       };
 
-      NSymmetry(int N) : Symmetry(), _N(N), _totstate(_N, 0.0), _current_sector(-1, 0), _comb(_N) {}
+      NSymmetry(int N) : Symmetry(), _N(N), _totstate(N, 0.0), _current_sector(-1, 0), _comb(N) {}
 
-      NSymmetry(alps::params &p) : Symmetry(), _N(2 * int(p["NSITES"])), _totstate(_N, 0.0), _current_sector(-1, 0),
-                               _comb(_N) {
+      NSymmetry(alps::params &p) : Symmetry(), _N(2 * int(p["NSITES"])), _totstate(2 * p["NSITES"].as<int>(), 0.0), _current_sector(-1, 0),
+                               _comb(2 * p["NSITES"].as<int>()) {
         if (p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
           std::vector < std::vector < int > > sectors;
           std::string input = p["INPUT_FILE"];

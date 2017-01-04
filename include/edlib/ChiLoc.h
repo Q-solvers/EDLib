@@ -22,7 +22,7 @@ namespace EDLib {
       SzOperator() {};
       template<class ModelType>
       precision action(long long state, int iii, const ModelType & model) const {
-        /// 0.5 (n_up - n_down)
+        /// 0.5 * (n_up - n_down)
         return 0.5*(model.checkState(state, iii, model.max_total_electrons()) -
                     model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
@@ -59,20 +59,30 @@ namespace EDLib {
       using Lanczos < precision, Hamiltonian >::compute_sym_continues_fraction;
     public:
       ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < precision, Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
-                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(p["NSITES"].as<int>())),
+                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
       }
 
+      /**
+       * Compute two-particle Green's function for specific operator Op.
+       *
+       * @tparam Op type of bosonic operator (should be either SzOperator or NOperator)
+       */
       template<typename Op = SzOperator<precision> >
       void compute() {
+        static_assert(std::is_base_of<BosonicOperator, Op>::value, "Wrong bosonic operator.");
         // cleanup
         gf *= 0.0;
         _Z = 0.0;
         if(hamiltonian().eigenpairs().empty())
           return;
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+#endif
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
@@ -88,22 +98,24 @@ namespace EDLib {
           }
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
                     << boltzmann_f << "; for sector" << pair.sector() << std::endl;
-          for (int i = 0; i < _model.orbitals(); ++i) {
-            std::vector < precision > outvec(pair.sector().size(), precision(0.0));
+          for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+            std::vector < precision > outvec(1, precision(0.0));
             precision expectation_value = 0;
             _model.symmetry().set_sector(pair.sector());
             if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
-              hamiltonian().storage().prepare_work_arrays(outvec.data());
               int nlanc = lanczos(outvec);
-              hamiltonian().storage().finalize();
+#ifdef USE_MPI
+              if(rank==0){
+#endif
               std::cout << "orbital: " << i << " <n|O|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
               compute_sym_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
+#ifdef USE_MPI
+            }
+#endif
             }
           }
         }
 #ifdef USE_MPI
-        int rank;
-        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
         gf/= _Z;

@@ -104,7 +104,7 @@ namespace EDLib {
       const std::vector < St > &V_states() const { return _V_states; };
 
       int interacting_orbitals() const {
-        return 1;
+        return _Ns;
       }
 
       inline const Symmetry::SzSymmetry &symmetry() const {

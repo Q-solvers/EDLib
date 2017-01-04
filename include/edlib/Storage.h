@@ -81,15 +81,10 @@ namespace EDLib {
         workd.assign(3 * size_t(n), prec(0.0));
         workl.assign(lworkl, prec(0.0));
         prepare_work_arrays(&workd[0], size_t(2 * n));
-        int av_it = 0;
         do {
           saupd(&ido, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0], &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
           if (ido == -1 || ido == 1) {
-            if( (av_it % 100) == 0){
-              std::cout << "av() iteration: " << av_it << std::endl << std::flush;
-            }
             av(&workd[ipntr[0] - 1], &workd[ipntr[1] - 1], n);
-            av_it++;
           }
         } while (ido != 99);
         if (info < 0) {

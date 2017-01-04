@@ -19,7 +19,7 @@ namespace EDLib {
       using Lanczos < precision, Hamiltonian >::compute_continues_fraction;
     public:
       GreensFunction(alps::params &p, Hamiltonian &h) : Lanczos < precision, Hamiltonian >(p, h), _model(h.model()),
-                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(p["NSITES"].as<int>()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -27,8 +27,14 @@ namespace EDLib {
       }
 
       void compute() {
+        gf *= 0.0;
+        _Z = 0.0;
         if(hamiltonian().eigenpairs().empty())
           return;
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+#endif
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
@@ -43,32 +49,41 @@ namespace EDLib {
           }
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
                     << boltzmann_f << "; for sector" << pair.sector() << std::endl;
-          for (int i = 0; i < _model.orbitals(); ++i) {
+          for (int i = 0; i < _model.interacting_orbitals(); ++i) {
             for (int is = 0; is < _model.spins(); ++is) {
-              std::vector < precision > outvec(pair.sector().size(), precision(0.0));
+              std::vector < precision > outvec(1, precision(0.0));
               precision expectation_value = 0;
               _model.symmetry().set_sector(pair.sector());
+              std::cout<<"Create particle"<<std::endl;
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
-                hamiltonian().storage().prepare_work_arrays(outvec.data());
                 int nlanc = lanczos(outvec);
-                hamiltonian().storage().finalize();
+#ifdef USE_MPI
+               if(rank==0){
+#endif
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(is));
+                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i),
+                                           alps::gf::index_mesh::index_type(is));
+#ifdef USE_MPI
+               }
+#endif
               }
               _model.symmetry().set_sector(pair.sector());
+              std::cout<<"Destroy particle"<<std::endl;
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
-                hamiltonian().storage().prepare_work_arrays(outvec.data());
                 int nlanc = lanczos(outvec);
-                hamiltonian().storage().finalize();
+#ifdef USE_MPI
+                if(rank==0){
+#endif
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(is));
+#ifdef USE_MPI
+                }
+#endif
               }
             }
           }
         }
 #ifdef USE_MPI
-        int rank;
-        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
         gf /= _Z;

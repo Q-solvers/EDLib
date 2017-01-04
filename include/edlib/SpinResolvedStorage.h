@@ -34,9 +34,10 @@ namespace EDLib {
         CRSMatrix() {
         }
 
-        void init(size_t N) {
-          _values.assign(N * N, p(0));
-          _col_ind.assign(N * N, 0);
+        void init(size_t N, size_t nnzl = 100) {
+          _nnz = N * nnzl;
+          _values.assign(_nnz, p(0));
+          _col_ind.assign(_nnz, 0);
           _row_ptr.assign(N + 1, 0);
           _vind = 0;
         }
@@ -45,22 +46,45 @@ namespace EDLib {
           if (i == j) {
             throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
           }
+          bool hasstate = false;
+          size_t foundstate = 0;
           if (std::abs(t) == 0) {
             return;
           }
           // check that there is no any data on the k state
           for (int iii = _row_ptr[i]; iii < _vind; ++iii) {
             if (_col_ind[iii] == j) {
-              throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
+              hasstate = true;
+              foundstate = iii;
             }
           }
-          // create new element in CRS arrays
-          _col_ind[_vind] = j;
-          _values[_vind] = sign * t;
-          ++_vind;
+          if(foundstate) {
+            // update existing value
+            _values[foundstate] += sign * t;
+          }else {
+            // create new element in CRS arrays
+            _col_ind[_vind] = j;
+            _values[_vind] = sign * t;
+            ++_vind;
+            if(_vind > _nnz) {
+              throw std::out_of_range("Number of non-zero elements is too big. Please increase number of non-zero elements per line.");
+            }
+          }
+        }
+
+        void inline compress(int i) {
+          int shift = 0;
+          for (int iii = _row_ptr[i]; iii < _vind; ++iii){
+            if(std::abs(_values[iii])<1e-15) {
+              _values.erase(_values.begin() + iii);
+              _col_ind.erase(_col_ind.begin() + iii);
+              --_vind;
+            }
+          }
         }
 
         void inline endLine(int i) {
+          compress(i);
           _row_ptr[i + 1] = _vind;
         }
 
@@ -81,13 +105,15 @@ namespace EDLib {
         std::vector < int > _row_ptr;
         std::vector < int > _col_ind;
         int _vind;
+        size_t _nnz;
       };
 
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _model(m), _interaction_size(m.interacting_orbitals()),
-                                                   _loc_symmetry(m.interacting_orbitals()), _Ns(p["NSITES"]), _ms(p["NSPINS"]), _up_symmetry(int(p["NSITES"])), _down_symmetry(int(p["NSITES"])) {
+      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _model(m),
+                                                                      _Ns(p["NSITES"].as<int>()), _ms(p["NSPINS"].as<int>()), _up_symmetry(p["NSITES"].as<int>()),
+                                                                      _down_symmetry(p["NSITES"].as<int>()) {
         MPI_Comm_size(_comm, &_nprocs);
         MPI_Comm_rank(_comm, &_myid);
       }
@@ -144,6 +170,17 @@ namespace EDLib {
             }
           }
         }
+
+        if(H_loc.row_ptr().size()!=0)
+        for (int i = 0; i < n; ++i) {
+          for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
+#ifdef USE_MPI
+            w[i] += H_loc.values()[j] * _vecval[H_loc.col_ind()[j]];
+#else
+            w[i] += H_loc.values()[j] * v[H_loc.col_ind()[j]];
+#endif
+          }
+        }
       }
 
       void fill() {
@@ -163,58 +200,85 @@ namespace EDLib {
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
           // TODO: Add off-diagonal interactions
-//          for (int kkk = 0; kkk < _model.T_states().size(); ++kkk) {
-//            if (_model.valid(_model.T_states()[kkk], nst)) {
-//              _model.set(_model.V_states()[kkk], nst, k, isign);
-//              int j = _model.symmetry().index(k);
-//              H_loc[0].addElement(i, j, _model.T_states()[kkk].value(), isign);
-//            }
-//          }
+          if(_model.V_states().size() > 0) {
+            for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
+              if (_model.valid(_model.V_states()[kkk], nst)) {
+                _model.set(_model.V_states()[kkk], nst, k, isign);
+                int j = _model.symmetry().index(k);
+                H_loc.addElement(i, j, _model.V_states()[kkk].value(), isign);
+              }
+            }
+            H_loc.endLine(i);
+          }
         }
 #ifdef USE_MPI
         find_neighbours();
 #endif
+//        print();
+//        std::exit(0);
       }
 
 
       void print() {
-        std::cout << std::setprecision(2) << std::fixed;
-        std::cout << "{";
-        for (int i = 0; i < _up_symmetry.sector().size(); ++i) {
-          std::cout << "{";
-          for (int j = 0; j < _up_symmetry.sector().size(); ++j) {
-            bool f = true;
-            for (int k = H_up.row_ptr()[i]; k < H_up.row_ptr()[i + 1]; ++k) {
-              if ((H_up.col_ind()[k]) == j) {
-                std::cout << std::setw(6) << H_up.values()[k] << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
-                f = false;
+        std::vector<std::vector<prec> > MMM(_locsize, std::vector<prec>(_locsize, 0.0));
+        for(int i = 0; i< _locsize; ++i) {
+          MMM[i][i] = _diagonal[i];
+        }
+        for (int i = 0; i < n(); ++i) {
+          for (int j = 0; j < n(); ++j) {
+            for (int k = H_loc.row_ptr()[i]; k < H_loc.row_ptr()[i + 1]; ++k) {
+              if ((H_loc.col_ind()[k]) == j) {
+                MMM[i][j] += H_loc.values()[k] + 0.0001;
               }
             }
-            if (f) {
-              std::cout << std::setw(6) << 0.0 << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
-            }
           }
-          std::cout << "}" << (i == _up_symmetry.sector().size() - 1 ? "" : ", \n");
         }
-        std::cout << "}" << std::endl;
-        std::cout << "\n\n{";
-        for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
-          std::cout << "{";
-          for (int j = 0; j < _down_symmetry.sector().size(); ++j) {
-            bool f = true;
-            for (int k = H_down.row_ptr()[i]; k < H_down.row_ptr()[i + 1]; ++k) {
-              if ((H_down.col_ind()[k]) == j) {
-                std::cout << std::setw(6) << H_down.values()[k] << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
-                f = false;
-              }
-            }
-            if (f) {
-              std::cout << std::setw(6) << 0.0 << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
-            }
+
+        std::ofstream hout("ham.txt");
+        for (int i = 0; i < n(); ++i) {
+          hout << "{";
+          for (int j = 0; j < n(); ++j) {
+            hout << std::setw(8) << MMM[i][j] << (j == n() - 1 ? "" : ", ");
           }
-          std::cout << "}" << (i == _down_symmetry.sector().size() - 1 ? "" : ", \n");
+          hout << "}" << (i == n() - 1 ? "" : ", \n");
         }
-        std::cout << "}" << std::endl;
+        hout<<"}\n";
+        hout.close();
+//        for (int i = 0; i < _up_symmetry.sector().size(); ++i) {
+//          std::cout << "{";
+//          for (int j = 0; j < _up_symmetry.sector().size(); ++j) {
+//            bool f = true;
+//            for (int k = H_up.row_ptr()[i]; k < H_up.row_ptr()[i + 1]; ++k) {
+//              if ((H_up.col_ind()[k]) == j) {
+//                std::cout << std::setw(6) << H_up.values()[k] << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
+//                f = false;
+//              }
+//            }
+//            if (f) {
+//              std::cout << std::setw(6) << 0.0 << (j == _up_symmetry.sector().size() - 1 ? "" : ", ");
+//            }
+//          }
+//          std::cout << "}" << (i == _up_symmetry.sector().size() - 1 ? "" : ", \n");
+//        }
+//        std::cout << "}" << std::endl;
+//        std::cout << "\n\n{";
+//        for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
+//          std::cout << "{";
+//          for (int j = 0; j < _down_symmetry.sector().size(); ++j) {
+//            bool f = true;
+//            for (int k = H_down.row_ptr()[i]; k < H_down.row_ptr()[i + 1]; ++k) {
+//              if ((H_down.col_ind()[k]) == j) {
+//                std::cout << std::setw(6) << H_down.values()[k] << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
+//                f = false;
+//              }
+//            }
+//            if (f) {
+//              std::cout << std::setw(6) << 0.0 << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
+//            }
+//          }
+//          std::cout << "}" << (i == _down_symmetry.sector().size() - 1 ? "" : ", \n");
+//        }
+//        std::cout << "}" << std::endl;
       }
 
       void endMatrix() {
@@ -229,8 +293,8 @@ namespace EDLib {
         _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
         size_t up_size = _up_symmetry.sector().size();
         size_t down_size = _down_symmetry.sector().size();
-        H_up.init(up_size);
-        H_down.init(down_size);
+        H_up.init(up_size, up_size);
+        H_down.init(down_size, down_size);
 #ifdef USE_MPI
         MPI_Comm run_comm;
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
@@ -267,6 +331,9 @@ namespace EDLib {
         _up_shift = 0;
 #endif
         _diagonal.assign(_locsize, prec(0.0));
+        if(_model.V_states().size()>0) {
+          H_loc.init(_locsize, 25);
+        }
         n() = _locsize;
         ntot() = sector.size();
       }
@@ -287,17 +354,12 @@ namespace EDLib {
         if ((up_size % size) > myid) {
           locsize += 1;
         }
-        std::cout<<"Vec size:"<<locsize * down_size<<std::endl;
+        std::cout<<"Vec size:"<<locsize * down_size<<" "<<myid<<std::endl;
         return locsize * down_size;
 #else
         return sector_size;
 #endif
       }
-
-      prec norm(const std::vector<prec>& vec) {
-
-      }
-
 
       void a_adag(int i, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
         size_t locsize = invec.size();
@@ -389,6 +451,9 @@ namespace EDLib {
         MPI_Info_set( info, (char *) "no_locks", (char *) "true");
         MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
         MPI_Info_free(&info);
+        int size;
+        MPI_Comm_size(_run_comm, &size);
+        std::cout<<"Size: "<< size<<"\n";
       }
 
       virtual MPI_Comm comm() {
@@ -406,8 +471,8 @@ namespace EDLib {
     protected:
 
     private:
-      std::vector < Matrix > H_loc;
       Model &_model;
+      Matrix H_loc;
       Matrix H_up;
       Matrix H_down;
 
@@ -416,8 +481,6 @@ namespace EDLib {
 
       Symmetry::NSymmetry _up_symmetry;
       Symmetry::NSymmetry _down_symmetry;
-      Symmetry::NSymmetry _loc_symmetry;
-
 
       int _interaction_size;
       int _Ns;
@@ -446,14 +509,26 @@ namespace EDLib {
 #ifdef USE_MPI
       void find_neighbours() {
         int ci, cid;
+        int size;
+        MPI_Comm_size(_run_comm, &size);
         std::vector<int> l_loc_max(_loc_min.size(), INT_MIN);
         std::vector<int> l_loc_min(_loc_min.size(), INT_MAX);
         for(int i = 0; i< _up_size; ++ i) {
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
-            calcIndex(ci, cid, H_up.col_ind()[j]);
+            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
             l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
             l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
             if(_procs[cid]==0)  {_procs[cid]=1;}
+          }
+        }
+        if(H_loc.row_ptr().size()!=0) {
+          for (int i = 0; i < _locsize; ++i) {
+            for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
+              calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
+              l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
+              l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
+              if(_procs[cid]==0)  {_procs[cid]=1;}
+            }
           }
         }
         int oset = 0;
@@ -479,8 +554,16 @@ namespace EDLib {
         // adjust indexes
         for (int i = 0; i < _up_size; ++i) {
           for (int j = H_up.row_ptr()[i + _up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
-            calcIndex(ci, cid, H_up.col_ind()[j]);
+            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
             H_up.col_ind()[j] -= _loc_offset[cid];
+          }
+        }
+        if(H_loc.row_ptr().size()!=0) {
+          for (int i = 0; i < _locsize; ++i) {
+            for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
+              calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
+              H_loc.col_ind()[j] -= _loc_offset[cid];
+            }
           }
         }
       }

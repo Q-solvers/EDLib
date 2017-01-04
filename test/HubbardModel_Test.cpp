@@ -6,6 +6,7 @@
 #include "edlib/Hamiltonian.h"
 #include "edlib/HubbardModel.h"
 #include "edlib/Storage.h"
+#include "edlib/EDParams.h"
 
 
 #ifdef USE_MPI
@@ -31,15 +32,15 @@ class HubbardModelTestEnv : public ::testing::Environment {
 #endif
 
 
-TEST(HubbardModelTest, Filling) {
+TEST(HubbardModelTest, ReferenceTest) {
   alps::params p;
+  EDLib::define_parameters(p);
   p["NSITES"]=4;
   p["NSPINS"]=2;
   p["INPUT_FILE"]="test/input/4ring/input.h5";
   p["arpack.SECTOR"]=false;
   p["storage.MAX_SIZE"]=576;
   p["storage.MAX_DIM"]=36;
-  //p["storage.EIGENVALUES_ONLY"]=false;
   p["storage.EIGENVALUES_ONLY"]=true;
   p["storage.ORBITAL_NUMBER"]=1;
   p["arpack.NEV"]=256;
@@ -318,6 +319,7 @@ TEST(HubbardModelTest, Filling) {
   };
 
   size_t i = 0;
+
   for(auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); ++pair){
     ASSERT_NEAR(pair->eigenvalue(), ref[i], 1e-3);
     i++;

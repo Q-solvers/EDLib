@@ -16,7 +16,7 @@ namespace EDLib {
         virtual int valid(long long, int) const {return 0;};
         virtual void set(long long,long long&, int&, int) const {};
         int inline checkState(long long nst, int im, int Ns) const {
-          return (int)((1ll << (2*Ns - 1 - im)) >> (2*Ns - 1 - im));
+          return (int)((nst & (1ll << (2*Ns - 1 - im))) >> (2*Ns - 1 - im));
         }
 
         /**
@@ -151,12 +151,18 @@ namespace EDLib {
           long long k1, k2, k3, k4;
           int isign1, isign2, isign3, isign4;
           a(_k + _sigma * Ns, nst, k3, isign1, 2*Ns);
-          a(_l + _sigmaprime * Ns, k3, k4, isign1, 2*Ns);
-          adag(_j + _sigmaprime * Ns, k4, k2, isign2, 2*Ns);
-          adag(_i + _sigma * Ns, k2, k1, isign2, 2*Ns);
+          a(_l + _sigmaprime * Ns, k3, k4, isign2, 2*Ns);
+          adag(_j + _sigmaprime * Ns, k4, k2, isign3, 2*Ns);
+          adag(_i + _sigma * Ns, k2, k1, isign4, 2*Ns);
           k = k1;
-          sign = isign1 * isign2;
+          sign = isign1 * isign2*isign3*isign4;
         }
+
+        /**
+         * @brief Return the interaction strength for current spin-orbital combination
+         * @return U_{ijkl}
+         */
+        virtual inline prec value() const { return 0.5*_U; }
 
       private:
         int _i;
@@ -208,7 +214,6 @@ namespace EDLib {
         int b_ind = 0;
         for(int im = 0; im< _ml; ++im ){
           _bath_ind[im] = b_ind;
-          std::cout<<"shift: "<<_bath_ind[im]<<" ";
           b_ind += _Vk[im].size();
         }
         if(b_ind != _Ns - _ml) {
@@ -221,18 +226,9 @@ namespace EDLib {
               if (std::abs(_Vk[im][ik][is]) > 1e-10) {
                 int imk = ik + _bath_ind[im] + _ml;
                 _T_states.push_back(HSt(im, imk, is, _Vk[im][ik][is]));
+                _T_states.push_back(HSt(imk, im, is, _Vk[im][ik][is]));
               }
             }
-          }
-        }
-        std::cout<<"Epsk: \n";
-        for (int im = 0; im < _ml; ++im) {
-          std::cout<<"im "<<im<<"\n";
-          for (int ik = 0; ik < _Vk[im].size(); ++ik) {
-            for (int is = 0; is < _ms; ++is) {
-              std::cout<<_Epsk[im][ik][is]<<" ";
-            }
-            std::cout<<"\n";
           }
         }
         for (int is1 = 0; is1 < _ms; ++is1) {
@@ -242,10 +238,12 @@ namespace EDLib {
                 for (int k = 0; k < _ml; ++k) {
                   for (int l = 0; l < _ml; ++l) {
                     // skip density-density contribution
-                    if ( ( (i == l) && (j == k) ) || ( (i == k) && (j == l) ) ) {
+                    if ( ( (i == l) && (j == k) && (is1==is2) ) || ( (i == k) && (j == l) ) ) {
                       continue;
                     }
-                    _V_states.push_back(USt(i, j, k, l, is1, is2, _U[i][j][k][l]));
+                    if(std::abs(_U[i][j][k][l]) != 0.0) {
+                      _V_states.push_back(USt(i, j, k, l, is1, is2, _U[i][j][k][l]));
+                    }
                   }
                 }
               }
@@ -266,10 +264,10 @@ namespace EDLib {
           }
           xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
           for(int jm = 0; jm < _ml; ++jm) {
-            for (int s1 = 0; s1 < _ms; ++s1) {
-              for (int s2 = 0; s2 < _ms; ++s2) {
-                xtemp += 0.5 * (_U[im][jm][im][jm] - _U[im][jm][jm][im]) * checkState(state, im + s1*_Ns, _Ip) * checkState(state, im + s2*_Ns, _Ip);
-              }
+            for(int is = 0; is< _ms; ++is)
+            if(im!=jm) {
+              xtemp += 0.5 * (_U[im][jm][im][jm] - _U[im][jm][jm][im]) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + is*_Ns, _Ip);
+              xtemp += 0.5 * (_U[im][jm][im][jm]) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + (1-is)*_Ns, _Ip);
             }
           }
         }
@@ -297,11 +295,11 @@ namespace EDLib {
         return _symmetry;
       }
 
-      inline const std::vector<St>& T_states() const {
+      inline const std::vector<HSt>& T_states() const {
         return _T_states;
       }
 
-      inline const std::vector < St > &V_states() const {
+      inline const std::vector<USt>& V_states() const {
         return _V_states;
       }
 
@@ -321,9 +319,9 @@ namespace EDLib {
       std::vector<int> _bath_ind;
 
       // Kinetic part of the off-diagonal Hamiltonian elements
-      std::vector < St > _T_states;
+      std::vector < HSt > _T_states;
       // Interaction part of the off-diagonal Hamiltonian elements
-      std::vector < St > _V_states;
+      std::vector < USt > _V_states;
     };
 
   }
