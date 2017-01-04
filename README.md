@@ -1,5 +1,8 @@
+[![DOI](https://zenodo.org/badge/63707930.svg)](https://zenodo.org/badge/latestdoi/63707930)
+
 ##### Overview
-EDLib is a C++ template Exact diagonalization solver for quantum electron models. It provides the following classes of objects:
+EDLib is a C++ template finite temperature Exact diagonalization solver for quantum electron models.
+It provides the following classes of objects:
 
 - `Hamiltonian<precision, Storage, Model>`.
 There exists a set of implementation of models for common purposes:
