@@ -38,8 +38,9 @@ should be compiled with *MPI* support.
 - *git* to fetch the code 
 - *cmake* to build tests and examples (optional)
 
-##### Author
+##### Authors
 - Sergei Iskakov, *iskakoff[at]q-solvers.ru*, 2016-now
+- Michael Danilov, 2016-now
 
 ##### Distribution
 Open-source under MIT License.
