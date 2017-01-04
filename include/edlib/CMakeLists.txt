@@ -8,6 +8,7 @@ add_custom_target(edlib SOURCES Combination.h
     FermionicModel.h
     fortranbinding.h
     GreensFunction.h
+    ChiLoc.h
     Hamiltonian.h
     HubbardModel.h
     Lanczos.h

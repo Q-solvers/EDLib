@@ -7,12 +7,13 @@
 #include "edlib/CRSStorage.h"
 #include "edlib/HubbardModel.h"
 #include "edlib/GreensFunction.h"
+#include "edlib/ChiLoc.h"
 #include "edlib/SpinResolvedStorage.h"
 
 
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
-  typedef EDLib::SRSHubbardHamiltonian_float HamType;
+  typedef EDLib::SRSHubbardHamiltonian HamType;
 #else
   typedef EDLib::SOCSRHubbardHamiltonian_float HamType;
 #endif
@@ -31,8 +32,10 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-//    EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
-//    greensFunction.compute();
+    EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
+    greensFunction.compute();
+    EDLib::gf::ChiLoc<double, HamType> susc(params, ham);
+    susc.compute();
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI

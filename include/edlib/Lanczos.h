@@ -16,8 +16,9 @@ namespace EDLib {
     template<typename precision, class Hamiltonian>
     class Lanczos {
     public:
-      Lanczos(alps::params &p, Hamiltonian &h) : ham(h), _omega(p["lanc.BETA"], p["lanc.NOMEGA"]),_Nl(p["lanc.NLANC"]),
-                                                 alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0) {}
+      Lanczos(alps::params &p, Hamiltonian &h, const alps::gf::statistics::statistics_type& type = alps::gf::statistics::statistics_type::FERMIONIC) :
+        ham(h), _omega(p["lanc.BETA"], p["lanc.NOMEGA"], type),_Nl(p["lanc.NLANC"]),
+        alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0) {}
 
       const alps::gf::matsubara_positive_mesh &omega() const {
         return _omega;
@@ -60,7 +61,9 @@ namespace EDLib {
       /**
        * Compute lanczos continues fraction
        */
-      void compute_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, alps::gf::omega_gf &gf) {
+      template<typename GF_TYPE>
+      void compute_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
+                                      const alps::gf::index_mesh::index_type & site, const alps::gf::index_mesh::index_type & spin) {
         double expb = 0;
         double shift;
         if (_omega.beta() * (excited_state - groundstate) > 25)
@@ -70,30 +73,37 @@ namespace EDLib {
         const std::vector < double > &freqs = _omega.points();
         for (int iomega = 0; iomega < _omega.extent(); ++iomega) {
           shift = 1.0;
+          std::complex<double> swp = 0.0;
           std::complex < double > ener = std::complex < double >(0.0, freqs[iomega]) + (excited_state) * isign;
-          det.assign(nlanc, 0.0);
-          for (int i = 0; i < nlanc; ++i) {
-            dl[i] = ener - ((double) (alfalanc[i]) * isign);
-          }
-          if (nlanc == 1) {
-            det[0] = dl[0];
-            gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb / det[0];
-          } else {
-            det[nlanc - 1] = dl[nlanc - 1];
-            det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
-            for (int i = nlanc - 3; i >= 0; --i) {
-              det[i] = (dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2]);
-              if(std::abs(det[i]) > (std::numeric_limits<float>::max()/2.0) && i!=0) {
-                shift = 1.0/(std::numeric_limits<float>::max()/1000.0);
-                det[i] *=shift;
-                det[i+1] *=shift;
-              }
-            }
-            gf(alps::gf::matsubara_positive_mesh::index_type(iomega)) += expectation_value * expb * det[1] / det[0];
-          }
+          swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
+
+          gf(alps::gf::matsubara_positive_mesh::index_type(iomega), site, spin) += swp;
         }
       }
 
+      /**
+       * Compute symmetrized lanczos continues fraction
+       */
+      template<typename GF_TYPE>
+      void compute_sym_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
+                                          const alps::gf::index_mesh::index_type & site) {
+        double expb = 0;
+        double shift;
+        if (_omega.beta() * (excited_state - groundstate) > 25)
+          expb = 0;
+        else
+          expb = exp(-_omega.beta() * (excited_state - groundstate));
+        const std::vector < double > &freqs = _omega.points();
+        gf(alps::gf::matsubara_positive_mesh::index_type(0), site) -= expectation_value*_omega.beta()*expb;
+        for (int iomega = 1; iomega < _omega.extent(); ++iomega) {
+          shift = 1.0;
+          std::complex < double > ener = std::complex < double >(0.0,   freqs[iomega]) + (excited_state) * isign;
+          std::complex < double > ener2 = std::complex < double >(0.0, -freqs[iomega]) + (excited_state) * isign;
+          std::complex<double> swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
+          swp += get_frac_point(expectation_value, nlanc, isign, expb, shift, ener2);
+          gf(alps::gf::matsubara_positive_mesh::index_type(iomega), site) += swp;
+        }
+      }
 
       const Hamiltonian &hamiltonian() const {
         return ham;
@@ -114,6 +124,41 @@ namespace EDLib {
 
       std::vector < std::complex < double > > det;
       std::vector < std::complex < double > > dl;
+
+      /**
+       *
+       * @param expectation_value
+       * @param nlanc - number of Lanczos operation have been performed
+       * @param isign - sign
+       * @param expb - Boltzman exponent value
+       * @param shift - overflow avoiding shift
+       * @param ener - first denominator in fraction (w - E)
+       * @return GF value for specific energy point.
+       */
+      std::complex < double > get_frac_point(double expectation_value, int nlanc, int isign, double expb, double shift, const std::complex < double > &ener) {
+        std::complex < double > swp = 0.0;
+        det.assign(nlanc, 0.0);
+        for (int i = 0; i < nlanc; ++i) {
+          dl[i] = ener - ((double) (alfalanc[i]) * isign);
+        }
+        if (nlanc == 1) {
+          det[0] = dl[0];
+          swp += expectation_value * expb / det[0];
+        } else {
+          det[nlanc - 1] = dl[nlanc - 1];
+          det[nlanc - 2] = dl[nlanc - 2] * dl[nlanc - 1] - std::pow(betalanc[nlanc - 1], 2);
+          for (int i = nlanc - 3; i >= 0; --i) {
+            det[i] = (dl[i] * det[i + 1] - std::pow(betalanc[i + 1], 2) * det[i + 2]);
+            if(abs(det[i]) > (std::numeric_limits<float>::max() / 2.0) && i != 0) {
+              shift = 1.0/(std::numeric_limits<float>::max() / 1000.0);
+              det[i] *=shift;
+              det[i + 1] *=shift;
+            }
+          }
+          swp += expectation_value * expb * det[1] / det[0];
+        }
+        return swp;
+      }
     };
 
   }
