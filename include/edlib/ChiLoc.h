@@ -51,7 +51,7 @@ namespace EDLib {
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
         SzOperator<precision, typename Hamiltonian::ModelType> op(_model);
-        for (typename std::set<EigenPair<precision, typename Hamiltonian::ModelType::Sector> >::iterator kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
+        for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
           if (boltzmann_f < _cutoff) {
