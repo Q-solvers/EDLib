@@ -206,9 +206,7 @@ namespace EDLib {
               if ((H_down.col_ind()[k]) == j) {
                 std::cout << std::setw(6) << H_down.values()[k] << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
                 f = false;
-              } /*else {
-            std::cout<<"0.0 ";
-          }*/
+              }
             }
             if (f) {
               std::cout << std::setw(6) << 0.0 << (j == _down_symmetry.sector().size() - 1 ? "" : ", ");
