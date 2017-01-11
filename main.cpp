@@ -32,9 +32,9 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::gf::GreensFunction < double, HamType > greensFunction(params, ham);
+    EDLib::gf::GreensFunction < HamType > greensFunction(params, ham);
     greensFunction.compute();
-    EDLib::gf::ChiLoc<double, HamType> susc(params, ham);
+    EDLib::gf::ChiLoc<HamType> susc(params, ham);
     susc.compute();
     susc.compute<EDLib::gf::NOperator<double> >();
 //    EDLib::CSRSIAMHamiltonian ham2(params);

@@ -51,15 +51,16 @@ namespace EDLib {
       std::string name() const {return "N";};
     };
 
-    template<typename precision, class Hamiltonian>
-    class ChiLoc : public Lanczos < precision, Hamiltonian > {
-      using Lanczos < precision, Hamiltonian >::hamiltonian;
-      using Lanczos < precision, Hamiltonian >::lanczos;
-      using Lanczos < precision, Hamiltonian >::omega;
-      using Lanczos < precision, Hamiltonian >::compute_sym_continues_fraction;
+    template<class Hamiltonian>
+    class ChiLoc : public Lanczos < Hamiltonian > {
+      using Lanczos < Hamiltonian >::hamiltonian;
+      using Lanczos < Hamiltonian >::lanczos;
+      using Lanczos < Hamiltonian >::omega;
+      using Lanczos < Hamiltonian >::compute_sym_continues_fraction;
+      using typename Lanczos < Hamiltonian >::precision;
     public:
-      ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < precision, Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
-                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
+      ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
+                                                        gf(Lanczos < Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");

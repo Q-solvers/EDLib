@@ -32,9 +32,10 @@ namespace EDLib {
       };
     }
 
-    template<typename precision>
+    template<typename prcsn>
     class HubbardModel: public FermionicModel {
     public:
+      typedef prcsn precision;
       typedef typename Symmetry::SzSymmetry SYMMETRY;
       typedef typename Hubbard::InnerState < precision > St;
       typedef typename Symmetry::SzSymmetry::Sector Sector;

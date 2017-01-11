@@ -11,15 +11,16 @@
 
 namespace EDLib {
   namespace gf {
-    template<typename precision, class Hamiltonian>
-    class GreensFunction : public Lanczos < precision, Hamiltonian > {
-      using Lanczos < precision, Hamiltonian >::hamiltonian;
-      using Lanczos < precision, Hamiltonian >::lanczos;
-      using Lanczos < precision, Hamiltonian >::omega;
-      using Lanczos < precision, Hamiltonian >::compute_continues_fraction;
+    template<class Hamiltonian>
+    class GreensFunction : public Lanczos < Hamiltonian > {
+      using Lanczos < Hamiltonian >::hamiltonian;
+      using Lanczos < Hamiltonian >::lanczos;
+      using Lanczos < Hamiltonian >::omega;
+      using Lanczos < Hamiltonian >::compute_continues_fraction;
+      using typename Lanczos < Hamiltonian >::precision;
     public:
-      GreensFunction(alps::params &p, Hamiltonian &h) : Lanczos < precision, Hamiltonian >(p, h), _model(h.model()),
-                                                        gf(Lanczos < precision, Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+      GreensFunction(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h), _model(h.model()),
+                                                        gf(Lanczos < Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");

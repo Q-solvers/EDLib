@@ -15,8 +15,9 @@
 namespace EDLib {
   namespace Storage {
 
-    template<typename prec, class Model>
-    class SOCRSStorage : public Storage < prec > {
+    template<class Model>
+    class SOCRSStorage : public Storage < typename Model::precision > {
+      typedef typename Model::precision prec;
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;

@@ -174,9 +174,10 @@ namespace EDLib {
         prec _U;
       };
     }
-    template<typename precision>
+    template<typename prec>
     class SingleImpurityAndersonModel : public FermionicModel {
     public:
+      typedef prec precision;
       typedef typename Symmetry::SzSymmetry SYMMETRY;
       typedef typename SingleImpurityAnderson::InnerState<precision> St;
       typedef typename SingleImpurityAnderson::InnerHybridizationState<precision> HSt;

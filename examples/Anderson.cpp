@@ -23,7 +23,7 @@ int main(int argc, const char ** argv) {
     EDLib::SRSSIAMHamiltonian ham(params);
 #endif
     ham.diag();
-    EDLib::gf::GreensFunction < double, EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
+    EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
     greensFunction.compute();
   } catch (std::exception & e) {
 #ifdef USE_MPI

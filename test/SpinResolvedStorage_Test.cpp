@@ -40,12 +40,12 @@ TEST(SpinResolvedStorageTest, Init) {
   p["storage.MAX_DIM"] = 4900;
   EDLib::Model::HubbardModel<double> m(p);
   EDLib::Model::HubbardModel<double> m2(p);
-  EDLib::Storage::SpinResolvedStorage<double, EDLib::Model::HubbardModel<double> > storage(p, m
+  EDLib::Storage::SpinResolvedStorage<EDLib::Model::HubbardModel<double> > storage(p, m
 #ifdef USE_MPI
   , MPI_COMM_WORLD
 #endif
 );
-  EDLib::Storage::CRSStorage<double, EDLib::Model::HubbardModel<double> > storage2(p, m2
+  EDLib::Storage::CRSStorage<EDLib::Model::HubbardModel<double> > storage2(p, m2
 #ifdef USE_MPI
   , MPI_COMM_WORLD
 #endif
@@ -75,7 +75,7 @@ TEST(SpinResolvedStorageTest, av) {
   p["storage.MAX_SIZE"] = 80000;
   p["storage.MAX_DIM"] = 4900;
   EDLib::Model::HubbardModel<double> m(p);
-  EDLib::Storage::SpinResolvedStorage<double, EDLib::Model::HubbardModel<double> > storage(p, m
+  EDLib::Storage::SpinResolvedStorage<EDLib::Model::HubbardModel<double> > storage(p, m
 #ifdef USE_MPI
   , MPI_COMM_WORLD
 #endif

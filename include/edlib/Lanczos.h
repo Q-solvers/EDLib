@@ -13,8 +13,10 @@
 
 namespace EDLib {
   namespace gf {
-    template<typename precision, class Hamiltonian>
+    template<class Hamiltonian>
     class Lanczos {
+    protected:
+      typedef typename Hamiltonian::ModelType::precision precision;
     public:
       Lanczos(alps::params &p, Hamiltonian &h, const alps::gf::statistics::statistics_type& type = alps::gf::statistics::statistics_type::FERMIONIC) :
         ham(h), _omega(p["lanc.BETA"].as<double>(), p["lanc.NOMEGA"].as<int>(), type),_Nl(p["lanc.NLANC"]),
