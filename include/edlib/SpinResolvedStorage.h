@@ -497,7 +497,7 @@ namespace EDLib {
             }else{
               _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
-            _proc_size[i]= l_loc_max[i] - l_loc_min[i] + 1;
+            _proc_size[i]= l_loc_max[i] - l_loc_min[i] + _down_symmetry.sector().size();
             oset+=ls;
           }
         }
