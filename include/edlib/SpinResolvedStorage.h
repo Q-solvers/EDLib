@@ -68,7 +68,10 @@ namespace EDLib {
             _values[_vind] = sign * t;
             ++_vind;
             if(_vind > _nnz) {
-              throw std::out_of_range("Number of non-zero elements is too big. Please increase number of non-zero elements per line.");
+              _nnz *= 2;
+              _values.resize(_nnz);
+              _col_ind.resize(_nnz);
+//              throw std::out_of_range("Number of non-zero elements is too big. Please increase number of non-zero elements per line.");
             }
           }
         }
@@ -77,8 +80,10 @@ namespace EDLib {
           int shift = 0;
           for (int iii = _row_ptr[i]; iii < _vind; ++iii){
             if(std::abs(_values[iii])<1e-15) {
-              _values.erase(_values.begin() + iii);
-              _col_ind.erase(_col_ind.begin() + iii);
+              for(int kkk = iii; kkk<_vind-1; ++kkk) {
+                _values[kkk] = _values[kkk+1];
+                _col_ind[kkk] = _col_ind[kkk+1];
+              }
               --_vind;
             }
           }
@@ -172,7 +177,7 @@ namespace EDLib {
         }
 
         if(H_loc.row_ptr().size()!=0)
-        for (int i = 0; i < n; ++i) {
+        for (int i = _int_start; i < n; ++i) {
           for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
 #ifdef USE_MPI
             w[i] += H_loc.values()[j] * _vecval[H_loc.col_ind()[j]];
@@ -195,14 +200,16 @@ namespace EDLib {
         // fill local part;
         int isign;
         long long k;
-        for(int i =0; i<_locsize; ++i) {
+        for(size_t i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
-          // TODO: Add off-diagonal interactions
+          /// Add off-diagonal interactions
+          _int_start = _locsize;
           if(_model.V_states().size() > 0) {
             for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
               if (_model.valid(_model.V_states()[kkk], nst)) {
+                _int_start = std::min(i, _int_start);
                 _model.set(_model.V_states()[kkk], nst, k, isign);
                 int j = _model.symmetry().index(k);
                 H_loc.addElement(i, j, _model.V_states()[kkk].value(), isign);
@@ -233,8 +240,8 @@ namespace EDLib {
         _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
         size_t up_size = _up_symmetry.sector().size();
         size_t down_size = _down_symmetry.sector().size();
-        H_up.init(up_size, up_size);
-        H_down.init(down_size, down_size);
+        H_up.init(up_size, 100);
+        H_down.init(down_size, 100);
 #ifdef USE_MPI
         MPI_Comm run_comm;
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
@@ -272,7 +279,7 @@ namespace EDLib {
 #endif
         _diagonal.assign(_locsize, prec(0.0));
         if(_model.V_states().size()>0) {
-          H_loc.init(_locsize, 25);
+          H_loc.init(_locsize, 3);
         }
         n() = _locsize;
         ntot() = sector.size();
@@ -426,10 +433,14 @@ namespace EDLib {
       int _Ns;
       int _ms;
 
-
+      /// size of H_up
       size_t _up_size;
+      /// offset in spin_up channel
       size_t _up_shift;
+      /// local size on each CPU
       size_t _locsize;
+      /// staring index in interaction Hamiltonian
+      size_t _int_start;
 
 #ifdef USE_MPI
       MPI_Comm _comm;
@@ -486,7 +497,7 @@ namespace EDLib {
             }else{
               _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
-            _proc_size[i]= l_loc_max[i] + _down_symmetry.sector().size() - l_loc_min[i];
+            _proc_size[i]= l_loc_max[i] - l_loc_min[i] + 1;
             oset+=ls;
           }
         }
