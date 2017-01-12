@@ -8,6 +8,7 @@ It provides the following classes of objects:
 There exists a set of implementation of models for common purposes:
     - `HubbardModel<precision>`. The finite Hubbard model cluster.
     - `SingleImpurityAndersonModel<precision>`. The single multi-orbital impurity Anderson Model.
+
 For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
 - `SpinResolvedStorage<precision, Model>`. A storage that takes into account the case when hopping Hamiltonian can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
 - `SOCRSStorage<precision, Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
