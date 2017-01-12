@@ -67,11 +67,10 @@ namespace EDLib {
             _col_ind[_vind] = j;
             _values[_vind] = sign * t;
             ++_vind;
-            if(_vind > _nnz) {
+            if(_vind == _nnz) {
               _nnz *= 2;
               _values.resize(_nnz);
               _col_ind.resize(_nnz);
-//              throw std::out_of_range("Number of non-zero elements is too big. Please increase number of non-zero elements per line.");
             }
           }
         }
@@ -90,7 +89,7 @@ namespace EDLib {
         }
 
         void inline endLine(int i) {
-          compress(i);
+//          compress(i);
           _row_ptr[i + 1] = _vind;
         }
 
@@ -177,7 +176,7 @@ namespace EDLib {
         }
 
         if(H_loc.row_ptr().size()!=0)
-        for (int i = _int_start; i < n; ++i) {
+        for (size_t i = _int_start; i < n; ++i) {
           for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
 #ifdef USE_MPI
             w[i] += H_loc.values()[j] * _vecval[H_loc.col_ind()[j]];
@@ -200,12 +199,12 @@ namespace EDLib {
         // fill local part;
         int isign;
         long long k;
+        _int_start = _locsize;
         for(size_t i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           _diagonal[i] = _model.diagonal(nst);
           /// Add off-diagonal interactions
-          _int_start = _locsize;
           if(_model.V_states().size() > 0) {
             for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
               if (_model.valid(_model.V_states()[kkk], nst)) {
@@ -473,9 +472,9 @@ namespace EDLib {
           }
         }
         if(H_loc.row_ptr().size()!=0) {
-          for (int i = 0; i < _locsize; ++i) {
+          for (size_t i = _int_start; i < _locsize; ++i) {
             for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
-              calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
+              calcIndex(ci, cid, _down_symmetry.sector().size()*(H_loc.col_ind()[j]/_down_symmetry.sector().size()), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
               l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
               l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
               if(_procs[cid]==0)  {_procs[cid]=1;}
@@ -510,10 +509,10 @@ namespace EDLib {
           }
         }
         if(H_loc.row_ptr().size()!=0) {
-          for (int i = 0; i < _locsize; ++i) {
+          for (size_t i = _int_start; i < _locsize; ++i) {
             for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
               calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
-              H_loc.col_ind()[j] -= _loc_offset[cid];
+              H_loc.col_ind()[j] -= _loc_offset[cid]*_down_symmetry.sector().size();
             }
           }
         }
