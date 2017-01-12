@@ -34,8 +34,8 @@ To compile examples and tests create a build directory and run
 
 To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* library
 should be compiled with *MPI* support. To build with a specific *ALPSCore* library `-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag.
-Since the major MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended to use the latest version of *ARPACK-ng* from 
-github repository.
+Since the critical for current library implementation MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended 
+to use the latest version of *ARPACK-ng* from github repository.
 
 ##### Dependencies 
 - c++11-compatible compiler (tested with clang >= 3.1, gcc >= 4.8.2, icpc >= 14.0.2)  
