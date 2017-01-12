@@ -44,7 +44,7 @@ namespace EDLib {
         return (model.checkState(state, iii, model.max_total_electrons()) +
                 model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
-      /// Current implementation restricted to half-filled
+      /// Current implementation restricted to half-filled case
       precision average() const {
         return 1.0;
       }
@@ -109,7 +109,7 @@ namespace EDLib {
 #ifdef USE_MPI
               if(rank==0){
 #endif
-              std::cout << "orbital: " << i << " <n|O|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
               compute_sym_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
 #ifdef USE_MPI
             }
@@ -124,14 +124,47 @@ namespace EDLib {
         /// Compute static susceptibility
         for (int i = 0; i < _model.orbitals(); ++i) {
           double chiSum = 0.0;
-          for (int iomega = 1; iomega < omega().extent(); ++iomega) {
-            chiSum = chiSum + gf(alps::gf::matsubara_positive_mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real();
+          /// Susceptibility decays as c2/w^2
+          /// compute c2 and c4 from two largest freq points
+          /// and for next pair as well to check convergence
+          double c2, c4;
+          double c2_2, c4_2;
+          double tail, tail2;
+          get_tail(i, omega().extent()-1, c2, c4, tail);
+          get_tail(i, omega().extent()-2, c2_2, c4_2, tail2);
+          if(std::abs(tail-tail2)/std::abs(tail) > 1e-4) {
+            std::cerr<<"Not enough frequencies to compute high frequency tail. Please increase number of frequencies. Diff: "<<std::abs(tail-tail2)/std::abs(tail)<<std::endl;
           }
-          gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + op.average()*omega().beta();
+          for (int iomega = 1; iomega < omega().extent(); ++iomega) {
+            double om = omega().points()[iomega];
+            chiSum = chiSum + gf(alps::gf::matsubara_positive_mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
+          }
+          gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*omega().beta();
         }
 #ifdef USE_MPI
         }
 #endif
+      }
+
+      /**
+       * High frequency behaviour of Chi(W_n) = c_2/(W_n)^2 + c_4/(W_n)^4
+       *
+       * @param i -- current orbital
+       * @param freq -- frequency
+       * @param c2 -- c_2 coefficient
+       * @param c4 -- c_4 coefficient
+       * @param tail -- analytical value of tail
+       */
+      void get_tail(int i, int freq, double &c2, double& c4, double &tail) const {
+        double om1 = omega().points()[freq];
+        double om2 = omega().points()[freq-1];
+        double om1_2 = om1*om1;
+        double om2_2 = om2*om2;
+        double g1 = gf(alps::gf::matsubara_positive_mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
+        double g2 = gf(alps::gf::matsubara_positive_mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
+        c2 = - (g2*om2_2*om2_2 - g1*om1_2*om1_2)/(om1_2-om2_2);
+        c4 = - (g1*om1_2*om1_2*om2_2 - g2*om2_2*om2_2*om1_2)/(om1_2-om2_2);
+        tail= c2 * omega().beta() * omega().beta() / 24.0 + c4 * omega().beta() * omega().beta() * omega().beta() * omega().beta() / 1440.0;
       }
 
       void save(alps::hdf5::archive& ar, const std::string & path) {
