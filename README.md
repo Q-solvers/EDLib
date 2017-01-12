@@ -8,7 +8,7 @@ The central class of the library is `Hamiltonian<Storage, Model>`, that is param
     - `HubbardModel<precision>`. The finite Hubbard model cluster.
     - `SingleImpurityAndersonModel<precision>`. The single multi-orbital impurity Anderson Model.
 
--For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
+- For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
     - `SpinResolvedStorage<Model>`. A storage that takes into account the case when hopping Hamiltonian can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
     - `SOCRSStorage<Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
     - `CRSStorage<Model>`. A simple CRS storage.
