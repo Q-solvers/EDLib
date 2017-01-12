@@ -61,7 +61,7 @@ namespace EDLib {
     public:
       ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
-                                                        _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
+                                                        _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
@@ -90,6 +90,7 @@ namespace EDLib {
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
         const Op op;
+        _type = op.name();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
@@ -128,16 +129,25 @@ namespace EDLib {
           }
           gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + op.average()*omega().beta();
         }
-        std::ostringstream Gomega_name;
-        Gomega_name << "Chi"<<op.name()<<"_omega";
-        std::ofstream G_omega_file(Gomega_name.str().c_str());
-        G_omega_file << std::setprecision(14) << gf;
-        Gomega_name << ".h5";
-        alps::hdf5::archive ar(Gomega_name.str().c_str(), alps::hdf5::archive::WRITE);
-        gf.save(ar, "/Chi_omega");
-        G_omega_file.close();
-        ar.close();
-        std::cout << "Statsum: " << _Z << std::endl;
+#ifdef USE_MPI
+        }
+#endif
+      }
+
+      void save(alps::hdf5::archive& ar, const std::string & path) {
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+        if(rank == 0) {
+#endif
+          gf.save(ar, path + "/Chi" + _type +"_omega");
+          std::ostringstream Gomega_name;
+          Gomega_name << "Chi"<<_type<<"_omega";
+          std::ofstream G_omega_file(Gomega_name.str().c_str());
+          G_omega_file << std::setprecision(14) << gf;
+          G_omega_file.close();
+          std::cout << "Statsum: " << _Z << std::endl;
+          ar[path + "/@Statsum"] << _Z;
 #ifdef USE_MPI
         }
 #endif
@@ -149,6 +159,8 @@ namespace EDLib {
       typename Hamiltonian::ModelType &_model;
       precision _cutoff;
       precision _Z;
+      /// type of recently computed susceptibility
+      std::string _type;
 
       /**
        * @brief Perform the operation to the eigenstate

@@ -8,6 +8,7 @@
 #include "edlib/HubbardModel.h"
 #include "edlib/GreensFunction.h"
 #include "edlib/ChiLoc.h"
+#include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
 
 
@@ -25,6 +26,7 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   EDLib::define_parameters(params);
+  alps::hdf5::archive ar(params["OUTPUT_FILE"],  alps::hdf5::archive::WRITE);
   try {
 #ifdef USE_MPI
     HamType ham(params, MPI_COMM_WORLD);
@@ -32,11 +34,15 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
+    EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType > greensFunction(params, ham);
     greensFunction.compute();
+    greensFunction.save(ar, "results");
     EDLib::gf::ChiLoc<HamType> susc(params, ham);
     susc.compute();
+    susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
+    susc.save(ar, "results");
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
@@ -47,6 +53,7 @@ int main(int argc, const char ** argv) {
     std::cerr<<e.what();
 #endif
   }
+  ar.close();
 #ifdef USE_MPI
   MPI_Finalize();
 #endif

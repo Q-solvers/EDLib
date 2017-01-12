@@ -31,7 +31,6 @@ namespace EDLib {
         unsigned long size = v.size();
         std::vector < precision > w(size, precision(0.0));
         precision alf = 0, bet = 0;
-        std::cout<<"fill"<<std::endl;
         ham.fill();
         if(v.size()!=0) {
           ham.storage().prepare_work_arrays(v.data());

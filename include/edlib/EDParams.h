@@ -13,6 +13,7 @@ namespace EDLib {
     params.define < int >("NSITES", 4, "Number of sites");
     params.define < int >("NSPINS", 2, "Number of spins");
     params.define < std::string >("INPUT_FILE", "input.h5", "File with initial data");
+    params.define < std::string >("OUTPUT_FILE", "sim.h5", "File with results");
     // Symmetry parameters
     params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
     // Storage parameters

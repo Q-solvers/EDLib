@@ -98,7 +98,7 @@ namespace EDLib {
     }
 
 #ifdef USE_MPI
-    MPI_Comm& comm() {
+    const MPI_Comm& comm() const {
       return _comm;
     }
 #endif

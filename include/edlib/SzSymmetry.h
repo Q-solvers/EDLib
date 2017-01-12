@@ -25,12 +25,7 @@ namespace EDLib {
         friend std::ostream &operator<<(std::ostream &o, const SzSymmetry::Sector &c) { return o << " (nup: " << c._nup << " ndown: " << c._ndown << ") size: " << c._size; }
 
         Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size) {};
-      protected:
-        bool operator<(Sector s) {
-          return _size < s._size;
-        }
 
-      public:
         int nup() const { return _nup; }
 
         int ndown() const { return _ndown; }
@@ -39,6 +34,10 @@ namespace EDLib {
 
         void print() const {
           std::cout << _nup << " " << _ndown;
+        }
+      protected:
+        bool operator<(Sector s) {
+          return _size < s._size;
         }
 
       private:

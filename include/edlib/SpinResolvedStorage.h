@@ -300,7 +300,6 @@ namespace EDLib {
         if ((up_size % size) > myid) {
           locsize += 1;
         }
-        std::cout<<"Vec size:"<<locsize * down_size<<" "<<myid<<std::endl;
         return locsize * down_size;
 #else
         return sector_size;
@@ -399,7 +398,6 @@ namespace EDLib {
         MPI_Info_free(&info);
         int size;
         MPI_Comm_size(_run_comm, &size);
-        std::cout<<"Size: "<< size<<"\n";
       }
 
       virtual MPI_Comm comm() {

@@ -3,6 +3,7 @@
 //
 
 #include <edlib/EDParams.h>
+#include <edlib/HDF5Utils.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/GreensFunction.h"
 
@@ -16,6 +17,7 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
+  alps::hdf5::archive ar(params["OUTPUT_FILE"], alps::hdf5::archive::WRITE);
   try {
 #ifdef USE_MPI
     EDLib::SRSSIAMHamiltonian ham(params, comm);
@@ -23,8 +25,10 @@ int main(int argc, const char ** argv) {
     EDLib::SRSSIAMHamiltonian ham(params);
 #endif
     ham.diag();
+    EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
     greensFunction.compute();
+    greensFunction.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
@@ -32,6 +36,7 @@ int main(int argc, const char ** argv) {
     std::cerr<<e.what();
 #endif
   }
+  ar.close();
 #ifdef USE_MPI
   MPI_Finalize();
 #endif

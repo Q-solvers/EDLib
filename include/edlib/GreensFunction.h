@@ -55,7 +55,6 @@ namespace EDLib {
               std::vector < precision > outvec(1, precision(0.0));
               precision expectation_value = 0;
               _model.symmetry().set_sector(pair.sector());
-              std::cout<<"Create particle"<<std::endl;
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
@@ -69,7 +68,6 @@ namespace EDLib {
 #endif
               }
               _model.symmetry().set_sector(pair.sector());
-              std::cout<<"Destroy particle"<<std::endl;
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
@@ -88,16 +86,25 @@ namespace EDLib {
         if(rank == 0) {
 #endif
         gf /= _Z;
-        std::ostringstream Gomega_name;
-        Gomega_name << "G_omega";
-        std::ofstream G_omega_file(Gomega_name.str().c_str());
-        G_omega_file << std::setprecision(14) << gf;
-        Gomega_name << ".h5";
-        alps::hdf5::archive ar(Gomega_name.str().c_str(), alps::hdf5::archive::WRITE);
-        gf.save(ar, "/G_omega");
-        G_omega_file.close();
-        ar.close();
-        std::cout << "Statsum: " << _Z << std::endl;
+#ifdef USE_MPI
+        }
+#endif
+      }
+
+      void save(alps::hdf5::archive& ar, const std::string & path) {
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+        if(rank == 0) {
+#endif
+          gf.save(ar, path + "/G_omega");
+          std::ostringstream Gomega_name;
+          Gomega_name << "G_omega";
+          std::ofstream G_omega_file(Gomega_name.str().c_str());
+          G_omega_file << std::setprecision(14) << gf;
+          G_omega_file.close();
+          std::cout << "Statsum: " << _Z << std::endl;
+          ar[path + "/@Statsum"] << _Z;
 #ifdef USE_MPI
         }
 #endif
