@@ -44,9 +44,9 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
         _model.symmetry().init();
+#ifdef _OPENMP
 #pragma omp parallel
         {
-#ifdef _OPENMP
           int myid = omp_get_thread_num();
 #else
           int myid = 0;
@@ -80,7 +80,9 @@ namespace EDLib {
               _vind += test;
             }
           }
+#ifdef _OPENMP
         }
+#endif
       }
 
       void reset() {
@@ -126,9 +128,9 @@ namespace EDLib {
         for(int myid = 0; myid <= _nthreads; ++myid){
           _vind_offset[myid] = (_model.T_states().size() + _model.V_states().size()) * _row_offset[myid];
         }
+#ifdef _OPENMP
 #pragma omp parallel
         {
-#ifdef _OPENMP
           int myid = omp_get_thread_num();
 #else
           int myid = 0;
@@ -147,61 +149,10 @@ namespace EDLib {
             off_diagonal < decltype(_model.V_states()) >(nst, i, _model.V_states(), myid);
           }
 //          _vind_offset[myid + 1] = _vind[myid];
+#ifdef _OPENMP
         }
+#endif
 //        }
-      }
-
-      template<typename T_states>
-      inline void off_diagonal(long long nst, int i, T_states& states, int chunk) {
-        long long k = 0;
-        int isign = 0;
-        for (int kkk = 0; kkk < states.size(); ++kkk) {
-          if (_model.valid(states[kkk], nst)) {
-            _model.set(states[kkk], nst, k, isign);
-            int k_index = _model.symmetry().index(k);
-            addElement(i, k_index, states[kkk].value(), isign, chunk);
-          }
-        }
-      };
-
-      /**
-       * Add diagonal H(i,i) element with value v.
-       */
-      void inline addDiagonal(const int &i, prec v, int chunk) {
-        dvalues[i] = v;
-        _vind_start[chunk] = _vind[chunk];
-      }
-
-      /**
-       * Add off-diagonal H(i,j) element with value t (discarded here, restored in av) and Fermi sign.
-       */
-      void inline addElement(const int &i, int j, prec t, int sign, int chunk) {
-        if (i == j) {
-          throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
-        }
-        // It is an error to add the element (i, j) twice.
-        for (size_t iii = _vind_start[chunk]; iii < _vind[chunk]; iii++) {
-          if (col_ind[iii] == j) {
-            throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
-          }
-        }
-        if (_vind[chunk] >= _vind_offset[chunk+1]) {
-          std::stringstream s;
-          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter.";
-          throw std::runtime_error(s.str().c_str());
-        }
-        // Store sign in CRS-like array, one bit per sign.
-        col_ind[_vind[chunk]] = j;
-        signs[_vind_byte[chunk]] &= ~(1ll << _vind_bit[chunk]);
-        signs[_vind_byte[chunk]] |= sign < 0 ? 1ll << _vind_bit[chunk] : 0;
-        ++_vind_bit[chunk];
-        ++_vind[chunk];
-        _vind_byte[chunk] += _vind_bit[chunk] / sizeof(char);
-        _vind_bit[chunk] %= sizeof(char);
-      }
-
-      void endMatrix() {
-        // Nothing to do
       }
 
       void print() {
@@ -309,6 +260,56 @@ namespace EDLib {
 
       // Hubbard model parameters
       Model &_model;
+
+
+      template<typename T_states>
+      inline void off_diagonal(long long nst, int i, T_states& states, int chunk) {
+        long long k = 0;
+        int isign = 0;
+        for (int kkk = 0; kkk < states.size(); ++kkk) {
+          if (_model.valid(states[kkk], nst)) {
+            _model.set(states[kkk], nst, k, isign);
+            int k_index = _model.symmetry().index(k);
+            addElement(i, k_index, states[kkk].value(), isign, chunk);
+          }
+        }
+      };
+
+      /**
+       * Add diagonal H(i,i) element with value v.
+       */
+      void inline addDiagonal(int i, prec v, int chunk) {
+        dvalues[i] = v;
+        _vind_start[chunk] = _vind[chunk];
+      }
+
+      /**
+       * Add off-diagonal H(i,j) element with value t (discarded here, restored in av) and Fermi sign.
+       */
+      void inline addElement(const int &i, int j, prec t, int sign, int chunk) {
+        if (i == j) {
+          throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
+        }
+        // It is an error to add the element (i, j) twice.
+        for (size_t iii = _vind_start[chunk]; iii < _vind[chunk]; iii++) {
+          if (col_ind[iii] == j) {
+            throw std::logic_error("Collision. Check a, adag, numState, ninv_value!");
+          }
+        }
+        if (_vind[chunk] >= _vind_offset[chunk+1]) {
+          std::stringstream s;
+          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter.";
+          throw std::runtime_error(s.str().c_str());
+        }
+        // Store sign in CRS-like array, one bit per sign.
+        col_ind[_vind[chunk]] = j;
+        signs[_vind_byte[chunk]] &= ~(1ll << _vind_bit[chunk]);
+        signs[_vind_byte[chunk]] |= sign < 0 ? 1ll << _vind_bit[chunk] : 0;
+        ++_vind_bit[chunk];
+        ++_vind[chunk];
+        _vind_byte[chunk] += _vind_bit[chunk] / sizeof(char);
+        _vind_bit[chunk] %= sizeof(char);
+      }
 
     };
   }

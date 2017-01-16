@@ -59,7 +59,7 @@ namespace EDLib {
               break;
             }
           }
-          hamiltonian().storage().finalize();
+          hamiltonian().storage().finalize(0, false);
         }
 #ifdef USE_MPI
         MPI_Barrier(hamiltonian().comm());

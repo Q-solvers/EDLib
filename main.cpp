@@ -27,6 +27,13 @@ int main(int argc, const char ** argv) {
   }
   EDLib::define_parameters(params);
   alps::hdf5::archive ar(params["OUTPUT_FILE"],  alps::hdf5::archive::WRITE);
+#ifdef USE_MPI
+  int rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  if(rank) {
+    ar.close();
+  }
+#endif
   try {
 #ifdef USE_MPI
     HamType ham(params, MPI_COMM_WORLD);
@@ -46,13 +53,14 @@ int main(int argc, const char ** argv) {
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
-    int rank;
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if(rank == 0) std::cerr<<e.what()<<std::endl;
+    if(!rank) std::cerr<<e.what()<<std::endl;
 #else
     std::cerr<<e.what();
 #endif
   }
+#ifdef USE_MPI
+  if(!rank)
+#endif
   ar.close();
 #ifdef USE_MPI
   MPI_Finalize();

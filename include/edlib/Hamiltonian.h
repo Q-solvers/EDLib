@@ -51,6 +51,10 @@ namespace EDLib {
      * result will be stored in evals and evecs
      */
     void diag() {
+#ifdef USE_MPI
+      int rank;
+      MPI_Comm_rank(_comm, &rank);
+#endif
       int k =0;
       while (_model.symmetry().next_sector()) {
         fill();
@@ -59,7 +63,10 @@ namespace EDLib {
          */
         int info = _storage.diag();
         if (info != 0) {
-
+          /// abnormal return from ARPACK. Eigen-pair have not been computed
+#ifdef USE_MPI
+          if (rank == 0) std::cerr<<"Eigenvalue have not been computed."<<std::endl;
+#endif
         } else {
           const std::vector < prec > &evals = _storage.eigenvalues();
           const std::vector < std::vector < prec > > &evecs = _storage.eigenvectors();
@@ -69,17 +76,17 @@ namespace EDLib {
         }
       }
 #ifdef USE_MPI
-      int rank;
-      MPI_Comm_rank(_comm, &rank);
       if (rank == 0){
 #endif
         std::cout << "Here is the list of eigenvalues:" << std::endl;
+        std::streamsize precision = std::cout.precision();
+        std::cout<<std::setprecision(14);
         for (typename std::set<EigenPair<prec, typename Model::Sector> >::iterator kkk = _eigenpairs.begin(); kkk != _eigenpairs.end(); kkk++) {
-	  std::cout<<std::setprecision(14);
           std::cout << kkk->eigenvalue() << " ";
           kkk->sector().print();
           std::cout << std::endl;
         }
+        std::cout<<std::setprecision(precision);
 #ifdef USE_MPI
       }
 #endif

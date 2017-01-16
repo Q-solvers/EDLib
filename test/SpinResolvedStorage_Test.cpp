@@ -91,7 +91,7 @@ TEST(SpinResolvedStorageTest, av) {
   std::vector<double> w(storage.vector_size(s), 0.0);
   storage.prepare_work_arrays(v.data());
   storage.av(v.data(), w.data(), vs);
-  storage.finalize();
+  storage.finalize(0);
   std::vector<double> vv(s.size());
   std::ifstream ifile("v.dat");
   for(int i = 0; i < s.size(); ++i)
