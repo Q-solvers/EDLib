@@ -56,7 +56,7 @@ matrix:
         - cd build
         - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
         - make
-        - CTEST_OUTPUT_ON_FAILURE=1 make test
+        - make test
     - compiler: gcc
       addons:
         apt:
@@ -86,5 +86,5 @@ matrix:
         - cd build
         - cmake -DTesting=ON -DUSE_MPI=ON -DALPSCore_DIR=/usr -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS" .. 
         - make
-        - CTEST_OUTPUT_ON_FAILURE=1 make test
+        - make test
 

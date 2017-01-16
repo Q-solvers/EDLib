@@ -568,8 +568,8 @@ namespace EDLib {
         int ci, cid;
         /// size of the working communicator
         int nprocs;
-        std::vector<int> loc_offset(nprocs, 0);
         MPI_Comm_size(_run_comm, &nprocs);
+        std::vector<int> loc_offset(nprocs, 0);
         /// Find smallest and largest index in the current Hamiltonian
         std::vector<int> l_loc_max(_loc_min.size(), INT_MIN);
         std::vector<int> l_loc_min(_loc_min.size(), INT_MAX);
