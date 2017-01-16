@@ -2,20 +2,22 @@
 
 ##### Overview
 EDLib is a C++ template finite temperature Exact diagonalization solver for quantum electron models.
-It provides the following classes of objects:
+The central class of the library is `Hamiltonian<Storage, Model>`, that is parametrized by Storage and Model:
 
-- `Hamiltonian<precision, Storage, Model>`.
-There exists a set of implementation of models for common purposes:
+- There exists a following set of implementation of models for common purposes:
     - `HubbardModel<precision>`. The finite Hubbard model cluster.
     - `SingleImpurityAndersonModel<precision>`. The single multi-orbital impurity Anderson Model.
-For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
-- `SpinResolvedStorage<precision, Model>`. A storage that takes into account the case when hopping Hamiltonian can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
-- `SOCRSStorage<precision, Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
-- `CRSStorage<precision, Model>`. A simple CRS storage.
 
-The following observable can be computed by means of Lanczos continuous fraction of the Lehmann representation:
-- Single-particle Green's function (`GreensFunction<precision, Hamiltonian>` class template).
-- Spin suseptibility (`ChiLoc<precision, Hamiltonian>` class template).
+- For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
+    - `SpinResolvedStorage<Model>`. A storage that takes into account the case when hopping Hamiltonian can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
+    - `SOCRSStorage<Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
+    - `CRSStorage<Model>`. A simple CRS storage.
+
+The resluting eigenpairs are stored as a set of `EigenPair<precision, SymmetrySectorType>` structures in th hHamiltonian object. 
+
+The following observable can be computed by means of Lanczos continuous fraction (`Lanczos<Hamiltonian>` class template) of the Lehmann representation:
+- Single-particle Green's function (`GreensFunction<Hamiltonian>` class template).
+- Spin suseptibility (`ChiLoc<Hamiltonian>` class template).
 Greens functions are implemented on top of *ALPSCore* Greens functions module.
 
 Look for examples in "examples/" directory for detailed information.
@@ -25,13 +27,15 @@ The code is is provided as a header-only library with a set of examples and test
 At least the `edlib/Hamiltonian.h` should be included in any derivative projects.
 To compile examples and tests create a build directory and run 
 
-1. `cmake -DExamples=ON -DTesting=ON {path_to_edlib}`
+1. `cmake -DARPACK_DIR=<path to ARPACK-ng library dir> -DExamples=ON -DTesting=ON {path_to_edlib}`
 2. `make`
 3. `make test` (for running tests)
 4. example will be build in examples subdirectory
 
 To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* library
-should be compiled with *MPI* support.
+should be compiled with *MPI* support. To build with a specific *ALPSCore* library `-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag.
+Since the critical for current library implementation MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended 
+to use the latest version of *ARPACK-ng* from github repository.
 
 ##### Dependencies 
 - c++11-compatible compiler (tested with clang >= 3.1, gcc >= 4.8.2, icpc >= 14.0.2)  
