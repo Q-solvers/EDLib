@@ -25,10 +25,10 @@ namespace EDLib {
       using Storage < prec >::ntot;
 #ifdef USE_MPI
       using Storage < prec >::comm;
+      using Storage < prec >::broadcast_evals;
 #endif
       using Storage < prec >::prepare_work_arrays;
       using Storage < prec >::finalize;
-      using Storage < prec >::broadcast_evals;
 
       /**
        * Simple CRS matrix class. This class is used to store hopping matrices and off-diagonal interactions
