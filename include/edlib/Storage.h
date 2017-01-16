@@ -44,17 +44,11 @@ namespace EDLib {
         int ido = 0;
         int n = _n;
         if (n == 0) {
-#ifdef USE_MPI
-          broadcast_evals(true);
-#endif
-          return 0;
+          return finalize(0, true, true);
         }
         if (_ntot == 1) {
           zero_eigenapair();
-#ifdef USE_MPI
-          broadcast_evals();
-#endif
-          return 0;
+          return finalize(0);
         }
         std::cout << "diag matrix:" << n << std::endl;
         int ncv = std::min(_ncv, _ntot);
@@ -92,8 +86,7 @@ namespace EDLib {
           std::cout << "' Error with _saupd, info = '  " << info << std::endl;
           std::cout << "' Check documentation in _saupd '  " << iparam[4] << std::endl;
           std::cout << "' '" << std::endl;
-          finalize();
-          return info;
+          return finalize(info);
         }
         int rvec = 1 - _eval_only;
         char howmny[2] = "A";
@@ -107,8 +100,7 @@ namespace EDLib {
           std::cout << "' Error with _seupd, info = '  " << info << std::endl;
           std::cout << "' Check the documentation of _seupd. '" << std::endl;
           std::cout << "' '" << std::endl;
-          finalize();
-          return info;
+          return finalize(info);
         }
         // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
         if (_eval_only == 0) {
@@ -124,9 +116,8 @@ namespace EDLib {
         int lout = 6, on = 2, idigit = -6;
         char ifmt[4] = {'R','i', 't', 'z'};
 //        mout(&lout, &nconv, &on, &evals[0], &ncv, &idigit, ifmt);
-        finalize();
+        finalize(info);
 #ifdef USE_MPI
-        broadcast_evals();
         int myid;
         MPI_Comm_rank(comm(), &myid);
         if (myid == 0) {
@@ -179,7 +170,7 @@ namespace EDLib {
        */
       virtual void av(prec *v, prec *w, int n, bool clear = true) = 0;
       virtual void prepare_work_arrays(prec *w, size_t shift = 0){};
-      virtual void finalize(){};
+      virtual int finalize(int info, bool bcast = true, bool empty = false){return info;};
 
       void saupd(int *ido, char *bmat, int *n, char *which, int *nev, prec *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
                  prec *workd, prec *workl, int *lworkl, int *info) {};

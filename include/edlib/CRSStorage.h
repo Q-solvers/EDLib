@@ -45,44 +45,6 @@ namespace EDLib {
         n() = 0;
       }
 
-      void inline addDiagonal(const int &i, prec v) {
-        row_ptr[i] = _vind;
-        col_ind[_vind] = i;
-        values[_vind] = v;
-        ++_vind;
-        ++n();
-        ++ntot();
-      }
-
-      /**
-       * Add off-diagonal H(i,j) element
-       */
-      void inline addElement(const int &i, int j, prec t, int sign) {
-        bool hasstate = false;
-        size_t foundstate = 0;
-        // check that there is no any data on the k state
-        for (size_t iii = row_ptr[i]; iii < _vind; ++iii) {
-          if (col_ind[iii] == j) {
-            hasstate = true;
-            foundstate = iii;
-          }
-        }
-        // In case of multi-orbital Coulomb interaction we can have contribution from different Coulomb interactions
-        if(hasstate) {
-          values[foundstate] += sign * t;
-        } else {
-          // create new element in CRS arrays
-          col_ind[_vind] = j;
-          values[_vind] = sign * t;
-          ++_vind;
-        }
-        if (_vind > _max_size) {
-          std::stringstream s;
-          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested " << _vind << ", allocated " << _max_size << ".";
-          throw std::runtime_error(s.str().c_str());
-        }
-      }
-
       /**
        * Simple Compressed-Row-Storage Matrix-Vector product
        */
@@ -102,32 +64,16 @@ namespace EDLib {
         int isign = 0;
         while (_model.symmetry().next_state()) {
           long long nst = _model.symmetry().state();
-          // Compute diagonal element for current i state
-
+          /// Compute diagonal element for current i state
           addDiagonal(i, _model.diagonal(nst));
-          // non-diagonal terms calculation
+          /// non-diagonal terms calculation
+          /// hoppings
           off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
+          /// interactions
           off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
           i++;
         }
         endMatrix();
-      }
-
-      template<typename T_states>
-      inline void off_diagonal(long long nst, int i, T_states states) {
-        long long k = 0;
-        int isign = 0;
-        for (int kkk = 0; kkk < states.size(); ++kkk) {
-          if (_model.valid(states[kkk], nst)) {
-            _model.set(states[kkk], nst, k, isign);
-            int k_index = _model.symmetry().index(k);
-            addElement(i, k_index, states[kkk].value(), isign);
-          }
-        }
-      };
-
-      void endMatrix() {
-        row_ptr[n()] = _vind;
       }
 
       void print() {
@@ -197,6 +143,64 @@ namespace EDLib {
       size_t _vind;
 
       Model &_model;
+
+      void inline addDiagonal(const int &i, prec v) {
+        row_ptr[i] = _vind;
+        col_ind[_vind] = i;
+        values[_vind] = v;
+        ++_vind;
+        ++n();
+        ++ntot();
+      }
+
+      /**
+       * Add off-diagonal H(i,j) element
+       */
+      void inline addElement(int i, int j, prec t, int sign) {
+        bool hasstate = false;
+        size_t foundstate = 0;
+        // check that there is no any data on the k state
+        for (size_t iii = row_ptr[i]; iii < _vind; ++iii) {
+          if (col_ind[iii] == j) {
+            hasstate = true;
+            foundstate = iii;
+          }
+        }
+        // In case of multi-orbital Coulomb interaction we can have contribution from different Coulomb interactions
+        if(hasstate) {
+          values[foundstate] += sign * t;
+        } else {
+          // create new element in CRS arrays
+          col_ind[_vind] = j;
+          values[_vind] = sign * t;
+          ++_vind;
+        }
+        if (_vind > _max_size) {
+          std::stringstream s;
+          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested " << _vind << ", allocated " << _max_size << ".";
+          throw std::runtime_error(s.str().c_str());
+        }
+      }
+
+      template<typename T_states>
+      inline void off_diagonal(long long nst, int i, T_states states) {
+        long long k = 0;
+        int isign = 0;
+        for (int kkk = 0; kkk < states.size(); ++kkk) {
+          /// check that there is transition for current state
+          if (_model.valid(states[kkk], nst)) {
+            /// set new state
+            _model.set(states[kkk], nst, k, isign);
+            int k_index = _model.symmetry().index(k);
+            addElement(i, k_index, states[kkk].value(), isign);
+          }
+        }
+      };
+
+      /// update the reference to the matrix end
+      void endMatrix() {
+        row_ptr[n()] = _vind;
+      }
     };
 
   }

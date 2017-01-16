@@ -28,13 +28,23 @@ namespace EDLib {
 #endif
       using Storage < prec >::prepare_work_arrays;
       using Storage < prec >::finalize;
+      using Storage < prec >::broadcast_evals;
 
+      /**
+       * Simple CRS matrix class. This class is used to store hopping matrices and off-diagonal interactions
+       * @tparam p
+       */
       template<typename p>
       class CRSMatrix {
       public:
         CRSMatrix() {
         }
 
+        /**
+         * init matrix arrays
+         * @param N -- leading dimension
+         * @param nnzl -- average number of non-zero elements per line
+         */
         void init(size_t N, size_t nnzl = 100) {
           _nnz = N * nnzl;
           _values.assign(_nnz, p(0));
@@ -43,31 +53,44 @@ namespace EDLib {
           _vind = 0;
         }
 
+        /**
+         * Add off-diagonal matrix element at the position (i,j)
+         *
+         * @param i - row number
+         * @param j - column number
+         * @param t - value
+         * @param sign - fermionic sign
+         */
         void inline addElement(int i, int j, prec t, int sign) {
           if (i == j) {
             throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
           }
+          /// flag that we already have data for (i,j)
           bool hasstate = false;
+          /// index of (i,j) element in spare storage
           size_t foundstate = 0;
           if (std::abs(t) == 0) {
             return;
           }
-          // check that there is no any data on the k state
+          /// check that there is no any data on the k state
+          /// In case of off-diagonal interaction there can be multiple possible transition from i-state to j-state
           for (int iii = _row_ptr[i]; iii < _vind; ++iii) {
             if (_col_ind[iii] == j) {
               hasstate = true;
               foundstate = iii;
             }
           }
-          if(foundstate) {
-            // update existing value
+          if(hasstate) {
+            /// update existing value
             _values[foundstate] += sign * t;
           }else {
-            // create new element in CRS arrays
+            /// create new element in CRS arrays
             _col_ind[_vind] = j;
             _values[_vind] = sign * t;
             ++_vind;
+            /// check that we have exceed the upper bound
             if(_vind == _nnz) {
+              /// resize storage
               _nnz *= 2;
               _values.resize(_nnz);
               _col_ind.resize(_nnz);
@@ -75,6 +98,8 @@ namespace EDLib {
           }
         }
 
+        /// some of the interaction terms can compensate each other
+        /// in this case we need to remove zero elements from storage to reduce required memory and communications
         void inline compress(int i) {
           int shift = 0;
           for (int iii = _row_ptr[i]; iii < _vind; ++iii){
@@ -89,7 +114,7 @@ namespace EDLib {
         }
 
         void inline endLine(int i) {
-//          compress(i);
+          compress(i);
           _row_ptr[i + 1] = _vind;
         }
 
@@ -106,10 +131,15 @@ namespace EDLib {
         }
 
       private:
+        /// matrix values
         std::vector < prec > _values;
+        /// pointer to a row
         std::vector < int > _row_ptr;
+        /// column indices
         std::vector < int > _col_ind;
+        /// internal index of non-zero values
         int _vind;
+        /// number of non-zero elements allocated in memory
         size_t _nnz;
       };
 
@@ -135,35 +165,38 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
 #ifdef USE_MPI
+        /// Initialize inter-processor communications
+        /// we collect all data from the remote processes into _vecval array
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
           if(_procs[i]!=0)
           MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, _loc_min[i], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
         }
 #endif
-        // Iteration over rows.
+        /// Iteration over diagonal contribution.
         for (int i = 0; i < n; ++i) {
-          // Diagonal contribution.
+          /// Diagonal contribution.
           w[i] = _diagonal[i] * v[i] + (clear ? 0.0 : w[i]);
         }
-        // Offdiagonal contribution.
-        // iterate over up spin blocks
+        /// Off-diagonal contribution. Process spin-down contribution for each spin-up block
+        /// iterate over spin-up blocks
         for (int k = 0; k < _up_size; ++k) {
-          // Iteration over rows.
+          /// Iteration over rows.
           for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
-            // Iteration over columns(unordered).
+            /// Iteration over columns.
             for (int j = H_down.row_ptr()[i]; j < H_down.row_ptr()[i + 1]; ++j) {
               w[i + k * _down_symmetry.sector().size()] += H_down.values()[j] * v[H_down.col_ind()[j] + k * _down_symmetry.sector().size()];
             }
           }
         }
-        //
-        // Iteration over rows.
 #ifdef USE_MPI
+        /// Waiting for the data to be received
         MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOPUT | MPI_MODE_NOSTORE, _win);
 #endif
+        /// Process spin-up hopping contribution
+        /// Iteration over rows.
         for (int i = 0; i < _up_size; ++i) {
-          // Iteration over columns(unordered).
+          /// Iteration over columns.
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             for (int k = 0; k < _down_symmetry.sector().size(); ++k) {
 #ifdef USE_MPI
@@ -175,6 +208,8 @@ namespace EDLib {
           }
         }
 
+        /// Off-diagonal interaction contribution
+        /// Check that we have off-diagonal interaction elements
         if(H_loc.row_ptr().size()!=0)
         for (size_t i = _int_start; i < n; ++i) {
           for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
@@ -190,21 +225,23 @@ namespace EDLib {
       void fill() {
         reset();
         if(n()==0) {
-          // Do nothing if the matrix size is zero;
+          /// Do nothing if the matrix size is zero;
           return;
         }
-        // fill off-diagonal matrix for each spin
+        /// Hopping term
+        /// fill off-diagonal matrix for each spin
         fill_spin(_up_symmetry, _Ns, H_up);
         fill_spin(_down_symmetry, 0, H_down);
-        // fill local part;
+        /// fill local part;
         int isign;
         long long k;
         _int_start = _locsize;
         for(size_t i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
+          /// add diagonal contribution
           _diagonal[i] = _model.diagonal(nst);
-          /// Add off-diagonal interactions
+          /// Add off-diagonal contribution from interaction term
           if(_model.V_states().size() > 0) {
             for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
               if (_model.valid(_model.V_states()[kkk], nst)) {
@@ -222,15 +259,14 @@ namespace EDLib {
 #endif
       }
 
-
       void print() {
         // nothing to do
       }
 
-      void endMatrix() {
-      }
-
-
+      /**
+       * Reset storage and symmetry object for the current symmetry sector.
+       * Update MPI communicator if necessary, set local dimensions size, setup working arrays size.
+       */
       void reset() {
         _model.symmetry().init();
         const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
@@ -243,14 +279,20 @@ namespace EDLib {
         H_down.init(down_size, 100);
 #ifdef USE_MPI
         MPI_Comm run_comm;
+        /// check that there is data for the current CPU
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
+        /// Create new MPI communicator for the processors with defined color
         MPI_Comm_split(_comm, color, _myid, &run_comm);
         if(color == 1) {
+          /// there is data for current CPU
+          /// update working communicator
           _run_comm = run_comm;
+          /// get CPU rank and size for recently created working communicator
           int myid;
           MPI_Comm_rank(_run_comm,&myid);
           int size;
           MPI_Comm_size(_run_comm,&size);
+          /// compute the size of local arrays and the offset from the beginning
           int locsize = up_size / size;
           if ((up_size % size) > myid) {
             locsize += 1;
@@ -258,14 +300,22 @@ namespace EDLib {
           } else {
             _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
           }
+          /// local dimension for the spin-up hopping Hamiltonian matrix
           _up_size = locsize;
+          /// offet in the spin-up channel
           _up_shift = _offset / down_size;
+          /// local dimension for the whole Hamiltonian matrix
           _locsize = locsize * down_size;
+          /// apply offset to the symmetry object to generate proper configuration state
           _model.symmetry().set_offset(_offset);
+          /// inter processor communactions
+          /// array with flags for each processor
           _procs.assign(size, 0);
+          /// offset of each processor in the vecval array
           _proc_offset.assign(size, 0);
-          _loc_offset.assign(size, 0);
+          /// data amount to be received
           _proc_size.assign(size, 0);
+          /// index of the first element to be received
           _loc_min.assign(size, 0);
         } else {
           _up_size = 0;
@@ -276,30 +326,45 @@ namespace EDLib {
         _up_size = up_size;
         _up_shift = 0;
 #endif
+        /// allocate memory for local Hamiltonian
+        /// density-density contribution
         _diagonal.assign(_locsize, prec(0.0));
+        /// off-diagonal contribution
         if(_model.V_states().size()>0) {
           H_loc.init(_locsize, 3);
         }
+        /// local dimension of the Hamiltonian matrix
         n() = _locsize;
+        /// total dimension of the Hamiltonian matrix
         ntot() = sector.size();
       }
 
+      /**
+       * Compute local dimension for the specific sector
+       * @param sector -- symmetry sector to compute dimension
+       * @return size of local vector for the specific symmetry sector
+       */
       size_t vector_size(typename Model::Sector sector) {
+        /// get the total dimension for the current symmetry sector
         size_t sector_size = sector.size();
-        int myid,size;
 #ifdef USE_MPI
+        int myid,size;
+        /// get rank and size for current CPU in the global communicator
         MPI_Comm_rank(_comm,&myid);
         MPI_Comm_size(_comm,&size);
         size_t up_size = _model.symmetry().comb().c_n_k(_Ns, sector.nup());
         size_t down_size = sector_size / up_size;
         size = up_size>size ? size : up_size;
+        /// there is no data for current CPU
         if(myid >= size) {
           return 0;
         }
+        /// compute local dimension for the spin-up channel
         size_t locsize = up_size / size;
         if ((up_size % size) > myid) {
           locsize += 1;
         }
+        /// compute and return the total dimension
         return locsize * down_size;
 #else
         return sector_size;
@@ -375,6 +440,12 @@ namespace EDLib {
       }
 
 
+      /**
+       * Compute <v|w> product
+       * @param v - bra-state
+       * @param w - ket-state
+       * @return <v|w> product
+       */
       prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
         prec alf = prec(0.0);
         prec temp = prec(0.0);
@@ -390,7 +461,15 @@ namespace EDLib {
       }
 
 #ifdef USE_MPI
+      /**
+       * Initialize the communication window for the *data object from the specific offset
+       * @param data -- input array
+       * @param shift -- offset in the input array
+       */
       virtual void prepare_work_arrays(prec * data, size_t shift = 0) {
+//        if(MPI_WIN_NULL != _win){
+//          // TODO: handle already allocated window
+//        }
         MPI_Info info;
         MPI_Info_create( &info );
         MPI_Info_set( info, (char *) "no_locks", (char *) "true");
@@ -400,15 +479,30 @@ namespace EDLib {
         MPI_Comm_size(_run_comm, &size);
       }
 
+      /**
+       *
+       * @return current working communicator
+       */
       virtual MPI_Comm comm() {
         return _run_comm;
       }
 
-      virtual void finalize(){
-        MPI_Win_free(&_win);
-        MPI_Comm run_comm = _run_comm;
-        MPI_Comm_free(&run_comm);
-        _run_comm = Storage<prec>::comm();
+      /**
+       * Finalize current MPI execution. Broadcast eigenvalues if necessary. Release window and communicator.
+       * Set the global MPI communicator as the current MPI communicator.
+       */
+      virtual int finalize(int info, bool bcast = true, bool empty = true) {
+        MPI_Bcast(&info,1, MPI_INT, 0, Storage<prec>::comm());
+        if(info>=0) {
+          if(bcast) broadcast_evals(empty);
+        }
+        if(ntot() > 1 && n() > 0) {
+          MPI_Win_free(&_win);
+          MPI_Comm run_comm = _run_comm;
+          MPI_Comm_free(&run_comm);
+          _run_comm = Storage < prec >::comm();
+        }
+        return info;
       }
 
       size_t offset(){
@@ -416,22 +510,29 @@ namespace EDLib {
       }
 #endif
 
-    protected:
-
     private:
+      /// Current model
       Model &_model;
+      /// Off-diagonal part of local Hamiltonian
       Matrix H_loc;
+      /// Spin-up hopping
       Matrix H_up;
+      /// Spin-down hopping
       Matrix H_down;
 
+      /// diagonal part
       std::vector < prec > _diagonal;
+      /// array to store remote processes communication data
       std::vector < prec > _vecval;
 
       Symmetry::NSymmetry _up_symmetry;
       Symmetry::NSymmetry _down_symmetry;
 
+      ///
       int _interaction_size;
+      /// The total number of electon
       int _Ns;
+      /// Total number of spins
       int _ms;
 
       /// size of H_up
@@ -444,39 +545,48 @@ namespace EDLib {
       size_t _int_start;
 
 #ifdef USE_MPI
+      /// global communicator
       MPI_Comm _comm;
+      /// current working communicator
       MPI_Comm _run_comm;
+      /// offset for the current CPU
       size_t _offset;
+      int _myid;
       int _nprocs;
+      /// Inter-process communication auxiliary arrays
       std::vector<int> _proc_offset;
-      std::vector<int> _loc_offset;
       std::vector<int> _procs;
       std::vector<int> _loc_min;
       std::vector<int> _proc_size;
-      int _myid;
+      /// MPI communication window
       MPI_Win _win;
-#endif
 
-
-#ifdef USE_MPI
+      /**
+       * Find neighbour CPUs for the current Hamiltonian matrix
+       */
       void find_neighbours() {
         int ci, cid;
-        int size;
-        MPI_Comm_size(_run_comm, &size);
+        /// size of the working communicator
+        int nprocs;
+        std::vector<int> loc_offset(nprocs, 0);
+        MPI_Comm_size(_run_comm, &nprocs);
+        /// Find smallest and largest index in the current Hamiltonian
         std::vector<int> l_loc_max(_loc_min.size(), INT_MIN);
         std::vector<int> l_loc_min(_loc_min.size(), INT_MAX);
+        /// For the spin-up channel
         for(int i = 0; i< _up_size; ++ i) {
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
-            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
+            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);
             l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
             l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
             if(_procs[cid]==0)  {_procs[cid]=1;}
           }
         }
+        /// For the off-diagonal interaction term
         if(H_loc.row_ptr().size()!=0) {
           for (size_t i = _int_start; i < _locsize; ++i) {
             for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
-              calcIndex(ci, cid, _down_symmetry.sector().size()*(H_loc.col_ind()[j]/_down_symmetry.sector().size()), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
+              calcIndex(ci, cid, _down_symmetry.sector().size()*(H_loc.col_ind()[j]/_down_symmetry.sector().size()), _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);
               l_loc_max[cid] = std::max(ci, l_loc_max[cid]);
               l_loc_min[cid] = std::min(ci, l_loc_min[cid]);
               if(_procs[cid]==0)  {_procs[cid]=1;}
@@ -484,42 +594,45 @@ namespace EDLib {
           }
         }
         int oset = 0;
-        int nprocs;
-        MPI_Comm_size(_run_comm, &nprocs);
         for(int i=0; i < nprocs; i++) {
           if(_procs[i]) {
             _procs[i]=1;
+            /// calculate offset for i-th CPU
             _proc_offset[i]=oset * _down_symmetry.sector().size() + l_loc_min[i];
+            /// The index of the first element of the vector to be received from i-th CPU
             _loc_min[i] = l_loc_min[i];
             int ls=_up_symmetry.sector().size()/nprocs;
             if((_up_symmetry.sector().size()% nprocs) > i) {
               ls++;
-              _loc_offset[i] = (i * ls) - oset;
+              loc_offset[i] = (i * ls) - oset;
             }else{
-              _loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
+              loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
+            /// number of elements to be received from the i-th CPU
             _proc_size[i]= l_loc_max[i] - l_loc_min[i] + _down_symmetry.sector().size();
             oset+=ls;
           }
         }
+        /// alloacte memory for the working array
         _vecval.assign(oset * _down_symmetry.sector().size(), prec(0.0));
-        // adjust indexes
+        /// adjust indexes
         for (int i = 0; i < _up_size; ++i) {
           for (int j = H_up.row_ptr()[i + _up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
-            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
-            H_up.col_ind()[j] -= _loc_offset[cid];
+            calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);
+            H_up.col_ind()[j] -= loc_offset[cid];
           }
         }
         if(H_loc.row_ptr().size()!=0) {
           for (size_t i = _int_start; i < _locsize; ++i) {
             for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
-              calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), size);
-              H_loc.col_ind()[j] -= _loc_offset[cid]*_down_symmetry.sector().size();
+              calcIndex(ci, cid, H_loc.col_ind()[j], _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);
+              H_loc.col_ind()[j] -= loc_offset[cid]*_down_symmetry.sector().size();
             }
           }
         }
       }
 
+      /// Calculate local index, ci, and CPU id, cid, for the global index i
       void calcIndex(int &ci, int &cid, int i) {
         int size;
         MPI_Comm_size(_run_comm, &size);
@@ -544,6 +657,12 @@ namespace EDLib {
       }
 #endif
 
+      /**
+       * Fill the Hamiltonian matrix for the specific spin
+       * @param spin_symmetry -- current
+       * @param shift -- spin shift in the configuration state (0 for spin-up, and Ns for spin-down)
+       * @param spin_matrix -- matrix to be filled
+       */
       void fill_spin(Symmetry::NSymmetry &spin_symmetry, int shift, Matrix &spin_matrix) {
         long long k = 0;
         int isign = 0;

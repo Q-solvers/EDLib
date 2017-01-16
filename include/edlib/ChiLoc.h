@@ -210,11 +210,10 @@ namespace EDLib {
         long long k = 0;
         int sign = 0;
         outvec.assign(hamiltonian().storage().vector_size(_model.symmetry().sector()), 0.0);
-        int i = 0;
-        while (_model.symmetry().next_state()) {
+        for(int i = 0; i< invec.size(); ++i) {
+          _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
           outvec[i] = o.action(nst, orbital, _model) * invec[i];
-          ++i;
         };
         double norm = hamiltonian().storage().vv(outvec, outvec);
         for (int j = 0; j < outvec.size(); ++j) {
