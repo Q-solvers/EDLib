@@ -17,10 +17,10 @@ namespace EDLib {
 #ifdef USE_MPI
       const int nitems=2;
       int blocklengths[nitems] = {1, 1};
-      MPI_Datatype types[nitems] = {MPI_INT, MPI_DOUBLE};
+      MPI_Datatype types[nitems] = {MPI_INT, alps::mpi::detail::mpi_type<precision>()};
       MPI_Aint offsets[nitems];
-      offsets[0] = offsetof(Element, ind);
-      offsets[1] = offsetof(Element, val);
+      offsets[0] = offsetof(Element, val);
+      offsets[1] = offsetof(Element, ind);
       MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_Element);
       MPI_Type_commit(&mpi_Element);
 #endif
@@ -36,12 +36,11 @@ namespace EDLib {
       for(size_t i = 0; i < largest.size(); ++i){
         largest[i] = i;
       }
-      std::partial_sort(largest.begin(), largest.begin()+nmax, largest.end(), Comp(pair.eigenvector()) );
+      std::partial_sort(largest.begin(), largest.begin()+nmax, largest.end(), [&pair] (int a, int b) -> bool {return std::abs(pair.eigenvector()[a]) > std::abs(pair.eigenvector()[b]);} );
 #ifdef USE_MPI
       std::vector<Element> send = std::vector<Element>(nmax, Element(0, 0.0));
       for(size_t i = 0; i < nmax; ++i){
-       send[i].val = pair.eigenvector()[largest[i]];
-       send[i].ind = largest[i] + _ham.storage().offset();
+       send[i] = Element(pair.eigenvector()[largest[i]], largest[i] + _ham.storage().offset());
       }
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
@@ -55,7 +54,7 @@ namespace EDLib {
       }
       MPI_Gather(send.data(), nmax, mpi_Element, all.data(), nmax, mpi_Element, 0, _ham.comm());
       if (myid == 0) {
-        std::partial_sort(all.begin(), all.begin()+nmax, all.end(), CompElement() );
+        std::partial_sort(all.begin(), all.begin()+nmax, all.end());
         for(size_t i = 0; i < nmax; ++i){
           std::cout << all[i].val << " * ";
           long long nst = _ham.model().symmetry().state_by_index(i);
@@ -89,21 +88,20 @@ namespace EDLib {
 
     Hamiltonian& _ham;
 
-    struct Comp{
-      Comp( const std::vector<double> & v ) : _v(v) {}
-      bool operator ()(int a, int b) { return std::abs(_v[a]) > std::abs(_v[b]);}
-      const std::vector<double> & _v;
-    };
-
 #ifdef USE_MPI
     struct Element{
-      Element( size_t _ind, double _val ) : ind(_ind), val(_val) {}
+      Element() {};
+      Element(size_t _ind, double _val) : ind(_ind), val(_val) {}
       size_t ind;
       double val;
-    };
 
-    struct CompElement{
-      bool operator ()(Element a, Element b) { return std::abs(a.val) > std::abs(b.val);}
+      bool operator>(const Element &el) const {
+        return (val > el.val);
+      };
+
+      bool operator<(const Element &el) const {
+        return (val < el.val);
+      };
     };
 
      MPI_Datatype mpi_Element;
