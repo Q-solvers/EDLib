@@ -10,6 +10,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
+#include "edlib/StateDescription.h"
 
 
 int main(int argc, const char ** argv) {
@@ -41,6 +42,8 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
+    EDLib::StateDescription<HamType> sd(ham);
+    sd.print(*ham.eigenpairs().begin(), 10, 1e-5);
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType > greensFunction(params, ham);
     greensFunction.compute();

@@ -504,6 +504,10 @@ namespace EDLib {
         }
         return info;
       }
+
+      size_t offset(){
+        return _offset;
+      }
 #endif
 
     private:
