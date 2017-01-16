@@ -410,6 +410,10 @@ namespace EDLib {
         MPI_Comm_free(&run_comm);
         _run_comm = Storage<prec>::comm();
       }
+
+      size_t offset(){
+        return _offset;
+      }
 #endif
 
     protected:
