@@ -27,7 +27,7 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::StateDescription<HamType> sd(ham);
+    EDLib::StateDescription<EDLib::SRSSIAMHamiltonian> sd(ham);
     for(auto & pair:ham.eigenpairs())
       sd.print(pair, 10, 1e-5);
     //EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
