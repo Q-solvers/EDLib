@@ -1,6 +1,8 @@
 //
 // Created by iskakoff on 19/07/16.
 //
+#include <iostream>
+#include <iomanip>
 
 #include <edlib/EDParams.h>
 #include <edlib/HDF5Utils.h>
