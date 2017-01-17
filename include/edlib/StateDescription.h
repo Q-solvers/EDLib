@@ -32,7 +32,7 @@ namespace EDLib {
       std::cout << std::endl;
       _ham.model().symmetry().set_sector(pair.sector());
       //std::vector<size_t> largest = std::vector<size_t>(std::min(nmax, pair.eigenvector().size()), 0);
-      std::vector<size_t> largest = std::vector<size_t>(pair.eigenvector().size(), 0);
+      std::vector<size_t> largest(pair.eigenvector().size(), 0);
       for(size_t i = 0; i < largest.size(); ++i){
         largest[i] = i;
       }
@@ -44,13 +44,11 @@ namespace EDLib {
       }
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
-      std::vector<size_t> all_inds;
-      std::vector<double> all_vals;
       std::vector<Element> all;
       if (myid == 0) {
         int nprocs;
         MPI_Comm_size(_ham.comm(), &nprocs);
-        all.assign(nprocs * nmax);
+        all.resize(nprocs * nmax);
       }
       MPI_Gather(send.data(), nmax, mpi_Element, all.data(), nmax, mpi_Element, 0, _ham.comm());
       if (myid == 0) {
