@@ -3,6 +3,8 @@
 
 #include "EigenPair.h"
 #include <vector>
+#include <bitset>
+#include <string>
 
 namespace EDLib {
   template<class Hamiltonian>
