@@ -23,7 +23,7 @@ namespace EDLib {
     public:
       Lanczos(alps::params &p, Hamiltonian &h, Args...args) :
         ham(h), _omega(MeshFactory<Mesh, Args...>::createMesh(p, args...)),_Nl(p["lanc.NLANC"]),
-        alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0),_beta(p["lanc.BETA"].as<precision>()) {}
+        alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0), _beta(p["lanc.BETA"].as<precision>()) {}
 
       const Mesh &omega() const {
         return _omega;
@@ -155,13 +155,13 @@ namespace EDLib {
 
       template<typename GF_TYPE, typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type
-      update_static(GF_TYPE gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
         gf(mesh_index(0), site) -= expectation_value*_beta*expb;
       };
 
       template<typename GF_TYPE, typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type
-      update_static(GF_TYPE gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
 
       };
 

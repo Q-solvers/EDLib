@@ -4,6 +4,7 @@
 
 #include <edlib/EDParams.h>
 #include <edlib/HDF5Utils.h>
+#include <edlib/ChiLoc.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/GreensFunction.h"
 #include "edlib/StateDescription.h"
@@ -19,6 +20,10 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   alps::hdf5::archive ar(params["OUTPUT_FILE"], alps::hdf5::archive::WRITE);
+#ifdef USE_MPI
+  if(comm.rank())
+    ar.close();
+#endif
   try {
 #ifdef USE_MPI
     EDLib::SRSSIAMHamiltonian ham(params, comm);
@@ -27,12 +32,14 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::StateDescription<EDLib::SRSSIAMHamiltonian> sd(ham);
-    for(auto & pair:ham.eigenpairs())
-      sd.print(pair, 10, 1e-5);
-    //EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
-    //greensFunction.compute();
-    //greensFunction.save(ar, "results");
+    EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> greensFunction(params, ham);
+    greensFunction.compute();
+    greensFunction.save(ar, "results");
+    EDLib::gf::ChiLoc<EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> susc(params, ham);
+    susc.compute();
+    susc.save(ar, "results");
+    susc.compute<EDLib::gf::NOperator<double> >();
+    susc.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
@@ -40,6 +47,9 @@ int main(int argc, const char ** argv) {
     std::cerr<<e.what();
 #endif
   }
+#ifdef USE_MPI
+  if(!comm.rank())
+#endif
   ar.close();
 #ifdef USE_MPI
   MPI_Finalize();

@@ -3,25 +3,40 @@
 import h5py
 import numpy as np
 
-import U_matrix
 
-U = np.real(U_matrix.U_matrix(2, U_int=6.6, J_hund=0.9, basis='cubic'))
-xmu = 44.44
-Eps0 = np.array([[-0.701786,-0.701786], [-0.812433,-0.812433], [-0.573927,-0.573927], [-0.812433,-0.812433], [-0.701786,-0.701786] ])
-Vk =   [ np.array([ [0.40219,  0.40219], [ 0.369274,0.369274]]),
-         np.array([ [0.731886,0.731886], [ 0.480395,0.480395]]),
-         np.array([ [0.484533,0.484533], [ 0.293002,0.293002]]),
-         np.array([ [0.731886,0.731886], [ 0.480395,0.480395]]),
-         np.array([ [0.40219,  0.40219], [ 0.369274,0.369274]]) ]
-Epsk = [ np.array([ [-1.74659,-1.74659], [-0.937719,-0.937719]]),
-         np.array([ [-1.73124,-1.73124], [ -1.11657,-1.11657] ]),
-         np.array([ [-1.93049,-1.93049], [-1.20792,-1.20792]]),
-         np.array([ [-1.73124,-1.73124], [-1.11657,-1.11657]]),
-         np.array([ [-1.74659,-1.74659], [-0.937719,-0.937719]] ) ]
+def Kanamori_interaction(l, U_int, J_hund):
+    norb = 2*l + 1
+    U =  np.zeros((norb,norb,norb,norb), dtype=float)
+    for i in range(norb):
+        U[i][i][i][i] = U_int
+        for j in range(norb):
+            if(i != j):
+                U[i][j][i][j] = U_int - 2* J_hund
+                U[i][j][j][i] = J_hund
+                U[i][i][j][j] = J_hund
+    return U
 
-Ns = 15
-ml = 5
-sectors = np.array([[14,14],])
+l = 2
+
+U = np.real(Kanamori_interaction(l, U_int=2.0, J_hund=0.3))
+xmu = 4.5
+Eps0 = np.array([[0.,0.], [0.,0.], [0.,0.], [0.,0.], [0.,0.] ])
+Vk =   [ np.array([ [0.5,  0.5] ]),
+         np.array([ [0.5,  0.5] ]),
+         np.array([ [0.5,  0.5] ]),
+         np.array([ [0.5,  0.5] ]),
+         np.array([ [0.5,  0.5] ]) ]
+Epsk = [ np.array([ [-1.0,-1.0] ]),
+         np.array([ [-1.0,-1.0] ]),
+         np.array([ [-1.0,-1.0] ]),
+         np.array([ [-1.0,-1.0] ]),
+         np.array([ [-1.0,-1.0] ]) ]
+
+ml = 2*l + 1
+Nk = 1
+Ns = len(Eps0) + len(Epsk)
+
+sectors = np.array([[3,3],])
 
 data = h5py.File("input.h5", "w");
 
