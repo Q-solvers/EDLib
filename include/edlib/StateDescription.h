@@ -42,7 +42,7 @@ namespace EDLib {
 #ifdef USE_MPI
       std::vector<Element> send;
       for(size_t i = 0; i < nmax; ++i){
-       send.push_back(Element(pair.eigenvector()[largest[i]], largest[i] + _ham.storage().offset()));
+       send.push_back(Element(largest[i] + _ham.storage().offset(), pair.eigenvector()[largest[i]]));
       }
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
@@ -56,7 +56,7 @@ namespace EDLib {
       if (myid == 0) {
         std::partial_sort(all.begin(), all.begin()+nmax, all.end());
         for(size_t i = 0; i < nmax; ++i){
-          std::cout << all[i].val << " * |";
+          std::cout << all[i].val*all[i].val << " * |";
           long long nst = _ham.model().symmetry().state_by_index(all[i].ind);
           std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
           std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
@@ -93,11 +93,11 @@ namespace EDLib {
       double val;
 
       bool operator>(const Element &el) const {
-        return (val > el.val);
+        return (std::abs(val) > std::abs(el.val));
       };
 
       bool operator<(const Element &el) const {
-        return (val < el.val);
+        return (std::abs(val) < std::abs(el.val));
       };
     };
 
