@@ -11,7 +11,7 @@
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
 #include "edlib/StateDescription.h"
-
+#include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
@@ -45,10 +45,10 @@ int main(int argc, const char ** argv) {
     EDLib::StateDescription<HamType> sd(ham);
     sd.print(*ham.eigenpairs().begin(), 10, 1e-5);
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::gf::GreensFunction < HamType > greensFunction(params, ham);
+    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
     greensFunction.compute();
     greensFunction.save(ar, "results");
-    EDLib::gf::ChiLoc<HamType> susc(params, ham);
+    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
     susc.compute();
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();

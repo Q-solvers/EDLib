@@ -26,6 +26,8 @@ namespace EDLib {
     params.define < int >("arpack.NCV", "Number of convergent values");
     // Lanczos parameters
     params.define < int >("lanc.NOMEGA", 32, "Number of fermionic frequencies");
+    params.define < int >("lanc.EMIN", -3, "Lowest real frequency value");
+    params.define < int >("lanc.EMAX", 3, "Largest real frequency value");
     params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
     params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
     params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");

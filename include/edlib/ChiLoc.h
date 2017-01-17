@@ -51,16 +51,17 @@ namespace EDLib {
       std::string name() const {return "N";};
     };
 
-    template<class Hamiltonian>
-    class ChiLoc : public Lanczos < Hamiltonian > {
-      using Lanczos < Hamiltonian >::hamiltonian;
-      using Lanczos < Hamiltonian >::lanczos;
-      using Lanczos < Hamiltonian >::omega;
-      using Lanczos < Hamiltonian >::compute_sym_continued_fraction;
-      using typename Lanczos < Hamiltonian >::precision;
+    template<class Hamiltonian, class Mesh, typename ... Args>
+    class ChiLoc : public Lanczos < Hamiltonian, Mesh, Args... > {
+      using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
+      using Lanczos < Hamiltonian, Mesh, Args... >::lanczos;
+      using Lanczos < Hamiltonian, Mesh, Args... >::omega;
+      using Lanczos < Hamiltonian, Mesh, Args... >::beta;
+      using Lanczos < Hamiltonian, Mesh, Args... >::compute_sym_continued_fraction;
+      using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
-      ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
+      ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
+                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -87,13 +88,13 @@ namespace EDLib {
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
-          _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
+          _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
         const Op op;
         _type = op.name();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
-          precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
+          precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
           if (boltzmann_f < _cutoff) {
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
             continue;
@@ -121,6 +122,14 @@ namespace EDLib {
         if(rank == 0) {
 #endif
         gf/= _Z;
+        zero_freq_contribution(op);
+#ifdef USE_MPI
+        }
+#endif
+      }
+
+      template<typename O, typename M= Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
         /// Compute static susceptibility
         for (int i = 0; i < _model.orbitals(); ++i) {
           double chiSum = 0.0;
@@ -137,14 +146,16 @@ namespace EDLib {
           }
           for (int iomega = 1; iomega < omega().extent(); ++iomega) {
             double om = omega().points()[iomega];
-            chiSum = chiSum + gf(alps::gf::matsubara_positive_mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
+            chiSum = chiSum + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
           }
-          gf(alps::gf::matsubara_positive_mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*omega().beta();
+          gf(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
         }
-#ifdef USE_MPI
-        }
-#endif
-      }
+      };
+
+      template<typename O, typename M= Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
+
+      };
 
       /**
        * High frequency behaviour of Chi(W_n) = c_2/(W_n)^2 + c_4/(W_n)^4
@@ -160,11 +171,11 @@ namespace EDLib {
         double om2 = omega().points()[freq-1];
         double om1_2 = om1*om1;
         double om2_2 = om2*om2;
-        double g1 = gf(alps::gf::matsubara_positive_mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
-        double g2 = gf(alps::gf::matsubara_positive_mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
+        double g1 = gf(typename Mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
+        double g2 = gf(typename Mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
         c2 = - (g2*om2_2*om2_2 - g1*om1_2*om1_2)/(om1_2-om2_2);
         c4 = - (g1*om1_2*om1_2*om2_2 - g2*om2_2*om2_2*om1_2)/(om1_2-om2_2);
-        tail= c2 * omega().beta() * omega().beta() / 24.0 + c4 * omega().beta() * omega().beta() * omega().beta() * omega().beta() / 1440.0;
+        tail= c2 * beta() * beta() / 24.0 + c4 * beta() * beta() * beta() * beta() / 1440.0;
       }
 
       void save(alps::hdf5::archive& ar, const std::string & path) {
@@ -187,7 +198,7 @@ namespace EDLib {
       }
 
     private:
-      typedef alps::gf::two_index_gf<std::complex<double>, alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>, alps::gf::index_mesh>  GF_TYPE;
+      typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
       GF_TYPE gf;
       typename Hamiltonian::ModelType &_model;
       precision _cutoff;

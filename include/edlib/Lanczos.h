@@ -11,18 +11,21 @@
 
 #include <cmath>
 
+#include "MeshFactory.h"
+
 namespace EDLib {
   namespace gf {
-    template<class Hamiltonian>
+    template<class Hamiltonian, class Mesh=alps::gf::matsubara_positive_mesh, typename ... Args>
     class Lanczos {
     protected:
       typedef typename Hamiltonian::ModelType::precision precision;
+      typedef typename Mesh::index_type mesh_index;
     public:
-      Lanczos(alps::params &p, Hamiltonian &h, const alps::gf::statistics::statistics_type& type = alps::gf::statistics::statistics_type::FERMIONIC) :
-        ham(h), _omega(p["lanc.BETA"].as<double>(), p["lanc.NOMEGA"].as<int>(), type),_Nl(p["lanc.NLANC"]),
-        alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0) {}
+      Lanczos(alps::params &p, Hamiltonian &h, Args...args) :
+        ham(h), _omega(MeshFactory<Mesh, Args...>::createMesh(p, args...)),_Nl(p["lanc.NLANC"]),
+        alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0),_beta(p["lanc.BETA"].as<precision>()) {}
 
-      const alps::gf::matsubara_positive_mesh &omega() const {
+      const Mesh &omega() const {
         return _omega;
       }
     protected:
@@ -75,18 +78,18 @@ namespace EDLib {
                                       const alps::gf::index_mesh::index_type &site, const alps::gf::index_mesh::index_type &spin) {
         double expb = 0;
         double shift;
-        if (_omega.beta() * (excited_state - groundstate) > 25)
+        if (_beta * (excited_state - groundstate) > 25)
           expb = 0;
         else
-          expb = exp(-_omega.beta() * (excited_state - groundstate));
+          expb = exp(-_beta * (excited_state - groundstate));
         const std::vector < double > &freqs = _omega.points();
         for (int iomega = 0; iomega < _omega.extent(); ++iomega) {
           shift = 1.0;
           std::complex<double> swp = 0.0;
-          std::complex < double > ener = std::complex < double >(0.0, freqs[iomega]) + (excited_state) * isign;
+          std::complex < double > ener = freq_point(iomega) + (excited_state) * isign;
           swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
 
-          gf(alps::gf::matsubara_positive_mesh::index_type(iomega), site, spin) += swp;
+          gf(mesh_index(iomega), site, spin) += swp;
         }
       }
 
@@ -98,19 +101,19 @@ namespace EDLib {
                                           const alps::gf::index_mesh::index_type &site) {
         double expb = 0;
         double shift;
-        if (_omega.beta() * (excited_state - groundstate) > 25)
+        if (_beta * (excited_state - groundstate) > 25)
           expb = 0;
         else
-          expb = exp(-_omega.beta() * (excited_state - groundstate));
+          expb = exp(-_beta * (excited_state - groundstate));
         const std::vector < double > &freqs = _omega.points();
-        gf(alps::gf::matsubara_positive_mesh::index_type(0), site) -= expectation_value*_omega.beta()*expb;
-        for (int iomega = 1; iomega < _omega.extent(); ++iomega) {
+        update_static(gf, site, expectation_value, expb);
+        for (int iomega = zero_freq(); iomega < _omega.extent(); ++iomega) {
           shift = 1.0;
-          std::complex < double > ener = std::complex < double >(0.0,   freqs[iomega]) + (excited_state) * isign;
-          std::complex < double > ener2 = std::complex < double >(0.0, -freqs[iomega]) + (excited_state) * isign;
+          std::complex < double > ener =   freq_point(iomega) + (excited_state) * isign;
+          std::complex < double > ener2 = -freq_point(iomega) + (excited_state) * isign;
           std::complex<double> swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
           swp += get_frac_point(expectation_value, nlanc, isign, expb, shift, ener2);
-          gf(alps::gf::matsubara_positive_mesh::index_type(iomega), site) += swp;
+          gf(mesh_index(iomega), site) += swp;
         }
       }
 
@@ -122,8 +125,49 @@ namespace EDLib {
         return ham;
       };
 
+      precision beta() const {
+        return _beta;
+      }
+
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, std::complex<double>>::type
+      freq_point(int index) {
+        return std::complex<double>(0.0, _omega.points()[index]);
+      };
+
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, std::complex<double>>::type
+      freq_point(int index) {
+        return std::complex<double>(_omega.points()[index], M_PI/_beta);
+      };
+
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, int>::type
+      zero_freq() {
+        return 1;
+      };
+
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, int>::type
+      zero_freq() {
+        return 0;
+      };
+
+      template<typename GF_TYPE, typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type
+      update_static(GF_TYPE gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+        gf(mesh_index(0), site) -= expectation_value*_beta*expb;
+      };
+
+      template<typename GF_TYPE, typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type
+      update_static(GF_TYPE gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+
+      };
+
     private:
-      alps::gf::matsubara_positive_mesh _omega;
+      Mesh _omega;
+      precision _beta;
 
       int _Nl;
       Hamiltonian &ham;
@@ -169,7 +213,6 @@ namespace EDLib {
         return swp;
       }
     };
-
   }
 }
 #endif //HUBBARD_LANCZOS_H

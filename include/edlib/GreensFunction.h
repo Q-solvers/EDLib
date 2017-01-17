@@ -8,19 +8,21 @@
 
 #include <iomanip>
 #include "Lanczos.h"
+#include "EigenPair.h"
 
 namespace EDLib {
   namespace gf {
-    template<class Hamiltonian>
-    class GreensFunction : public Lanczos < Hamiltonian > {
-      using Lanczos < Hamiltonian >::hamiltonian;
-      using Lanczos < Hamiltonian >::lanczos;
-      using Lanczos < Hamiltonian >::omega;
-      using Lanczos < Hamiltonian >::compute_continued_fraction;
-      using typename Lanczos < Hamiltonian >::precision;
+    template<class Hamiltonian, typename Mesh, typename... Args>
+    class GreensFunction : public Lanczos < Hamiltonian, Mesh, Args...> {
+      using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
+      using Lanczos < Hamiltonian, Mesh, Args... >::lanczos;
+      using Lanczos < Hamiltonian, Mesh, Args... >::omega;
+      using Lanczos < Hamiltonian, Mesh, Args... >::beta;
+      using Lanczos < Hamiltonian, Mesh, Args... >::compute_continued_fraction;
+      using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
-      GreensFunction(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+      GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
+                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -41,13 +43,13 @@ namespace EDLib {
         /// compute statsum
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
-          _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
+          _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
         /// iterate over eigen-pairs
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           /// compute Boltzmann-factor
-          precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
+          precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
           /// Skip all eigenvalues with Boltzmann-factor smaller than cutoff
           if (boltzmann_f < _cutoff) {
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
@@ -133,7 +135,7 @@ namespace EDLib {
 
     private:
       /// Green's function type
-      typedef alps::gf::three_index_gf<std::complex<double>, alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
+      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
       /// Green's function container object
       GF_TYPE gf;
       /// Model we are solving

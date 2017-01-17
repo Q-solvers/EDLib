@@ -19,4 +19,6 @@ add_custom_target(edlib SOURCES Combination.h
     StateDescription.h
     Storage.h
     Symmetry.h
-    SzSymmetry.h)
+    SzSymmetry.h
+    HDF5Utils.h
+    MeshFactory.h)
