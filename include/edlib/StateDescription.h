@@ -21,8 +21,8 @@ namespace EDLib {
       int blocklengths[nitems] = {1, 1};
       MPI_Datatype types[nitems] = {MPI_INT, alps::mpi::detail::mpi_type<precision>()};
       MPI_Aint offsets[nitems];
-      offsets[0] = offsetof(Element, val);
-      offsets[1] = offsetof(Element, ind);
+      offsets[0] = offsetof(Element, ind);
+      offsets[1] = offsetof(Element, val);
       MPI_Type_create_struct(nitems, blocklengths, offsets, types, &mpi_Element);
       MPI_Type_commit(&mpi_Element);
 #endif
