@@ -38,9 +38,9 @@ namespace EDLib {
       }
       std::partial_sort(largest.begin(), largest.begin()+nmax, largest.end(), [&pair] (int a, int b) -> bool {return std::abs(pair.eigenvector()[a]) > std::abs(pair.eigenvector()[b]);} );
 #ifdef USE_MPI
-      std::vector<Element> send = std::vector<Element>(nmax, Element(0, 0.0));
+      std::vector<Element> send;
       for(size_t i = 0; i < nmax; ++i){
-       send[i] = Element(pair.eigenvector()[largest[i]], largest[i] + _ham.storage().offset());
+       send.push_back(Element(pair.eigenvector()[largest[i]], largest[i] + _ham.storage().offset()));
       }
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
@@ -50,20 +50,17 @@ namespace EDLib {
       if (myid == 0) {
         int nprocs;
         MPI_Comm_size(_ham.comm(), &nprocs);
-        all = std::vector<Element>(nprocs * nmax, Element(0, 0.0));
+        all.assign(nprocs * nmax);
       }
       MPI_Gather(send.data(), nmax, mpi_Element, all.data(), nmax, mpi_Element, 0, _ham.comm());
       if (myid == 0) {
         std::partial_sort(all.begin(), all.begin()+nmax, all.end());
         for(size_t i = 0; i < nmax; ++i){
-          std::cout << all[i].val << " * ";
+          std::cout << all[i].val << " * |";
           long long nst = _ham.model().symmetry().state_by_index(i);
-          for (int j = 1; j >= 0; --j){
-            std::cout << "|";
-            for (int i = (j + 1)*_ham.model().interacting_orbitals(); i >= j * _ham.model().interacting_orbitals(); --i){
-              std::cout << ((nst >> i) & 1);
-            }
-          }
+          std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
+          std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
+          std::cout<<spin_up<< "|"<<spin_down;
           std::cout << ">" << std::endl;
           //std::cout << " * |" <<  std::bitset<sizeof(long long)*8>(nst) << ">" << std::endl;
         }
