@@ -6,7 +6,7 @@
 #include <edlib/HDF5Utils.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/GreensFunction.h"
-#include "edlib/StateDescriptor.h"
+#include "edlib/StateDescription.h"
 
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
