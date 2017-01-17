@@ -6,7 +6,7 @@
 #define HUBBARD_CHILOC_H
 
 
-
+#include <iostream>
 #include <iomanip>
 #include "Lanczos.h"
 #include "EigenPair.h"
