@@ -57,7 +57,7 @@ namespace EDLib {
         std::partial_sort(all.begin(), all.begin()+nmax, all.end());
         for(size_t i = 0; i < nmax; ++i){
           std::cout << all[i].val << " * |";
-          long long nst = _ham.model().symmetry().state_by_index(i);
+          long long nst = _ham.model().symmetry().state_by_index(all[i].ind);
           std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
           std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
           std::cout<<spin_up<< "|"<<spin_down;
