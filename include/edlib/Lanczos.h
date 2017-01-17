@@ -71,8 +71,8 @@ namespace EDLib {
        * Compute lanczos continues fraction
        */
       template<typename GF_TYPE>
-      void compute_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
-                                      const alps::gf::index_mesh::index_type & site, const alps::gf::index_mesh::index_type & spin) {
+      void compute_continued_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
+                                      const alps::gf::index_mesh::index_type &site, const alps::gf::index_mesh::index_type &spin) {
         double expb = 0;
         double shift;
         if (_omega.beta() * (excited_state - groundstate) > 25)
@@ -94,8 +94,8 @@ namespace EDLib {
        * Compute symmetrized lanczos continues fraction
        */
       template<typename GF_TYPE>
-      void compute_sym_continues_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
-                                          const alps::gf::index_mesh::index_type & site) {
+      void compute_sym_continued_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
+                                          const alps::gf::index_mesh::index_type &site) {
         double expb = 0;
         double shift;
         if (_omega.beta() * (excited_state - groundstate) > 25)

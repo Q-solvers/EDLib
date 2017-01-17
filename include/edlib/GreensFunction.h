@@ -16,7 +16,7 @@ namespace EDLib {
       using Lanczos < Hamiltonian >::hamiltonian;
       using Lanczos < Hamiltonian >::lanczos;
       using Lanczos < Hamiltonian >::omega;
-      using Lanczos < Hamiltonian >::compute_continues_fraction;
+      using Lanczos < Hamiltonian >::compute_continued_fraction;
       using typename Lanczos < Hamiltonian >::precision;
     public:
       GreensFunction(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h), _model(h.model()),
@@ -36,45 +36,60 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
+        /// get groundstate
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
+        /// compute statsum
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
         }
+        /// iterate over eigen-pairs
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
+          /// compute Boltzmann-factor
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * omega().beta());
+          /// Skip all eigenvalues with Boltzmann-factor smaller than cutoff
           if (boltzmann_f < _cutoff) {
 //        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
             continue;
           }
-          std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
-                    << boltzmann_f << "; for sector" << pair.sector() << std::endl;
+#ifdef USE_MPI
+          if(rank==0)
+#endif
+          std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << pair.sector() << std::endl;
+          /// iterate over interacting orbitals
           for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+            /// iterate over spins
             for (int is = 0; is < _model.spins(); ++is) {
               std::vector < precision > outvec(1, precision(0.0));
               precision expectation_value = 0;
               _model.symmetry().set_sector(pair.sector());
+              /// first we are going to create particle and compute contribution to Green's function
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
+                /// Perform Lanczos factorization for starting vector |outvec>
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
                if(rank==0){
 #endif
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i),
-                                           alps::gf::index_mesh::index_type(is));
+                /// Using computed Lanczos factorization compute approximation for \frac{1}{z - H} by calculation of a continued fraction
+                 compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i),
+                                            alps::gf::index_mesh::index_type(is));
 #ifdef USE_MPI
                }
 #endif
               }
+              /// restore symmetry sector
               _model.symmetry().set_sector(pair.sector());
+              /// perform the same for destroying of a particle
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
                 if(rank==0){
 #endif
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(is));
+                  compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, alps::gf::index_mesh::index_type(i),
+                                             alps::gf::index_mesh::index_type(is));
 #ifdef USE_MPI
                 }
 #endif
@@ -85,12 +100,18 @@ namespace EDLib {
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
+        /// normalize Green's function by statsum Z.
         gf /= _Z;
 #ifdef USE_MPI
         }
 #endif
       }
 
+      /**
+       * Save Green's function in the hdf5 archive and in plain text file
+       * @param ar -- hdf5 archive to save Green's function
+       * @param path -- root path in hdf5 archive
+       */
       void save(alps::hdf5::archive& ar, const std::string & path) {
 #ifdef USE_MPI
         int rank;
@@ -111,10 +132,15 @@ namespace EDLib {
       }
 
     private:
+      /// Green's function type
       typedef alps::gf::three_index_gf<std::complex<double>, alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
+      /// Green's function container object
       GF_TYPE gf;
+      /// Model we are solving
       typename Hamiltonian::ModelType &_model;
+      /// Boltzmann-factor cutoff
       precision _cutoff;
+      /// Statsum
       precision _Z;
 
       /**

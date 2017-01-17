@@ -62,9 +62,6 @@ namespace EDLib {
          * @param sign - fermionic sign
          */
         void inline addElement(int i, int j, prec t, int sign) {
-          if (i == j) {
-            throw std::logic_error("Attempt to use addElement() to add diagonal element. Use addDiagonal() instead!");
-          }
           /// flag that we already have data for (i,j)
           bool hasstate = false;
           /// index of (i,j) element in spare storage
@@ -371,70 +368,97 @@ namespace EDLib {
 #endif
       }
 
+      /**
+       * Perform a_i or a_i^* operation on |invec>
+       *
+       * @param i -- position to destroy(create) electron
+       * @param invec -- input vector
+       * @param outvec -- output vector
+       * @param next_sec -- the resulting Symmetry sector
+       * @param a -- destroy particle if true, create otherwise
+       */
       void a_adag(int i, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
+        /// local dimension of current vector
         size_t locsize = invec.size();
+        /// maximal local dimension of current vector
         size_t locsize_max = locsize;
+        /// dimension of the resulting symmetry sector
         size_t next_size = next_sec.size();
+        /// dimension of spin-up channel Hamiltonian matrix
         size_t up_size = _model.symmetry().comb().c_n_k(_Ns, next_sec.nup());
+        /// dimension of spin-down channel Hamiltonian matrix
         size_t down_size = next_size / up_size;
         long long k;
         int sign;
+#ifdef USE_MPI
         int ci;
         int cid;
-#ifdef USE_MPI
         int myid;
         MPI_Comm_rank(_comm,&myid);
         int size;
         MPI_Comm_size(_comm,&size);
         int t = 0;
-        bool fence;
-
+        /// synchronization flag
+        bool fence = false;
+        /// adjust maximal local dimension
         if(_up_symmetry.sector().size()%size != 0) {
           locsize_max+= _down_symmetry.sector().size();
         }
+        /// communication buffer
         std::vector<prec> buff(1000, 0.0);
-
+        /// communication window
         MPI_Win eigwin;
         MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, MPI_COMM_WORLD, &eigwin);
         MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
 #endif
+        /// iterate over local part of vector
         for (int ind = 0; ind < locsize_max; ++ind) {
 #ifdef USE_MPI
+          /// perfrom one-sided communication
           if(fence)
             MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
           fence=false;
 #endif
+          /// destroy (create) particle if index is within boundary
           if(ind<locsize) {
             _model.symmetry().next_state();
             long long nst = _model.symmetry().state();
+            /// check that particle can be destroyed (created)
             if (_model.checkState(nst, i, _model.max_total_electrons()) == (a ? 1 : 0)) {
               if (a) _model.a(i, nst, k, sign);
               else _model.adag(i, nst, k, sign);
+              /// compute index of the new state
               int i1 = _model.symmetry().index(k, next_sec);
 #ifdef USE_MPI
               int size;
               MPI_Comm_size(_run_comm, &size);
+              /// compute CPU id and local index of new state
               calcIndex(ci, cid, i1, up_size, down_size, size);
+              /// avoid intra-CPU MPI communications
               if(myid == cid) {
                 outvec[ci] = sign * invec[ind];
               } else {
+                /// initiate one-sided communication
                 buff[t]=sign*invec[ind];
                 MPI_Put(&buff[t],1,alps::mpi::detail::mpi_type<prec>(),cid,ci,1,alps::mpi::detail::mpi_type<prec>(), eigwin);
               }
 #else
+              /// update array
               outvec[i1] = sign * invec[ind];
 #endif
 
             }
           }
 #ifdef USE_MPI
+          /// check buffer boundary
           if((t+1)==buff.size()){fence=true;t=0;}
+          /// synchronize if necessary
           if(fence)
             MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
 #endif
         }
 #ifdef USE_MPI
-        MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, eigwin);
+        if(!fence) MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, eigwin);
         MPI_Win_free(&eigwin);
 #endif
       }

@@ -56,7 +56,7 @@ namespace EDLib {
       using Lanczos < Hamiltonian >::hamiltonian;
       using Lanczos < Hamiltonian >::lanczos;
       using Lanczos < Hamiltonian >::omega;
-      using Lanczos < Hamiltonian >::compute_sym_continues_fraction;
+      using Lanczos < Hamiltonian >::compute_sym_continued_fraction;
       using typename Lanczos < Hamiltonian >::precision;
     public:
       ChiLoc(alps::params &p, Hamiltonian &h) : Lanczos < Hamiltonian >(p, h, alps::gf::statistics::statistics_type::BOSONIC), _model(h.model()),
@@ -110,7 +110,7 @@ namespace EDLib {
               if(rank==0){
 #endif
               std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-              compute_sym_continues_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
+                compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
 #ifdef USE_MPI
             }
 #endif
