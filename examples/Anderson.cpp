@@ -6,6 +6,7 @@
 #include <edlib/HDF5Utils.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/GreensFunction.h"
+#include "edlib/StateDescriptor.h"
 
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
@@ -26,9 +27,12 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
-    greensFunction.compute();
-    greensFunction.save(ar, "results");
+    EDLib::StateDescription<HamType> sd(ham);
+    for(auto & pair:ham.eigenpairs())
+      sd.print(pair, 10, 1e-5);
+    //EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian > greensFunction(params, ham);
+    //greensFunction.compute();
+    //greensFunction.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
