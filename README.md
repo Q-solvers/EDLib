@@ -9,18 +9,23 @@ The central class of the library is `Hamiltonian<Storage, Model>`, that is param
     - `SingleImpurityAndersonModel<precision>`. The single multi-orbital impurity Anderson Model.
 
 - For the Hamiltonian matrix storage there are three implementation of sparse matrix storages:
-    - `SpinResolvedStorage<Model>`. A storage that takes into account the case when hopping Hamiltonian can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
-    - `SOCRSStorage<Model>`. A storage that store only fermion signs for each element in Hamiltonian. This storage is implemented with *OpenMP* support.
+    - `SpinResolvedStorage<Model>`. A storage that takes into account the case when hopping Hamiltonian 
+    can be expressed as Kronecker sum for each spin. This storage is implemented with *MPI* support.
+    - `SOCRSStorage<Model>`. A storage that store only fermion signs for each element in Hamiltonian. 
+    This storage is implemented with *OpenMP* support.
     - `CRSStorage<Model>`. A simple CRS storage.
 
-The resluting eigenpairs are stored as a set of `EigenPair<precision, SymmetrySectorType>` structures in th hHamiltonian object. 
+The resluting eigenpairs are stored as a set of `EigenPair<precision, SymmetrySectorType>` structures in 
+the Hamiltonian object. 
 
-The following observable can be computed by means of Lanczos continuous fraction (`Lanczos<Hamiltonian>` class template) of the Lehmann representation:
-- Single-particle Green's function (`GreensFunction<Hamiltonian>` class template).
-- Spin suseptibility (`ChiLoc<Hamiltonian>` class template).
-Greens functions are implemented on top of *ALPSCore* Greens functions module.
+The following observable can be computed by means of Lanczos continuous fraction 
+(`Lanczos<Hamiltonian, Mesh, MeshArguments...>` class template) of the Lehmann representation:
+- Single-particle Green's function (`GreensFunction<Hamiltonian, Mesh, MeshArguments...>` class template).
+- Spin suseptibility (`ChiLoc<Hamiltonian, Mash, MeshArguments...>` class template).
+Greens functions are implemented on top of *ALPSCore* Greens functions module and can use either positive 
+Matsubara frequency mesh or Real frequency mesh.
 
-Look for examples in "examples/" directory for detailed information.
+Look for examples in the "examples/" directory for a detailed information.
 
 ##### Installation ###
 The code is is provided as a header-only library with a set of examples and tests.
@@ -32,10 +37,11 @@ To compile examples and tests create a build directory and run
 3. `make test` (for running tests)
 4. example will be build in examples subdirectory
 
-To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* library
-should be compiled with *MPI* support. To build with a specific *ALPSCore* library `-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag.
-Since the critical for current library implementation MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended 
-to use the latest version of *ARPACK-ng* from github repository.
+To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* 
+library should be compiled with *MPI* support. To build with a specific *ALPSCore* library 
+`-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag. Since the critical for current library implementation 
+MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended to use the latest version 
+of *ARPACK-ng* from github repository.
 
 ##### Dependencies 
 - c++11-compatible compiler (tested with clang >= 3.1, gcc >= 4.8.2, icpc >= 14.0.2)  
