@@ -2,14 +2,19 @@
 // Created by iskakoff on 19/07/16.
 //
 #include <iostream>
-#include <iomanip>
 
 #include <edlib/EDParams.h>
-#include <edlib/HDF5Utils.h>
-#include <edlib/ChiLoc.h>
 #include "edlib/Hamiltonian.h"
+#include "edlib/SzSymmetry.h"
+#include "edlib/SOCRSStorage.h"
+#include "edlib/CRSStorage.h"
+#include "edlib/HubbardModel.h"
 #include "edlib/GreensFunction.h"
+#include "edlib/ChiLoc.h"
+#include "edlib/HDF5Utils.h"
+#include "edlib/SpinResolvedStorage.h"
 #include "edlib/StateDescription.h"
+#include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
