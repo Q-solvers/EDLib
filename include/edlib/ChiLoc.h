@@ -188,7 +188,7 @@ namespace EDLib {
           std::ostringstream Gomega_name;
           Gomega_name << "Chi"<<_type<<"_omega";
           std::ofstream G_omega_file(Gomega_name.str().c_str());
-          G_omega_file << gf;
+          G_omega_file << std::setprecision(14) << gf;
           G_omega_file.close();
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
