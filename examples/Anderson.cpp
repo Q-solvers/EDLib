@@ -39,14 +39,14 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    //EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
-    //greensFunction.compute();
-    //greensFunction.save(ar, "results");
-    //EDLib::gf::ChiLoc<EDLib::SRSSIAMHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
-    //susc.compute();
-    //susc.save(ar, "results");
-    //susc.compute<EDLib::gf::NOperator<double> >();
-    //susc.save(ar, "results");
+    EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
+    greensFunction.compute();
+    greensFunction.save(ar, "results");
+    EDLib::gf::ChiLoc<EDLib::SRSSIAMHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
+    susc.compute();
+    susc.save(ar, "results");
+    susc.compute<EDLib::gf::NOperator<double> >();
+    susc.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
