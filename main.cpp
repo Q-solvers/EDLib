@@ -27,14 +27,13 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   EDLib::define_parameters(params);
-  alps::hdf5::archive ar(params["OUTPUT_FILE"],  alps::hdf5::archive::WRITE);
+  alps::hdf5::archive ar;
 #ifdef USE_MPI
   int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(rank) {
-    ar.close();
-  }
+  if(!rank)
 #endif
+  ar.open(params["OUTPUT_FILE"], "w");
   try {
 #ifdef USE_MPI
     HamType ham(params, MPI_COMM_WORLD);
