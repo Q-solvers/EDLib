@@ -33,7 +33,7 @@ int main(int argc, const char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(!rank)
 #endif
-  ar.open(params["OUTPUT_FILE"], "w");
+  ar.open(params["OUTPUT_FILE"].as<std::string>().c_str(), "w");
   try {
 #ifdef USE_MPI
     HamType ham(params, MPI_COMM_WORLD);
