@@ -42,7 +42,9 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::StateDescription<HamType> sd(ham);
-    sd.print(*ham.eigenpairs().begin(), 10, 1e-5);
+    for (auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); pair++) {
+      sd.print(*pair, 256, 1e-5);
+    }
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
     greensFunction.compute();
