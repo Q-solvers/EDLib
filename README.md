@@ -1,3 +1,5 @@
+{% seo %}
+
 [![DOI](https://zenodo.org/badge/63707930.svg)](https://zenodo.org/badge/latestdoi/63707930)
 
 ##### Overview
