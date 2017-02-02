@@ -43,7 +43,7 @@ namespace EDLib {
       MPI_Gather(&count, 1, MPI_INT, counts.data(), 1, MPI_INT, 0, _ham.comm());
       if(!myid){
         displs[0] = 0;
-        for(size_t i = 0; i < displs.size(); i++){
+        for(size_t i = 0; i < nprocs; i++){
          displs[i + 1] = displs[i] + counts[i];
         }
 #endif
@@ -66,7 +66,7 @@ namespace EDLib {
       for(size_t i = 0; i < count; ++i){
        send[i] = Element(largest[i] + _ham.storage().offset(), pair.eigenvector()[largest[i]]);
       }
-      std::vector<Element> all(displs[nprocs + 1]);
+      std::vector<Element> all(displs[nprocs]);
       MPI_Gatherv(send.data(), count, mpi_Element, all.data(), counts.data(), displs.data(), mpi_Element, 0, _ham.comm());
       if (myid == 0) {
         nmax = std::min(nmax, all.size());
