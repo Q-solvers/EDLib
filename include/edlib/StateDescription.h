@@ -13,9 +13,12 @@ namespace EDLib {
     typedef typename Hamiltonian::ModelType::precision precision;
   public:
 
-    StateDescription(Hamiltonian& ham) :
+    StateDescription(alps::params &p, Hamiltonian& ham) :
       _ham(ham)
     {
+      if(p["storage.EIGENVALUES_ONLY"] == 1) {
+        throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
+      }
 #ifdef USE_MPI
       const int nitems=2;
       int blocklengths[nitems] = {1, 1};
@@ -28,7 +31,7 @@ namespace EDLib {
 #endif
     };
 
-    void print(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    std::vector<std::pair<long long, precision>> find(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -46,11 +49,6 @@ namespace EDLib {
         for(size_t i = 0; i < nprocs; i++){
          displs[i + 1] = displs[i] + counts[i];
         }
-#endif
-        std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
-        pair.sector().print();
-        std::cout << std::endl;
-#ifdef USE_MPI
       }
 #endif
       for(size_t i = 0; i < largest.size(); ++i){
@@ -68,29 +66,49 @@ namespace EDLib {
       }
       std::vector<Element> all(displs[nprocs]);
       MPI_Gatherv(send.data(), count, mpi_Element, all.data(), counts.data(), displs.data(), mpi_Element, 0, _ham.comm());
-      if (myid == 0) {
+      if (!myid) {
         nmax = std::min(nmax, all.size());
         std::partial_sort(all.begin(), all.begin()+nmax, all.end(), [] (Element a, Element b) -> bool {return (a > b);});
+        std::vector<std::pair<long long, precision>> ret(nmax);
         for(size_t i = 0; i < nmax; ++i){
-          std::cout << all[i].val << " * |";
           long long nst = _ham.model().symmetry().state_by_index(all[i].ind);
-          std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
-          std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
+          ret[i] = std::pair<long long, precision>(nst, all[i].val);
+        }
+        return ret;
+      } else {
+        std::vector<std::pair<long long, precision>> ret(0);
+        return ret;
+      }
+#else
+      std::vector<std::pair<long long, precision>> ret(count);
+      for(size_t i = 0; i < count; ++i){
+        long long nst = _ham.model().symmetry().state_by_index(largest[i]);
+        ret[i] = std::pair<long long, precision>(nst, pair.eigenvector()[largest[i]]);
+      }
+      return ret;
+#endif
+    }
+
+    void print(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+      std::vector<std::pair<long long, precision>> contribs = find(pair, nmax, trivial);
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(_ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
+        // FIXME Depends on find() having set the sector.
+        pair.sector().print();
+        std::cout << std::endl;
+        for(size_t i = 0; i < contribs.size(); ++i){
+          std::cout << contribs[i].second << " * |";
+          std::string spin_down = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
+          std::string spin_up   = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
           std::cout<<spin_up<< "|"<<spin_down;
           std::cout << ">" << std::endl;
         }
       }
-#else
-      for(size_t i = 0; i < count; ++i){
-        std::cout << pair.eigenvector()[largest[i]] << " * |";
-        long long nst = _ham.model().symmetry().state_by_index(largest[i]);
-        std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
-        std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
-        std::cout<<spin_up<< "|"<<spin_down;
-        std::cout << ">" << std::endl;
-      }
-      std::cout << std::endl;
-#endif
     }
 
   private:
