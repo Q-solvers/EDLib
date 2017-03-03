@@ -13,11 +13,9 @@ namespace EDLib {
     typedef typename Hamiltonian::ModelType::precision precision;
   public:
 
-    StateDescription(alps::params &p, Hamiltonian& ham) :
-      _ham(ham)
-    {
+    StateDescription(alps::params &p) {
       if(p["storage.EIGENVALUES_ONLY"] == 1) {
-        throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
+        throw std::logic_error("Eigenvectors have not been computed. Can not print.");
       }
 #ifdef USE_MPI
       const int nitems=2;
@@ -31,7 +29,7 @@ namespace EDLib {
 #endif
     };
 
-    std::vector<std::pair<long long, precision>> find(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -89,8 +87,8 @@ namespace EDLib {
 #endif
     }
 
-    void print(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
-      std::vector<std::pair<long long, precision>> contribs = find(pair, nmax, trivial);
+    void print(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+      std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
 #ifdef USE_MPI
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
@@ -98,7 +96,6 @@ namespace EDLib {
 #endif
       {
         std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
-        // FIXME Depends on find() having set the sector.
         pair.sector().print();
         std::cout << std::endl;
         for(size_t i = 0; i < contribs.size(); ++i){
@@ -110,10 +107,6 @@ namespace EDLib {
         }
       }
     }
-
-  private:
-
-    Hamiltonian& _ham;
 
 #ifdef USE_MPI
     struct Element{
