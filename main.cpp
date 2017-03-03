@@ -41,7 +41,7 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::StateDescription<HamType> sd(ham);
+    EDLib::StateDescription<HamType> sd(params, ham);
     for (auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); pair++) {
       sd.print(*pair, 256, 1e-5);
     }
