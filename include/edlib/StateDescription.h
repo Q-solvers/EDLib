@@ -13,9 +13,12 @@ namespace EDLib {
     typedef typename Hamiltonian::ModelType::precision precision;
   public:
 
-    StateDescription(alps::params &p) {
+    StateDescription(alps::params &p) :
+      _beta(p["lanc.BETA"].as<precision>()),
+      _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
+    {
       if(p["storage.EIGENVALUES_ONLY"] == 1) {
-        throw std::logic_error("Eigenvectors have not been computed. Can not print.");
+        throw std::logic_error("Eigenvectors have not been computed. StateDescription can not continue.");
       }
 #ifdef USE_MPI
       const int nitems=2;
@@ -28,6 +31,56 @@ namespace EDLib {
       MPI_Type_commit(&mpi_Element);
 #endif
     };
+
+    precision avgn1(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, int diff){
+      _ham.model().symmetry().set_sector(pair.sector());
+      _ham.storage().reset();
+      precision result = 0.0;
+      for(int i = 0; i < pair.eigenvector().size(); ++i){
+        _ham.model().symmetry().next_state();
+        long long nst = _ham.model().symmetry().state();
+        for(int im = 0; im < _ham.model().interacting_orbitals(); ++im){
+          int electrons = 0;
+          for(int is = 0; is < _ham.model().spins(); ++is){
+            electrons += (diff ? 1 - 2 * is : 1) *  _ham.model().checkState(nst, im + is * _ham.model().interacting_orbitals(), _ham.model().max_total_electrons());
+          }
+          result += precision(electrons) * pair.eigenvector()[i] * pair.eigenvector()[i];
+        }
+      }
+#ifdef USE_MPI
+      int myid;
+      int nprocs;
+      MPI_Comm_rank(_ham.comm(), &myid);
+      MPI_Comm_size(_ham.comm(), &nprocs);
+      std::vector<precision> all(nprocs);
+      MPI_Gather(&result, 1, MPI_DOUBLE_PRECISION, all.data(), 1, MPI_DOUBLE_PRECISION, 0, _ham.comm());
+      result = 0.0;
+      for(int i = 0; i < all.size(); ++i){
+        result += all[i];
+      }
+#endif
+      return result / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+    }
+
+    precision avgn(Hamiltonian& _ham, int diff){
+      precision avg = 0.0;
+      precision sum = 0.0;
+      const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *_ham.eigenpairs().begin();
+
+      for(auto ipair = _ham.eigenpairs().begin(); ipair != _ham.eigenpairs().end(); ++ipair){
+        const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *ipair;
+        precision boltzmann_f = std::exp(
+         -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
+        );
+        if(boltzmann_f < _cutoff){
+//          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
+          continue;
+        }
+        avg += avgn1(_ham, pair, diff) * boltzmann_f;
+        sum += boltzmann_f;
+      }
+      return avg / sum;
+    }
 
     std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
@@ -130,6 +183,12 @@ namespace EDLib {
 
      MPI_Datatype mpi_Element;
 #endif
+
+  private:
+    /// Inverse temperature
+    precision _beta;
+    /// Boltzmann-factor cutoff
+    precision _cutoff;
 
   };
 
