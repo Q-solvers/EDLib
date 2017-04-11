@@ -42,8 +42,8 @@ int main(int argc, const char ** argv) {
 #endif
     ham.diag();
     EDLib::StateDescription<HamType> sd(params);
-    std::cout << "<n_up + n_do> = " << sd.avgn(ham, 0) << std::endl;
-    std::cout << "<n_up - n_do> = " << sd.avgn(ham, 1) << std::endl;
+    std::cout << "<n_up + n_do 1> = " << sd.avgn(ham, 0, 0) << std::endl;
+    std::cout << "<n_up - n_do 1> = " << sd.avgn(ham, 1, 0) << std::endl;
     for (auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); ++pair) {
       sd.print(ham, *pair, 256, 1e-5);
     }

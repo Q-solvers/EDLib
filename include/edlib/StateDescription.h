@@ -32,43 +32,21 @@ namespace EDLib {
 #endif
     };
 
-    precision avgn1(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, int diff){
-      _ham.model().symmetry().set_sector(pair.sector());
-      _ham.storage().reset();
-      precision result = 0.0;
-      for(int i = 0; i < pair.eigenvector().size(); ++i){
-        _ham.model().symmetry().next_state();
-        long long nst = _ham.model().symmetry().state();
-        for(int im = 0; im < _ham.model().interacting_orbitals(); ++im){
-          int electrons = 0;
-          for(int is = 0; is < _ham.model().spins(); ++is){
-            electrons += (diff ? 1 - 2 * is : 1) *  _ham.model().checkState(nst, im + is * _ham.model().interacting_orbitals(), _ham.model().max_total_electrons());
-          }
-          result += precision(electrons) * pair.eigenvector()[i] * pair.eigenvector()[i];
-        }
-      }
-#ifdef USE_MPI
-      int myid;
-      int nprocs;
-      MPI_Comm_rank(_ham.comm(), &myid);
-      MPI_Comm_size(_ham.comm(), &nprocs);
-      std::vector<precision> all(nprocs);
-      MPI_Gather(&result, 1, MPI_DOUBLE_PRECISION, all.data(), 1, MPI_DOUBLE_PRECISION, 0, _ham.comm());
-      result = 0.0;
-      for(int i = 0; i < all.size(); ++i){
-        result += all[i];
-      }
-#endif
-      return result / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
-    }
-
-    precision avgn(Hamiltonian& _ham, int diff){
+    /**
+     * @brief Compute average number of electrons
+     *
+     * @param orb - the site for calculation
+     * @param diff - 0: average number or electrons, 1: average spin
+     * @param _ham - the Hamiltonian
+     */
+    precision avgn(Hamiltonian& _ham, int diff, int orb){
       precision avg = 0.0;
       precision sum = 0.0;
       const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *_ham.eigenpairs().begin();
-
+      // Loop over all eigenpairs.
       for(auto ipair = _ham.eigenpairs().begin(); ipair != _ham.eigenpairs().end(); ++ipair){
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *ipair;
+        // Calculate Boltzmann factor, skip the states with trivial contribution.
         precision boltzmann_f = std::exp(
          -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
         );
@@ -76,7 +54,8 @@ namespace EDLib {
 //          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
           continue;
         }
-        avg += avgn1(_ham, pair, diff) * boltzmann_f;
+        // Sum the contributions.
+        avg += avgn1(_ham, pair, diff, orb) * boltzmann_f;
         sum += boltzmann_f;
       }
       return avg / sum;
@@ -185,6 +164,41 @@ namespace EDLib {
 #endif
 
   private:
+
+    /**
+     * @brief Compute average number of electrons or average spin on the site in one eigenvector.
+     *
+     * @param orb - the site for calculation
+     * @param diff - 0: average number or electrons, 1: average spin
+     * @param _ham - the Hamiltonian
+     * @param pair - the eigenpair
+     */
+    precision avgn1(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, int diff, int orb){
+      _ham.model().symmetry().set_sector(pair.sector());
+      _ham.storage().reset();
+      precision result = 0.0;
+      // Loop over basis vectors.
+      for(int i = 0; i < pair.eigenvector().size(); ++i){
+        // Calculate sum or difference of occupations with different spin on the site of choice.
+        _ham.model().symmetry().next_state();
+        long long nst = _ham.model().symmetry().state();
+        int electrons = 0;
+        for(int is = 0; is < _ham.model().spins(); ++is){
+          electrons += (diff ? 1 - 2 * is : 1) *  _ham.model().checkState(nst, orb + is * _ham.model().interacting_orbitals(), _ham.model().max_total_electrons());
+        }
+        // Sum, weighted by square of eigenvector component.
+        result += precision(electrons) * pair.eigenvector()[i] * pair.eigenvector()[i];
+      }
+#ifdef USE_MPI
+      precision all;
+      // Add the sums from all processes, divide by the norm of eigenvector.
+      MPI_Reduce(&result, &all, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, _ham.comm());
+      return all / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+#else
+      return result / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+#endif
+    }
+
     /// Inverse temperature
     precision _beta;
     /// Boltzmann-factor cutoff
