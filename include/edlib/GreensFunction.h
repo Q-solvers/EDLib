@@ -133,6 +133,33 @@ namespace EDLib {
 #endif
       }
 
+      void compute_selfenergy(alps::hdf5::archive &ar, const std::string &path){
+        GF_TYPE bare(gf.mesh1(), gf.mesh2(), gf.mesh3());
+        GF_TYPE sigma(gf.mesh1(), gf.mesh2(), gf.mesh3());
+        _model.bare_greens_function(bare, beta());
+        bare.save(ar, path + "/G0_omega");
+        std::ostringstream Gomega_name;
+        Gomega_name << "G0_omega";
+        std::ofstream G_omega_file(Gomega_name.str().c_str());
+        G_omega_file << std::setprecision(14) << bare;
+        G_omega_file.close();
+        for(int iw = 0; iw< bare.mesh1().points().size(); ++iw) {
+          typename Mesh::index_type w(iw);
+          for (int im: bare.mesh2().points()) {
+            for (int is : bare.mesh3().points()) {
+              sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) =
+                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
+            }
+          }
+        }
+        sigma.save(ar, path + "/Sigma_omega");
+        Gomega_name.str("");
+        Gomega_name << "Sigma_omega";
+        G_omega_file.open(Gomega_name.str().c_str());
+        G_omega_file << std::setprecision(14) << sigma;
+        G_omega_file.close();
+      }
+
     private:
       /// Green's function type
       typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;

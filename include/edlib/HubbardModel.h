@@ -8,8 +8,11 @@
 #include <vector>
 
 #include <alps/params.hpp>
+#include <alps/gf/mesh.hpp>
+#include <alps/gf/gf.hpp>
 #include "SzSymmetry.h"
 #include "FermionicModel.h"
+#include "CommonUtils.h"
 
 namespace EDLib {
   namespace Model {
@@ -41,7 +44,7 @@ namespace EDLib {
       typedef typename Symmetry::SzSymmetry::Sector Sector;
 
       HubbardModel(alps::params &p) : FermionicModel(p), _symmetry(p) {
-        Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
+        _Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
         t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
         U.assign(p["NSITES"], precision(0.0));
         _xmu.assign(p["NSITES"], precision(0.0));
@@ -88,7 +91,7 @@ namespace EDLib {
         precision xtemp = 0.0;
         for (int im = 0; im < _Ns; ++im) {
           for (int is = 0; is < _ms; ++is) {
-            xtemp += (Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
+            xtemp += (_Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += U[im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
           xtemp += _Hmag * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
@@ -116,6 +119,19 @@ namespace EDLib {
         return _symmetry;
       }
 
+      template<typename Mesh>
+      void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
+        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
+          typename Mesh::index_type w(iw);
+          for (int im: bare_gf.mesh2().points()) {
+            for (int is : bare_gf.mesh3().points()) {
+              // TODO: this is wrong calculation of Bare GF.
+              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) + _xmu[im] - _Eps[im][is]);
+            }
+          }
+        }
+      }
+
     private:
       // Symmetry
       Symmetry::SzSymmetry _symmetry;
@@ -128,7 +144,7 @@ namespace EDLib {
       // Magnetic field
       precision _Hmag;
       // site energy shift
-      std::vector < std::vector < precision > > Eps;
+      std::vector < std::vector < precision > > _Eps;
       // Inverse temperature
       double _beta;
 

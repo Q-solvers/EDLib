@@ -42,6 +42,7 @@ int main(int argc, const char ** argv) {
     EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> greensFunction(params, ham);
     greensFunction.compute();
     greensFunction.save(ar, "results");
+    greensFunction.compute_selfenergy(ar, "results");
     EDLib::gf::ChiLoc<EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> susc(params, ham);
     susc.compute();
     susc.save(ar, "results");

@@ -5,7 +5,10 @@
 #ifndef HUBBARD_SINGLEIMPURITYANDERSONMODEL_H
 #define HUBBARD_SINGLEIMPURITYANDERSONMODEL_H
 
+#include <alps/gf/mesh.hpp>
+#include <alps/gf/gf.hpp>
 #include "FermionicModel.h"
+#include "CommonUtils.h"
 
 namespace EDLib {
   namespace Model {
@@ -306,6 +309,22 @@ namespace EDLib {
 
       int interacting_orbitals() const {
         return _ml;
+      }
+
+      template<typename Mesh>
+      void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
+        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
+          typename Mesh::index_type w(iw);
+          for (int im: bare_gf.mesh2().points()) {
+            for (int is : bare_gf.mesh3().points()) {
+              std::complex<double> delta = 0;
+              for(int ik = 0; ik< _Epsk[im].size(); ++ik) {
+                delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[im][ik][is]);
+              }
+              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Eps[im][is] - delta);
+            }
+          }
+        }
       }
 
     private:

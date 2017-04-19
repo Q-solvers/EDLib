@@ -96,9 +96,12 @@ namespace EDLib {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
           if (boltzmann_f < _cutoff) {
-//        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
+            // Skipped by Boltzmann factor.
             continue;
           }
+#ifdef USE_MPI
+          if(rank == 0)
+#endif
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
                     << boltzmann_f << "; for sector" << pair.sector() << std::endl;
           for (int i = 0; i < _model.interacting_orbitals(); ++i) {
