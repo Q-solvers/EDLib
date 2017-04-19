@@ -13,9 +13,13 @@ namespace EDLib {
     typedef typename Hamiltonian::ModelType::precision precision;
   public:
 
-    StateDescription(Hamiltonian& ham) :
-      _ham(ham)
+    StateDescription(alps::params &p) :
+      _beta(p["lanc.BETA"].as<precision>()),
+      _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
     {
+      if(p["storage.EIGENVALUES_ONLY"] == 1) {
+        throw std::logic_error("Eigenvectors have not been computed. StateDescription can not continue.");
+      }
 #ifdef USE_MPI
       const int nitems=2;
       int blocklengths[nitems] = {1, 1};
@@ -28,7 +32,36 @@ namespace EDLib {
 #endif
     };
 
-    void print(const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    /**
+     * @brief Compute average number of electrons
+     *
+     * @param orb - the site for calculation
+     * @param diff - 0: average number or electrons, 1: average spin
+     * @param _ham - the Hamiltonian
+     */
+    precision avgn(Hamiltonian& _ham, int diff, int orb){
+      precision avg = 0.0;
+      precision sum = 0.0;
+      const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *_ham.eigenpairs().begin();
+      // Loop over all eigenpairs.
+      for(auto ipair = _ham.eigenpairs().begin(); ipair != _ham.eigenpairs().end(); ++ipair){
+        const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *ipair;
+        // Calculate Boltzmann factor, skip the states with trivial contribution.
+        precision boltzmann_f = std::exp(
+         -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
+        );
+        if(boltzmann_f < _cutoff){
+//          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
+          continue;
+        }
+        // Sum the contributions.
+        avg += avgn1(_ham, pair, diff, orb) * boltzmann_f;
+        sum += boltzmann_f;
+      }
+      return avg / sum;
+    }
+
+    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -43,14 +76,9 @@ namespace EDLib {
       MPI_Gather(&count, 1, MPI_INT, counts.data(), 1, MPI_INT, 0, _ham.comm());
       if(!myid){
         displs[0] = 0;
-        for(size_t i = 0; i < displs.size(); i++){
+        for(size_t i = 0; i < nprocs; i++){
          displs[i + 1] = displs[i] + counts[i];
         }
-#endif
-        std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
-        pair.sector().print();
-        std::cout << std::endl;
-#ifdef USE_MPI
       }
 #endif
       for(size_t i = 0; i < largest.size(); ++i){
@@ -66,36 +94,51 @@ namespace EDLib {
       for(size_t i = 0; i < count; ++i){
        send[i] = Element(largest[i] + _ham.storage().offset(), pair.eigenvector()[largest[i]]);
       }
-      std::vector<Element> all(displs[nprocs + 1]);
+      std::vector<Element> all(displs[nprocs]);
       MPI_Gatherv(send.data(), count, mpi_Element, all.data(), counts.data(), displs.data(), mpi_Element, 0, _ham.comm());
-      if (myid == 0) {
+      if (!myid) {
         nmax = std::min(nmax, all.size());
         std::partial_sort(all.begin(), all.begin()+nmax, all.end(), [] (Element a, Element b) -> bool {return (a > b);});
+        std::vector<std::pair<long long, precision>> ret(nmax);
         for(size_t i = 0; i < nmax; ++i){
-          std::cout << all[i].val << " * |";
           long long nst = _ham.model().symmetry().state_by_index(all[i].ind);
-          std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
-          std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
+          ret[i] = std::pair<long long, precision>(nst, all[i].val);
+        }
+        return ret;
+      } else {
+        std::vector<std::pair<long long, precision>> ret(0);
+        return ret;
+      }
+#else
+      std::vector<std::pair<long long, precision>> ret(count);
+      for(size_t i = 0; i < count; ++i){
+        long long nst = _ham.model().symmetry().state_by_index(largest[i]);
+        ret[i] = std::pair<long long, precision>(nst, pair.eigenvector()[largest[i]]);
+      }
+      return ret;
+#endif
+    }
+
+    void print(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+      std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(_ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
+        pair.sector().print();
+        std::cout << std::endl;
+        for(size_t i = 0; i < contribs.size(); ++i){
+          std::cout << contribs[i].second << " * |";
+          std::string spin_down = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
+          std::string spin_up   = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
           std::cout<<spin_up<< "|"<<spin_down;
           std::cout << ">" << std::endl;
         }
       }
-#else
-      for(size_t i = 0; i < count; ++i){
-        std::cout << pair.eigenvector()[largest[i]] << " * |";
-        long long nst = _ham.model().symmetry().state_by_index(largest[i]);
-        std::string spin_down = std::bitset< 64 >( nst ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
-        std::string spin_up   = std::bitset< 64 >( nst ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
-        std::cout<<spin_up<< "|"<<spin_down;
-        std::cout << ">" << std::endl;
-      }
-      std::cout << std::endl;
-#endif
     }
-
-  private:
-
-    Hamiltonian& _ham;
 
 #ifdef USE_MPI
     struct Element{
@@ -119,6 +162,47 @@ namespace EDLib {
 
      MPI_Datatype mpi_Element;
 #endif
+
+  private:
+
+    /**
+     * @brief Compute average number of electrons or average spin on the site in one eigenvector.
+     *
+     * @param orb - the site for calculation
+     * @param diff - 0: average number or electrons, 1: average spin
+     * @param _ham - the Hamiltonian
+     * @param pair - the eigenpair
+     */
+    precision avgn1(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, int diff, int orb){
+      _ham.model().symmetry().set_sector(pair.sector());
+      _ham.storage().reset();
+      precision result = 0.0;
+      // Loop over basis vectors.
+      for(int i = 0; i < pair.eigenvector().size(); ++i){
+        // Calculate sum or difference of occupations with different spin on the site of choice.
+        _ham.model().symmetry().next_state();
+        long long nst = _ham.model().symmetry().state();
+        int electrons = 0;
+        for(int is = 0; is < _ham.model().spins(); ++is){
+          electrons += (diff ? 1 - 2 * is : 1) *  _ham.model().checkState(nst, orb + is * _ham.model().interacting_orbitals(), _ham.model().max_total_electrons());
+        }
+        // Sum, weighted by square of eigenvector component.
+        result += precision(electrons) * pair.eigenvector()[i] * pair.eigenvector()[i];
+      }
+#ifdef USE_MPI
+      precision all;
+      // Add the sums from all processes, divide by the norm of eigenvector.
+      MPI_Reduce(&result, &all, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, _ham.comm());
+      return all / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+#else
+      return result / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+#endif
+    }
+
+    /// Inverse temperature
+    precision _beta;
+    /// Boltzmann-factor cutoff
+    precision _cutoff;
 
   };
 

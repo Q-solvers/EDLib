@@ -41,15 +41,19 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::StateDescription<HamType> sd(ham);
-    for (auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); pair++) {
-      sd.print(*pair, 256, 1e-5);
+    EDLib::StateDescription<HamType> sd(params);
+    std::cout << "<n_up + n_do 1> = " << sd.avgn(ham, 0, 0) << std::endl;
+    std::cout << "<n_up - n_do 1> = " << sd.avgn(ham, 1, 0) << std::endl;
+    for (auto pair = ham.eigenpairs().begin(); pair != ham.eigenpairs().end(); ++pair) {
+      sd.print(ham, *pair, 256, 1e-5);
     }
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
+    //EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greensFunction(params, ham);
     greensFunction.compute();
     greensFunction.save(ar, "results");
     EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
+    //EDLib::gf::ChiLoc< HamType, alps::gf::real_frequency_mesh> susc(params, ham);
     susc.compute();
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
