@@ -6,6 +6,8 @@
 #include <bitset>
 #include <string>
 
+#include <alps/params.hpp>
+
 namespace EDLib {
   template<class Hamiltonian>
   class StateDescription {
@@ -42,15 +44,22 @@ namespace EDLib {
      */
     void print_static_observables(Hamiltonian& ham){
       std::map<std::string, std::vector<double>> obs = calculate_static_observables(ham);
-      for(auto ivar = obs.begin(); ivar != obs.end(); ++ivar){
-        std::cout << "<" << (*ivar).first << "> = {";
-        for(int i = 0; i < (*ivar).second.size(); ++i){
-          if(i){
-            std::cout << ", ";
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        for(auto ivar = obs.begin(); ivar != obs.end(); ++ivar){
+          std::cout << "<" << (*ivar).first << "> = {";
+          for(int i = 0; i < (*ivar).second.size(); ++i){
+            if(i){
+              std::cout << ", ";
+            }
+            std::cout << (*ivar).second[i];
           }
-          std::cout << (*ivar).second[i];
+          std::cout << "}" << std::endl;
         }
-        std::cout << "}" << std::endl;
       }
     }
 
@@ -247,11 +256,11 @@ namespace EDLib {
       };
 #ifdef USE_MPI
       // Add the sums from all processes.
-      MPI_Reduce(n.data(), result["n"].data(), n.size(), MPI_DOUBLE_PRECISION, MPI_SUM, 0, ham.comm());
-      MPI_Reduce(n_up.data(), result["n_up"].data(), n_up.size(), MPI_DOUBLE_PRECISION, MPI_SUM, 0, ham.comm());
-      MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), MPI_DOUBLE_PRECISION, MPI_SUM, 0, ham.comm());
-      MPI_Reduce(m.data(), result["m"].data(), m.size(), MPI_DOUBLE_PRECISION, MPI_SUM, 0, ham.comm());
-      MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), MPI_DOUBLE_PRECISION, MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n.data(), result["n"].data(), n.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_up.data(), result["n_up"].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(m.data(), result["m"].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result["n"] = n;
       result["n_up"] = n_up;
