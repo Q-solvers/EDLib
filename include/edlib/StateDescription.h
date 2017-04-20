@@ -13,6 +13,7 @@ namespace EDLib {
   class StateDescription {
   protected:
     typedef typename Hamiltonian::ModelType::precision precision;
+    typedef typename Hamiltonian::ModelType::Sector sector;
 
   public:
 
@@ -84,10 +85,10 @@ namespace EDLib {
         {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
       };
       precision sum = 0.0;
-      const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *ham.eigenpairs().begin();
+      const EigenPair<precision, sector> &groundstate =  *ham.eigenpairs().begin();
       // Loop over all eigenpairs.
       for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
-        const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *ipair;
+        const EigenPair<precision, sector>& pair = *ipair;
         // Calculate Boltzmann factor, skip the states with trivial contribution.
         precision boltzmann_f = std::exp(
          -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
@@ -113,7 +114,7 @@ namespace EDLib {
       return avg;
     }
 
-    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -171,7 +172,7 @@ namespace EDLib {
 #endif
     }
 
-    void print(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    void print(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
       std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
 #ifdef USE_MPI
       int myid;
@@ -223,7 +224,7 @@ namespace EDLib {
      * @param ham - the Hamiltonian
      * @param pair - the eigenpair
      */
-    std::map<std::string, std::vector<precision>> calculate_static_observables_eigenvector(Hamiltonian& ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair){
+    std::map<std::string, std::vector<precision>> calculate_static_observables_eigenvector(Hamiltonian& ham, const EigenPair<precision, sector>& pair){
       std::vector<precision> n(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> n_up(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> n_down(ham.model().interacting_orbitals(), 0.0);
