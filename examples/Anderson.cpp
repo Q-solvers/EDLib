@@ -37,7 +37,11 @@ int main(int argc, const char ** argv) {
 #else
     EDLib::SRSSIAMHamiltonian ham(params);
 #endif
+    EDLib::common::statistics.registerEvent("total");
+    EDLib::common::statistics.registerEvent("diag");
     ham.diag();
+    EDLib::common::statistics.updateEvent("diag");
+    EDLib::common::statistics.registerEvent("GF");
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> greensFunction(params, ham);
     greensFunction.compute();
@@ -48,6 +52,9 @@ int main(int argc, const char ** argv) {
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
     susc.save(ar, "results");
+    EDLib::common::statistics.updateEvent("GF");
+    EDLib::common::statistics.updateEvent("total");
+    EDLib::common::statistics.print();
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();

@@ -9,6 +9,7 @@
 #include <iomanip>
 #include "Lanczos.h"
 #include "EigenPair.h"
+#include "ExecutionStatistic.h"
 
 namespace EDLib {
   namespace gf {
@@ -45,6 +46,7 @@ namespace EDLib {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
+        common::statistics.registerEvent("Greens function");
         /// iterate over eigen-pairs
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
@@ -107,6 +109,7 @@ namespace EDLib {
 #ifdef USE_MPI
         }
 #endif
+        common::statistics.updateEvent("Greens function");
       }
 
       /**
@@ -195,7 +198,10 @@ namespace EDLib {
         typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
         int i = 0;
+        common::statistics.registerEvent("adag");
         hamiltonian().storage().a_adag(orbital + spin * _model.orbitals(), invec, outvec, next_sec, false);
+        common::statistics.updateEvent("adag");
+        std::cout<<"adag in "<<common::statistics.event("adag").first<<" s \n";
         double norm = hamiltonian().storage().vv(outvec, outvec);
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
@@ -228,7 +234,9 @@ namespace EDLib {
         typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
         outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0.0));
         int i = 0;
+        common::statistics.registerEvent("a");
         hamiltonian().storage().a_adag(orbital + spin * _model.orbitals(), invec, outvec, next_sec, true);
+        common::statistics.updateEvent("a");
         double norm = hamiltonian().storage().vv(outvec, outvec);
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);

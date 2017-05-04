@@ -68,6 +68,7 @@ include_directories(${Hubbard_SOURCE_DIR}/lib)
 
 add_subdirectory(lib)
 add_subdirectory(include/edlib)
+add_subdirectory(include/ext)
 
 option(Examples "Enable examples" ON)
 if(Examples)

@@ -111,14 +111,11 @@ namespace EDLib {
         return _sectors;
       }
 
-    private:
-
+    protected:
+      int _ind;
+      std::vector < int > _totstate;
       int _N;
       bool _first;
-      int _ind;
-      NSymmetry::Sector _current_sector;
-      std::queue < NSymmetry::Sector > _sectors;
-      std::vector < int > _totstate;
       Combination _comb;
 
       int next_basis(int n, int k, std::vector < int > &old) {
@@ -144,6 +141,10 @@ namespace EDLib {
           res = _comb.c_n_k(n - 1, m) + num(b, n - 1, m - 1);
         return res;
       }
+
+    private:
+      NSymmetry::Sector _current_sector;
+      std::queue < NSymmetry::Sector > _sectors;
     };
   }
 }
