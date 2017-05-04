@@ -6,11 +6,15 @@
 #include <bitset>
 #include <string>
 
+#include <alps/params.hpp>
+
 namespace EDLib {
   template<class Hamiltonian>
   class StateDescription {
   protected:
     typedef typename Hamiltonian::ModelType::precision precision;
+    typedef typename Hamiltonian::ModelType::Sector sector;
+
   public:
 
     StateDescription(alps::params &p) :
@@ -33,19 +37,58 @@ namespace EDLib {
     };
 
     /**
-     * @brief Compute average number of electrons
+     * @brief Print static observables.
      *
-     * @param orb - the site for calculation
-     * @param diff - 0: average number or electrons, 1: average spin
-     * @param _ham - the Hamiltonian
+     * @param ham - the Hamiltonian
+     *
+     * Prints all the parameters returned by calculate_static_observables().
      */
-    precision avgn(Hamiltonian& _ham, int diff, int orb){
-      precision avg = 0.0;
+    void print_static_observables(Hamiltonian& ham){
+      std::map<std::string, std::vector<double>> obs = calculate_static_observables(ham);
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        for(auto ivar = obs.begin(); ivar != obs.end(); ++ivar){
+          std::cout << "<" << (*ivar).first << "> = {";
+          for(int i = 0; i < (*ivar).second.size(); ++i){
+            if(i){
+              std::cout << ", ";
+            }
+            std::cout << (*ivar).second[i];
+          }
+          std::cout << "}" << std::endl;
+        }
+      }
+    }
+
+    /**
+     * @brief Compute static observables.
+     *
+     * @param ham - the Hamiltonian
+     *
+     * Returns the following parameters for all sites:
+     *  n: average number of electrons;
+     *  n_up: average number of electrons with the spin up;
+     *  n_down: average number of electrons with the spin down;
+     *  m: average magnetic moment;
+     *  d_occ: average double occupancy;
+     */
+    std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
+      std::map<std::string, std::vector<precision>> avg = {
+        {"n", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+      };
       precision sum = 0.0;
-      const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *_ham.eigenpairs().begin();
+      const EigenPair<precision, sector> &groundstate =  *ham.eigenpairs().begin();
       // Loop over all eigenpairs.
-      for(auto ipair = _ham.eigenpairs().begin(); ipair != _ham.eigenpairs().end(); ++ipair){
-        const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *ipair;
+      for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
+        const EigenPair<precision, sector>& pair = *ipair;
         // Calculate Boltzmann factor, skip the states with trivial contribution.
         precision boltzmann_f = std::exp(
          -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
@@ -55,13 +98,23 @@ namespace EDLib {
           continue;
         }
         // Sum the contributions.
-        avg += avgn1(_ham, pair, diff, orb) * boltzmann_f;
+        std::map<std::string, std::vector<precision>> contrib = calculate_static_observables_eigenvector(ham, pair);
+        for(auto ivar = contrib.begin(); ivar != contrib.end(); ++ivar){
+          for(int i = 0; i < (*ivar).second.size(); ++i){
+            avg[(*ivar).first][i] += (*ivar).second[i] * boltzmann_f;
+          }
+        }
         sum += boltzmann_f;
       }
-      return avg / sum;
+      for(auto ivar = avg.begin(); ivar != avg.end(); ++ivar){
+        for(int i = 0; i < (*ivar).second.size(); ++i){
+          (*ivar).second[i] /= sum;
+        }
+      }
+      return avg;
     }
 
-    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -119,7 +172,7 @@ namespace EDLib {
 #endif
     }
 
-    void print(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, size_t nmax, precision trivial){
+    void print(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
       std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
 #ifdef USE_MPI
       int myid;
@@ -166,37 +219,57 @@ namespace EDLib {
   private:
 
     /**
-     * @brief Compute average number of electrons or average spin on the site in one eigenvector.
+     * @brief Compute static observables for one eigenvector.
      *
-     * @param orb - the site for calculation
-     * @param diff - 0: average number or electrons, 1: average spin
-     * @param _ham - the Hamiltonian
+     * @param ham - the Hamiltonian
      * @param pair - the eigenpair
      */
-    precision avgn1(Hamiltonian& _ham, const EigenPair<typename Hamiltonian::ModelType::precision, typename Hamiltonian::ModelType::Sector>& pair, int diff, int orb){
-      _ham.model().symmetry().set_sector(pair.sector());
-      _ham.storage().reset();
-      precision result = 0.0;
+    std::map<std::string, std::vector<precision>> calculate_static_observables_eigenvector(Hamiltonian& ham, const EigenPair<precision, sector>& pair){
+      std::vector<precision> n(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> n_up(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> n_down(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> m(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
+      ham.model().symmetry().set_sector(pair.sector());
+      ham.storage().reset();
       // Loop over basis vectors.
       for(int i = 0; i < pair.eigenvector().size(); ++i){
-        // Calculate sum or difference of occupations with different spin on the site of choice.
-        _ham.model().symmetry().next_state();
-        long long nst = _ham.model().symmetry().state();
-        int electrons = 0;
-        for(int is = 0; is < _ham.model().spins(); ++is){
-          electrons += (diff ? 1 - 2 * is : 1) *  _ham.model().checkState(nst, orb + is * _ham.model().interacting_orbitals(), _ham.model().max_total_electrons());
+        precision weight = pair.eigenvector()[i] * pair.eigenvector()[i];
+        // Calculate static variables for each orbital.
+        ham.model().symmetry().next_state();
+        long long nst = ham.model().symmetry().state();
+        for(int orb = 0; orb < ham.model().interacting_orbitals(); ++orb){
+          int el_up = ham.model().checkState(nst, orb, ham.model().max_total_electrons());
+          int el_down = ham.model().checkState(nst, orb + ham.model().interacting_orbitals(), ham.model().max_total_electrons());
+          n[orb] += (el_up + el_down) * weight;
+          n_up[orb] += el_up * weight;
+          n_down[orb] += el_down * weight;
+          m[orb] += (el_up - el_down) * weight;
+          d_occ[orb] += el_up * el_down * weight;
         }
-        // Sum, weighted by square of eigenvector component.
-        result += precision(electrons) * pair.eigenvector()[i] * pair.eigenvector()[i];
       }
+      std::map<std::string, std::vector<precision>> result = {
+        {"n", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+      };
 #ifdef USE_MPI
-      precision all;
-      // Add the sums from all processes, divide by the norm of eigenvector.
-      MPI_Reduce(&result, &all, 1, MPI_DOUBLE_PRECISION, MPI_SUM, 0, _ham.comm());
-      return all / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+      // Add the sums from all processes.
+      MPI_Reduce(n.data(), result["n"].data(), n.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_up.data(), result["n_up"].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(m.data(), result["m"].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
-      return result / _ham.storage().vv(pair.eigenvector(), pair.eigenvector());
+      result["n"] = n;
+      result["n_up"] = n_up;
+      result["n_down"] = n_down;
+      result["m"] = m;
+      result["d_occ"] = d_occ;
 #endif
+     return result;
     }
 
     /// Inverse temperature
