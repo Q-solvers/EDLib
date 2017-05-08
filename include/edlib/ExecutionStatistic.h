@@ -6,7 +6,10 @@
 #define HUBBARD_EXECUTIONSTATISTIC_H
 
 
+#ifdef USE_MPI
 #include <mpi.h>
+#endif
+
 #include <string>
 #include <map>
 #include <chrono>
