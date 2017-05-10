@@ -1,28 +1,30 @@
-#ifndef HUBBARD_STATEDESCRIPTION_H
-#define HUBBARD_STATEDESCRIPTION_H
+#ifndef HUBBARD_STATICOBSERVABLES_H
+#define HUBBARD_STATICOBSERVABLES_H
 
 #include "EigenPair.h"
-#include <vector>
-#include <bitset>
-#include <string>
 
 #include <alps/params.hpp>
 
+#include <vector>
+#include <bitset>
+#include <string>
+#include <cmath>
+
 namespace EDLib {
   template<class Hamiltonian>
-  class StateDescription {
+  class StaticObservables {
   protected:
     typedef typename Hamiltonian::ModelType::precision precision;
     typedef typename Hamiltonian::ModelType::Sector sector;
 
   public:
 
-    StateDescription(alps::params &p) :
+    StaticObservables(alps::params &p) :
       _beta(p["lanc.BETA"].as<precision>()),
       _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
     {
       if(p["storage.EIGENVALUES_ONLY"] == 1) {
-        throw std::logic_error("Eigenvectors have not been computed. StateDescription can not continue.");
+        throw std::logic_error("Eigenvectors have not been computed. StaticObservables can not continue.");
       }
 #ifdef USE_MPI
       const int nitems=2;
@@ -75,6 +77,7 @@ namespace EDLib {
      *  n_down: average number of electrons with the spin down;
      *  m: average magnetic moment;
      *  d_occ: average double occupancy;
+     *  N_eff: average effective dimension of Hilbert space;
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
       std::map<std::string, std::vector<precision>> avg = {
@@ -82,7 +85,8 @@ namespace EDLib {
         {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"N_eff", std::vector<precision>(1, 0.0)}
       };
       precision sum = 0.0;
       const EigenPair<precision, sector> &groundstate =  *ham.eigenpairs().begin();
@@ -114,19 +118,31 @@ namespace EDLib {
       return avg;
     }
 
-    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
-      _ham.model().symmetry().set_sector(pair.sector());
-      _ham.storage().reset();
+    /**
+     * @brief Find largest (by magnitude) coefficients in an eigenvector.
+     *
+     * @param ham - the Hamiltonian
+     * @param pair - the eigenpair
+     * @param nmax - maximum number of coefficients to be returned;
+     * @param trivial - skip the coefficients smaller than this number.
+     *
+     * Returns a vector of pairs sorted starting from largest magnitude:
+     *  first: symmetry state;
+     *  second: coefficient;
+     */
+    std::vector<std::pair<long long, precision>> find_largest_coefficients(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
+      ham.model().symmetry().set_sector(pair.sector());
+      ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
       std::vector<size_t> largest = std::vector<size_t>(pair.eigenvector().size());
 #ifdef USE_MPI
       int myid;
       int nprocs;
-      MPI_Comm_rank(_ham.comm(), &myid);
-      MPI_Comm_size(_ham.comm(), &nprocs);
+      MPI_Comm_rank(ham.comm(), &myid);
+      MPI_Comm_size(ham.comm(), &nprocs);
       std::vector<int> counts(nprocs);
       std::vector<int> displs(nprocs + 1);
-      MPI_Gather(&count, 1, MPI_INT, counts.data(), 1, MPI_INT, 0, _ham.comm());
+      MPI_Gather(&count, 1, MPI_INT, counts.data(), 1, MPI_INT, 0, ham.comm());
       if(!myid){
         displs[0] = 0;
         for(size_t i = 0; i < nprocs; i++){
@@ -145,16 +161,16 @@ namespace EDLib {
 #ifdef USE_MPI
       std::vector<Element> send(count);
       for(size_t i = 0; i < count; ++i){
-       send[i] = Element(largest[i] + _ham.storage().offset(), pair.eigenvector()[largest[i]]);
+       send[i] = Element(largest[i] + ham.storage().offset(), pair.eigenvector()[largest[i]]);
       }
       std::vector<Element> all(displs[nprocs]);
-      MPI_Gatherv(send.data(), count, mpi_Element, all.data(), counts.data(), displs.data(), mpi_Element, 0, _ham.comm());
+      MPI_Gatherv(send.data(), count, mpi_Element, all.data(), counts.data(), displs.data(), mpi_Element, 0, ham.comm());
       if (!myid) {
         nmax = std::min(nmax, all.size());
         std::partial_sort(all.begin(), all.begin()+nmax, all.end(), [] (Element a, Element b) -> bool {return (a > b);});
         std::vector<std::pair<long long, precision>> ret(nmax);
         for(size_t i = 0; i < nmax; ++i){
-          long long nst = _ham.model().symmetry().state_by_index(all[i].ind);
+          long long nst = ham.model().symmetry().state_by_index(all[i].ind);
           ret[i] = std::pair<long long, precision>(nst, all[i].val);
         }
         return ret;
@@ -165,30 +181,110 @@ namespace EDLib {
 #else
       std::vector<std::pair<long long, precision>> ret(count);
       for(size_t i = 0; i < count; ++i){
-        long long nst = _ham.model().symmetry().state_by_index(largest[i]);
+        long long nst = ham.model().symmetry().state_by_index(largest[i]);
         ret[i] = std::pair<long long, precision>(nst, pair.eigenvector()[largest[i]]);
       }
       return ret;
 #endif
     }
 
-    void print(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
-      std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
+    /**
+     * @brief Calculate contribution of the states with the same coefficient (classes) to the eigenvector.
+     *
+     * @param ham - the Hamiltonian
+     * @param pair - the eigenpair
+     * @param nmax - maximum number of coefficients to be processed;
+     * @param trivial - skip the coefficients smaller than this number;
+     * @param cumulative - calculate cumulative contribution: this class and all previous classes.
+     *
+     * Returns a vector of pairs:
+     *  first: symmetry state (the first one of each class);
+     *  second: contribution of the class;
+     * The vector is sorted the largest coefficient of the class.
+     */
+    std::vector<std::pair<long long, precision>> calculate_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
+      std::vector<std::pair<long long, precision>> coeffs = find_largest_coefficients(ham, pair, nmax, trivial);
+      std::vector<std::pair<long long, precision>> contribs(0);
 #ifdef USE_MPI
       int myid;
-      MPI_Comm_rank(_ham.comm(), &myid);
+      MPI_Comm_rank(ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        for(size_t i = 0; i < coeffs.size(); ++i){
+          // Add up squares of coefficients within each class.
+          //if(!i || std::abs(coeffs[i - 1].second - coeffs[i].second) < trivial)
+          if(!i || coeffs[i - 1].second != coeffs[i].second){
+            contribs.push_back(std::pair<long long, precision>(coeffs[i].first, coeffs[i].second * coeffs[i].second));
+            if(i){
+             contribs.back().second += (cumulative ? contribs[contribs.size() - 2].second : 0.0);
+             contribs[contribs.size() - 2].second = std::sqrt(contribs[contribs.size() - 2].second);
+            }
+          }else{
+            contribs.back().second += coeffs[i].second * coeffs[i].second;
+          }
+        }
+        // The last contribs may be truncated, remove.
+        contribs.pop_back();
+      }
+      return contribs;
+    }
+
+    /**
+     * @brief Print largest coefficients of an eigenvector in decreasing order of magnitude.
+     *
+     * @param ham - the Hamiltonian
+     * @param pair - the eigenpair
+     * @param nmax - maximum number of coefficients to be processed;
+     * @param trivial - skip the coefficients smaller than this number.
+     */
+    void print_largest_coefficients(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
+      std::vector<std::pair<long long, precision>> coeffs = find_largest_coefficients(ham, pair, nmax, trivial);
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.comm(), &myid);
       if(!myid)
 #endif
       {
         std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
         pair.sector().print();
         std::cout << std::endl;
-        for(size_t i = 0; i < contribs.size(); ++i){
-          std::cout << contribs[i].second << " * |";
-          std::string spin_down = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-  _ham.model().orbitals(), _ham.model().orbitals());
-          std::string spin_up   = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-2*_ham.model().orbitals(), _ham.model().orbitals());
+        for(size_t i = 0; i < coeffs.size(); ++i){
+          std::cout << coeffs[i].second << " * |";
+          std::string spin_down = std::bitset< 64 >( coeffs[i].first ).to_string().substr(64-  ham.model().orbitals(), ham.model().orbitals());
+          std::string spin_up   = std::bitset< 64 >( coeffs[i].first ).to_string().substr(64-2*ham.model().orbitals(), ham.model().orbitals());
           std::cout<<spin_up<< "|"<<spin_down;
           std::cout << ">" << std::endl;
+        }
+      }
+    }
+
+    /**
+     * @brief Print contribution of the states with the same coefficient (classes) to the eigenvector.
+     *
+     * @param ham - the Hamiltonian
+     * @param pair - the eigenpair
+     * @param nmax - maximum number of coefficients to be processed;
+     * @param trivial - skip the coefficients smaller than this number.
+     * @param cumulative - calculate cumulative contribution: this class and all previous classes.
+     */
+    void print_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
+      std::vector<std::pair<long long, precision>> contribs = calculate_class_contrib(ham, pair, nmax, trivial, cumulative);
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.comm(), &myid);
+      if(!myid)
+#endif
+      {
+        std::cout << "Contributions of eigenvector component contribs for eigenvalue " << pair.eigenvalue() << " ";
+        pair.sector().print();
+        std::cout << std::endl;
+        for(size_t i = 0; i < contribs.size(); ++i){
+          std::cout << "|";
+          std::string spin_down = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-  ham.model().orbitals(), ham.model().orbitals());
+          std::string spin_up   = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-2*ham.model().orbitals(), ham.model().orbitals());
+          std::cout<<spin_up<< "|"<<spin_down;
+          std::cout << ">\t" << contribs[i].second << std::endl;
         }
       }
     }
@@ -230,6 +326,7 @@ namespace EDLib {
       std::vector<precision> n_down(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> m(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
+      precision inverse_N_eff = 0.0;
       ham.model().symmetry().set_sector(pair.sector());
       ham.storage().reset();
       // Loop over basis vectors.
@@ -247,13 +344,15 @@ namespace EDLib {
           m[orb] += (el_up - el_down) * weight;
           d_occ[orb] += el_up * el_down * weight;
         }
+        inverse_N_eff += weight * weight;
       }
       std::map<std::string, std::vector<precision>> result = {
         {"n", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"N_eff", std::vector<precision>(1, 0.0)}
       };
 #ifdef USE_MPI
       // Add the sums from all processes.
@@ -262,13 +361,16 @@ namespace EDLib {
       MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(m.data(), result["m"].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(&inverse_N_eff, &result["N_eff"][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result["n"] = n;
       result["n_up"] = n_up;
       result["n_down"] = n_down;
       result["m"] = m;
       result["d_occ"] = d_occ;
+      result["N_eff"][0] = inverse_N_eff;
 #endif
+     result["N_eff"][0] = 1 / result["N_eff"][0];
      return result;
     }
 
