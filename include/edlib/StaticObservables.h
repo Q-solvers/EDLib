@@ -198,13 +198,13 @@ namespace EDLib {
      * @param cumulative - calculate cumulative contribution: this class and all previous classes.
      *
      * Returns a vector of pairs:
-     *  first: symmetry state (the first one of each class);
+     *  first: index of the first state in the class, as returned by find_largest_coefficients();
      *  second: contribution of the class;
      * The vector is sorted the largest coefficient of the class.
      */
-    std::vector<std::pair<long long, precision>> calculate_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
+    std::vector<std::pair<size_t, precision>> calculate_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
       std::vector<std::pair<long long, precision>> coeffs = find_largest_coefficients(ham, pair, nmax, trivial);
-      std::vector<std::pair<long long, precision>> contribs(0);
+      std::vector<std::pair<size_t, precision>> contribs(0);
 #ifdef USE_MPI
       int myid;
       MPI_Comm_rank(ham.comm(), &myid);
@@ -213,12 +213,10 @@ namespace EDLib {
       {
         for(size_t i = 0; i < coeffs.size(); ++i){
           // Add up squares of coefficients within each class.
-          //if(!i || std::abs(coeffs[i - 1].second - coeffs[i].second) < trivial)
-          if(!i || coeffs[i - 1].second != coeffs[i].second){
-            contribs.push_back(std::pair<long long, precision>(coeffs[i].first, coeffs[i].second * coeffs[i].second));
+          if(!i || std::abs(coeffs[i - 1].second - coeffs[i].second) > trivial){
+            contribs.push_back(std::pair<size_t, precision>(i, coeffs[i].second * coeffs[i].second));
             if(i){
              contribs.back().second += (cumulative ? contribs[contribs.size() - 2].second : 0.0);
-             contribs[contribs.size() - 2].second = std::sqrt(contribs[contribs.size() - 2].second);
             }
           }else{
             contribs.back().second += coeffs[i].second * coeffs[i].second;
@@ -269,22 +267,18 @@ namespace EDLib {
      * @param cumulative - calculate cumulative contribution: this class and all previous classes.
      */
     void print_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
-      std::vector<std::pair<long long, precision>> contribs = calculate_class_contrib(ham, pair, nmax, trivial, cumulative);
+      std::vector<std::pair<size_t, precision>> contribs = calculate_class_contrib(ham, pair, nmax, trivial, cumulative);
 #ifdef USE_MPI
       int myid;
       MPI_Comm_rank(ham.comm(), &myid);
       if(!myid)
 #endif
       {
-        std::cout << "Contributions of eigenvector component contribs for eigenvalue " << pair.eigenvalue() << " ";
+        std::cout << "Contributions of eigenvector component classes for eigenvalue " << pair.eigenvalue() << " ";
         pair.sector().print();
         std::cout << std::endl;
         for(size_t i = 0; i < contribs.size(); ++i){
-          std::cout << "|";
-          std::string spin_down = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-  ham.model().orbitals(), ham.model().orbitals());
-          std::string spin_up   = std::bitset< 64 >( contribs[i].first ).to_string().substr(64-2*ham.model().orbitals(), ham.model().orbitals());
-          std::cout<<spin_up<< "|"<<spin_down;
-          std::cout << ">\t" << contribs[i].second << std::endl;
+          std::cout << contribs[i].first << "\t" << contribs[i].second << std::endl;
         }
       }
     }
