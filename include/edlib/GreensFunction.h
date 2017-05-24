@@ -32,33 +32,32 @@ namespace EDLib {
         alps::hdf5::archive input_file(input.c_str(), "r");
         if(input_file.is_data("GreensFunction_orbitals/values")){
           input_file >> alps::make_pvp("GreensFunction_orbitals/values", gf_orbs);
-          // Find all unique indices.
-          diagonal_orbs.resize(gf_orbs.size() * 2);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-           for(int j = 0; j < 2; ++j){
-             diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
-           }
-          }
-          std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
-          diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
-          offdiagonal_orbs.resize(0);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-            if(gf_orbs[i][0] != gf_orbs[i][1]){
-              offdiagonal_orbs.push_back(gf_orbs[i]);
-            }
-          }
         }else{
-          gf_orbs.resize(h.model().interacting_orbitals());
-          diagonal_orbs.resize(gf_orbs.size());
-          offdiagonal_orbs.resize(0);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-            gf_orbs[i].resize(2);
-            gf_orbs[i][0] = i;
-            gf_orbs[i][1] = i;
-            diagonal_orbs[i] = i;
+          // Or calculate all possible indices.
+          gf_orbs.clear();
+          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
+            for(int j = 0; j < h.model().interacting_orbitals(); ++j){
+              gf_orbs.push_back({i, j});
+            }
           }
         }
         input_file.close();
+        // Find all unique indices for the diagonal part.
+        diagonal_orbs.resize(gf_orbs.size() * 2);
+        for(int i = 0; i < gf_orbs.size(); ++i){
+         for(int j = 0; j < 2; ++j){
+           diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
+         }
+        }
+        std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
+        diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
+        // Find nondiagonal indices.
+        offdiagonal_orbs.clear();
+        for(int i = 0; i < gf_orbs.size(); ++i){
+          if(gf_orbs[i][0] != gf_orbs[i][1]){
+            offdiagonal_orbs.push_back(gf_orbs[i]);
+          }
+        }
       }
 
       void compute() {
@@ -215,9 +214,9 @@ namespace EDLib {
             std::vector < precision > sumvec(1, precision(0.0));
             bool found[2];
             precision expectation_value = 0.0;
-            _model.symmetry().set_sector(pair.sector());
             /// create particle on two different orbs, sum the resulting vectors and compute contribution to Green's function
             for(int i = 0; i < 2; ++i){
+              _model.symmetry().set_sector(pair.sector());
               found[i] = create_particle(orbs[i], ispin, pair.eigenvector(), outvec[i], expectation_value);
             }
             if(found[0] || found[1]){
@@ -238,10 +237,10 @@ namespace EDLib {
                 compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
               }
             }
-            /// restore symmetry sector
-            _model.symmetry().set_sector(pair.sector());
             /// perform the same for destroying of a particle
             for(int i = 0; i < 2; ++i){
+              /// restore symmetry sector
+              _model.symmetry().set_sector(pair.sector());
               found[i] = annihilate_particle(orbs[i], ispin, pair.eigenvector(), outvec[i], expectation_value);
             }
             if(found[0] || found[1]){
@@ -258,7 +257,7 @@ namespace EDLib {
               if(!rank)
 #endif
               {
-                std::cout << "orbital: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+                std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
               }
             }

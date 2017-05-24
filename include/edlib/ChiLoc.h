@@ -70,34 +70,31 @@ namespace EDLib {
         alps::hdf5::archive input_file(input.c_str(), "r");
         if(input_file.is_data("ChiLoc_orbitals/values")){
           input_file >> alps::make_pvp("ChiLoc_orbitals/values", gf_orbs);
-          // Find all unique indices.
-          diagonal_orbs.resize(gf_orbs.size() * 2);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-           for(int j = 0; j < 2; ++j){
-             diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
-           }
-          }
-          std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
-          diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
-          offdiagonal_orbs.resize(0);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-            if(gf_orbs[i][0] != gf_orbs[i][1]){
-              throw std::logic_error("Offdiagonal susceptibility is not supported yet.");
-              offdiagonal_orbs.push_back(gf_orbs[i]);
-            }
-          }
         }else{
-          gf_orbs.resize(h.model().interacting_orbitals());
-          diagonal_orbs.resize(gf_orbs.size());
-          offdiagonal_orbs.resize(0);
-          for(int i = 0; i < gf_orbs.size(); ++i){
-            gf_orbs[i].resize(2);
-            gf_orbs[i][0] = i;
-            gf_orbs[i][1] = i;
-            diagonal_orbs[i] = i;
+          // Or calculate all diagonal indices.
+          gf_orbs.clear();
+          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
+            gf_orbs.push_back({i, i});
           }
         }
         input_file.close();
+        // Find all unique indices for the diagonal part.
+        diagonal_orbs.resize(gf_orbs.size() * 2);
+        for(int i = 0; i < gf_orbs.size(); ++i){
+         for(int j = 0; j < 2; ++j){
+           diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
+         }
+        }
+        std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
+        diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
+        // Find nondiagonal indices.
+        offdiagonal_orbs.clear();
+        for(int i = 0; i < gf_orbs.size(); ++i){
+          if(gf_orbs[i][0] != gf_orbs[i][1]){
+            throw std::logic_error("Offdiagonal susceptibility is not supported yet.");
+            offdiagonal_orbs.push_back(gf_orbs[i]);
+          }
+        }
       }
 
       /**
