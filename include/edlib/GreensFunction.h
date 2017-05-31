@@ -270,8 +270,9 @@ namespace EDLib {
           for (int iorb = 0; iorb < offdiagonal_orbs.size(); ++iorb) {
             for (int ispin = 0; ispin < _model.spins(); ++ispin) {
               std::vector<int> orbs = offdiagonal_orbs[iorb];
-              gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
-              gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[1]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
+              for (int j = 0; j < 2; ++j) {
+                gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(orbs[j]), index_mesh_index(ispin));
+              }
               gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) *= 0.5;
             }
           }
