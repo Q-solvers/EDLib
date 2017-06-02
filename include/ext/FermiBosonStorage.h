@@ -9,7 +9,7 @@
 #include <edlib/Storage.h>
 #include <edlib/CRSMatrix.h>
 #include <edlib/NSymmetry.h>
-#include "NSymmetryWithBoson.h"
+#include "SzSymmetryWithBoson.h"
 
 namespace EDLib {
   namespace Storage {
@@ -57,12 +57,9 @@ namespace EDLib {
 
       void reset() {
         _model.symmetry().init();
-        const Symmetry::NSymmetryWithBoson &symmetry = static_cast<Symmetry::NSymmetryWithBoson>(_model.symmetry());
-        const Symmetry::NSymmetryWithBoson::Sector &sector = symmetry.sector();
-        _el_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.n(), symmetry.comb().c_n_k(_Ns, sector.nup())));
-        _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
-        size_t up_size = _up_symmetry.sector().size();
-        size_t down_size = _down_symmetry.sector().size();
+        const Symmetry::SzSymmetryWithBoson &symmetry = static_cast<Symmetry::SzSymmetryWithBoson>(_model.symmetry());
+        const Symmetry::SzSymmetryWithBoson::Sector &sector = symmetry.sector();
+        _el_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.n(), symmetry.comb().c_n_k(_Ns, sector.n())));
         H_up.init(up_size, 100);
       }
 
@@ -79,6 +76,15 @@ namespace EDLib {
       CRSMatrix _Hbos;
       Symmetry::NSymmetry _el_symmetry;
       Model& _model;
+
+      ///
+      int _interaction_size;
+      /// The total number of electons
+      int _Ns;
+      /// Total number of spins
+      int _ms;
+      /// Total number of bosons
+      int _Nb;
     };
 
   }

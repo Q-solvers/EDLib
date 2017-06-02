@@ -20,6 +20,9 @@ namespace EDLib {
 
       virtual bool next_state() = 0;
 
+      virtual bool can_create_particle(int spin) = 0;
+      virtual bool can_destroy_particle(int spin) = 0;
+
       long long state() const {
         return _state;
       };

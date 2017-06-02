@@ -73,11 +73,18 @@ namespace EDLib {
         }
       };
 
+      /**
+       * check that current basis vector get non-zero contribution
+       *
+       * @param state - electron state combination of spin and site indices
+       * @param nst - current basis state
+       * @return 1 if there is nonzero contribution, otherwise 0
+       */
       inline int valid(const St &state, long long nst) {
         return (checkState(nst, state.indicies().first + state.spin() * _Ns, _Ip) * (1 - checkState(nst, state.indicies().second + state.spin() * _Ns, _Ip)));
       }
 
-      inline void set(const St &state, long long nst, long long &k, int &sign) {
+      inline precision set(const St &state, long long nst, long long &k, int &sign) {
         long long k1, k2;
         int isign1, isign2;
         a(state.indicies().first + state.spin() * _Ns, nst, k1, isign1);
@@ -85,8 +92,15 @@ namespace EDLib {
         k = k2;
         // -t c^+ c
         sign = -isign1 * isign2;
+        return state.value();
       }
 
+      /**
+       * Computes diagonal contribution for state s: <s| H |s>
+       *
+       * @param state - current basis state
+       * @return value of <s| H |s>
+       */
       inline precision diagonal(long long state) const {
         precision xtemp = 0.0;
         for (int im = 0; im < _Ns; ++im) {
@@ -102,6 +116,7 @@ namespace EDLib {
       inline long long interacting_states(long long nst) {
         return nst;
       }
+
 
       const std::vector < St > &T_states() const { return _states; };
       // We have only diagonal interaction

@@ -30,7 +30,7 @@ namespace EDLib {
        *
        * @return 0 if state is empty, 1 - otherwise
        */
-      int inline checkState(long long nst, const int &im, int Ip) const {
+      int inline checkState(long long nst, const int im, int Ip) const {
         return (int) ((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
       }
       /**

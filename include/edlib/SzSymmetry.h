@@ -76,7 +76,7 @@ namespace EDLib {
 
       virtual ~SzSymmetry() {};
 
-      virtual bool next_state() {
+      virtual bool next_state() override {
         if (_first) {
           _first = false;
         }
@@ -97,7 +97,7 @@ namespace EDLib {
         return res;
       }
 
-      int index(long long state, const SzSymmetry::Sector &sector) {
+      virtual int index(long long state, const SzSymmetry::Sector &sector) {
         long long up = state >> _Ns;
         long long down = state & ((1ll << _Ns) - 1);
         int cup = _comb.c_n_k(_Ns, sector.nup());
@@ -105,30 +105,28 @@ namespace EDLib {
         return ninv[sector.nup()][(int) up] * (cdo) + ninv[sector.ndown()][(int) down];
       }
 
-      virtual int index(long long state) {
+      virtual int index(long long state)  override{
         return index(state, _current_sector);
       }
 
-      virtual void reset() {
+      virtual void reset()  override{
         state() = 0ll;
         _first = true;
         _ind = 0;
       }
 
-      virtual void init() {
+      virtual void init()  override {
         // TODO: Decide what we should have to init
         reset();
         _comb.init_state(_current_sector.nup(), upstate);
         _comb.init_state(_current_sector.ndown(), dostate);
       };
 
-      virtual bool next_sector() {
+      virtual bool next_sector() override {
         if (_sectors.empty())
           return false;
         _current_sector = _sectors.front();
         _sectors.pop();
-//        std::cout << "Diagonalizating Sz-symmetry sector with nup: " << _current_sector.nup() << " ndown: " << _current_sector.ndown() << " size: " << _current_sector.size()
-//                  << std::endl;
         return true;
       }
 
@@ -144,6 +142,25 @@ namespace EDLib {
       inline const Combination &comb() const {
         return _comb;
       }
+
+      bool can_create_particle(int spin) override {
+        return spin == 0 ? _current_sector.nup() < _Ns - 1 : _current_sector.ndown() < _Ns - 1;
+      }
+
+      bool can_destroy_particle(int spin) override {
+        return spin == 0 ? _current_sector.nup() > 0 : _current_sector.ndown() > 0;
+      }
+
+      SzSymmetry::Sector destroy_partice(int spin) {
+        return Sector(_current_sector.nup() - (1 - spin), _current_sector.ndown() - spin,
+                      _comb.c_n_k(_Ns, _current_sector.nup() - (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() - spin));
+      }
+
+      SzSymmetry::Sector create_partice(int spin) {
+        return Sector(_current_sector.nup() + (1 - spin), _current_sector.ndown() + spin,
+                      _comb.c_n_k(_Ns, _current_sector.nup() + (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() + spin));
+      }
+
 #ifdef USE_MPI
       void set_offset(size_t offset) {_ind += offset;}
 #endif

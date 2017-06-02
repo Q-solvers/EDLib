@@ -43,6 +43,7 @@ namespace EDLib {
         col_ind.assign(_max_size, 0);
         values.assign(_max_size, prec(0.0));
         n() = 0;
+        ntot() = 0;
       }
 
       /**
@@ -190,9 +191,9 @@ namespace EDLib {
           /// check that there is transition for current state
           if (_model.valid(states[kkk], nst)) {
             /// set new state
-            _model.set(states[kkk], nst, k, isign);
+            prec val = _model.set(states[kkk], nst, k, isign);
             int k_index = _model.symmetry().index(k);
-            addElement(i, k_index, states[kkk].value(), isign);
+            addElement(i, k_index, val, isign);
           }
         }
       };

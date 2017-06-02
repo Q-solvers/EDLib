@@ -291,8 +291,9 @@ namespace EDLib {
         return state.valid(nst, _Ns);
       }
 
-      inline void set(const St &state, long long nst, long long &k, int &sign) {
+      inline precision set(const St &state, long long nst, long long &k, int &sign) {
         state.set(nst, k, sign, _Ns);
+        return state.value();
       }
 
       SYMMETRY &symmetry() {

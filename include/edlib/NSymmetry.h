@@ -68,7 +68,7 @@ namespace EDLib {
         return _current_sector;
       }
 
-      virtual bool next_state() {
+      virtual bool next_state() override {
         long long res = 0;
         if (_ind >= _current_sector.size()) {
           return false;
@@ -79,22 +79,22 @@ namespace EDLib {
         return true;
       }
 
-      virtual int index(long long st) {
+      virtual int index(long long st) override  {
         return _comb.c_n_k(_N, _current_sector.n()) - num(st, _N, _current_sector.n()) - 1;
       }
 
-      virtual void reset() {
+      virtual void reset() override {
         state() = 0ll;
         _first = true;
         _ind = 0;
       }
 
-      virtual void init() {
+      virtual void init() override {
         reset();
         _comb.init_state(_current_sector.n(), _totstate);
       }
 
-      virtual bool next_sector() {
+      virtual bool next_sector() override {
         if (_sectors.empty())
           return false;
         _current_sector = _sectors.front();
@@ -109,6 +109,14 @@ namespace EDLib {
 
       std::queue<NSymmetry::Sector> &sectors() {
         return _sectors;
+      }
+
+      bool can_create_particle(int spin) override {
+        return _current_sector.n() < _N - 1;
+      }
+
+      bool can_destroy_particle(int spin) override {
+        return _current_sector.n() > 0;
       }
 
     protected:

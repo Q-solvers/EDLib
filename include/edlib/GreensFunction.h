@@ -187,7 +187,7 @@ namespace EDLib {
        */
       bool create_particle(int orbital, int spin, const std::vector < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {
         // check that the particle can be annihilated
-        if ((spin == 0 && _model.symmetry().sector().nup() == _model.orbitals()) || (spin == 1 && _model.symmetry().sector().ndown() == _model.orbitals())) {
+        if (!_model.symmetry().can_create_particle(spin)) {
           return false;
         }
         hamiltonian().storage().reset();
@@ -195,13 +195,13 @@ namespace EDLib {
         int sign = 0;
         int nup_new = _model.symmetry().sector().nup() + (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() + spin;
-        typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
+
+        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().create_partice(spin);
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
         int i = 0;
         common::statistics.registerEvent("adag");
         hamiltonian().storage().a_adag(orbital + spin * _model.orbitals(), invec, outvec, next_sec, false);
         common::statistics.updateEvent("adag");
-        std::cout<<"adag in "<<common::statistics.event("adag").first<<" s \n";
         double norm = hamiltonian().storage().vv(outvec, outvec);
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
@@ -223,7 +223,7 @@ namespace EDLib {
        */
       bool annihilate_particle(int orbital, int spin, const std::vector < precision > &invec, std::vector < precision > &outvec, double &expectation_value) {
         // check that the particle can be annihilated
-        if ((spin == 0 && _model.symmetry().sector().nup() == 0) || (spin == 1 && _model.symmetry().sector().ndown() == 0)) {
+        if (!_model.symmetry().can_destroy_particle(spin)) {
           return false;
         }
         hamiltonian().storage().reset();
@@ -231,7 +231,7 @@ namespace EDLib {
         int sign = 0;
         int nup_new = _model.symmetry().sector().nup() - (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() - spin;
-        typename Hamiltonian::ModelType::Sector next_sec(nup_new, ndn_new, _model.symmetry().comb().c_n_k(_model.orbitals(), nup_new) * _model.symmetry().comb().c_n_k(_model.orbitals(), ndn_new));
+        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().destroy_partice(spin);
         outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0.0));
         int i = 0;
         common::statistics.registerEvent("a");
