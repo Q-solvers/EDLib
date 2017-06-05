@@ -45,17 +45,28 @@ int main(int argc, const char ** argv) {
     EDLib::common::statistics.updateEvent("diag");
     EDLib::common::statistics.registerEvent("GF");
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greensFunction(params, ham);
+    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, alps::gf::statistics::FERMIONIC);
     greensFunction.compute();
     greensFunction.save(ar, "results");
-    EDLib::gf::ChiLoc<HamType, alps::gf::real_frequency_mesh> susc(params, ham);
-    susc.compute();
+    EDLib::StaticObervables<HamType> sd(params);
+    // compute static observables
+    std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
+    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type > susc(params, ham, alps::gf::statistics::BOSONIC);
+    // compute average magnetic moment
+    double avg = 0;
+    for(auto x : observables[sd._M_]) {
+      avg += x / (2.0*observables[sd._M_].size());
+    }
+    susc.compute<EDLib::gf::SzOperator<double>>(&avg);
     susc.save(ar, "results");
-    susc.compute<EDLib::gf::NOperator<double> >();
+    // compute average occupancy moment
+    avg = 0;
+    for(auto x : observables[sd._N_]) {
+      avg += x / double(observables[sd._N_].size());
+    }
+    susc.compute<EDLib::gf::NOperator<double>>(&avg);
     susc.save(ar, "results");
     EDLib::common::statistics.updateEvent("GF");
-    EDLib::StaticObervables<HamType> sd(params);
-    std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
     EDLib::hdf5::save_static_observables(observables, ar, "results");
     
     EDLib::common::statistics.updateEvent("total");

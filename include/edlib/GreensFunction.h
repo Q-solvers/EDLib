@@ -54,7 +54,6 @@ namespace EDLib {
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
           /// Skip all eigenvalues with Boltzmann-factor smaller than cutoff
           if (boltzmann_f < _cutoff) {
-//        std::cout<<"Skipped by Boltzmann factor."<<std::endl;
             continue;
           }
 #ifdef USE_MPI

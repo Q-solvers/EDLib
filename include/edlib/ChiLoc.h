@@ -14,39 +14,39 @@
 
 namespace EDLib {
   namespace gf {
-    class BosonicOperator{};
+    template<typename precision>
+    class BosonicOperator{
+    public:
+      BosonicOperator(precision avg) : _avg(avg) {}
+      precision average () const {
+        return _avg;
+      }
+    private:
+      precision _avg;
+    };
 
     template<typename precision>
-    class SzOperator: public BosonicOperator {
+    class SzOperator: public BosonicOperator<precision> {
     public:
-      SzOperator() {};
+      SzOperator(precision avg = 0.0) : BosonicOperator<precision>(avg) {};
       template<class ModelType>
       precision action(long long state, int iii, const ModelType & model) const {
         /// 0.5 * (n_up - n_down)
         return 0.5*(model.checkState(state, iii, model.max_total_electrons()) -
                     model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
-      /// Current implementation restricted to paramagnetic solution
-      precision average () const {
-        return 0.0;
-      }
-
       std::string name() const {return "Sz";};
     };
 
     template<typename precision>
-    class NOperator: public BosonicOperator {
+    class NOperator: public BosonicOperator<precision> {
     public:
-      NOperator() {};
+      NOperator(precision avg = 1.0) : BosonicOperator<precision>(avg) {};
       template<class ModelType>
       precision action(long long state, int iii, const ModelType & model) const {
         /// (n_up + n_down)
         return (model.checkState(state, iii, model.max_total_electrons()) +
                 model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
-      }
-      /// Current implementation restricted to half-filled case
-      precision average() const {
-        return 1.0;
       }
       std::string name() const {return "N";};
     };
@@ -74,8 +74,8 @@ namespace EDLib {
        * @tparam Op type of bosonic operator (should be either SzOperator or NOperator)
        */
       template<typename Op = SzOperator<precision> >
-      void compute() {
-        static_assert(std::is_base_of<BosonicOperator, Op>::value, "Wrong bosonic operator.");
+      void compute(const double * avg_ptr = nullptr) {
+        static_assert(std::is_base_of<BosonicOperator<precision>, Op>::value, "Wrong bosonic operator.");
         // cleanup
         gf *= 0.0;
         _Z = 0.0;
@@ -90,7 +90,7 @@ namespace EDLib {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
-        const Op op;
+        const Op op = (avg_ptr == nullptr ? Op() : Op(*avg_ptr));
         _type = op.name();
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
@@ -134,9 +134,9 @@ namespace EDLib {
       template<typename O, typename M= Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
         /// Compute static susceptibility
-        for (int i = 0; i < _model.orbitals(); ++i) {
+        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
           double chiSum = 0.0;
-          /// Susceptibility decays as c2/w^2
+          /// Susceptibility decays as c2/w^2 + c4/w^4
           /// compute c2 and c4 from two largest freq points
           /// and for next pair as well to check convergence
           double c2, c4;
