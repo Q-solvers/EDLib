@@ -270,8 +270,8 @@ namespace EDLib {
       MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result[_N_] = n;
-      result[_N_up_] = n_up;
-      result[_N_dn_] = n_down;
+      result[_N_UP_] = n_up;
+      result[_N_DN_] = n_down;
       result[_M_] = m;
       result[_D_OCC_] = d_occ;
 #endif
