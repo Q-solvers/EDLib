@@ -13,7 +13,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/StateDescription.h"
+#include "edlib/StaticObervables.h"
 #include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {

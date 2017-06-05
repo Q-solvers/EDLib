@@ -200,7 +200,7 @@ namespace EDLib {
           return state.valid(nst, _Ns, _Nb);
         }
 
-        inline double set(const St &state, long long nst, long long &k, int &sign) {
+        inline prec set(const St &state, long long nst, long long &k, int &sign) {
           return state.set(nst, k, sign, _Ns, _Nb);
         }
 

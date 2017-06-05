@@ -13,7 +13,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/StateDescription.h"
+#include "edlib/StaticObervables.h"
 #include "edlib/MeshFactory.h"
 #include "ext/HolsteinAndersonModel.h"
 #include "ext/HolsteinAndersonParameter.h"
@@ -48,13 +48,16 @@ int main(int argc, const char ** argv) {
     EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greensFunction(params, ham);
     greensFunction.compute();
     greensFunction.save(ar, "results");
-//    greensFunction.compute_selfenergy(ar, "results");
-//    EDLib::gf::ChiLoc<HamType, alps::gf::real_frequency_mesh> susc(params, ham);
-//    susc.compute();
-//    susc.save(ar, "results");
-//    susc.compute<EDLib::gf::NOperator<double> >();
-//    susc.save(ar, "results");
+    EDLib::gf::ChiLoc<HamType, alps::gf::real_frequency_mesh> susc(params, ham);
+    susc.compute();
+    susc.save(ar, "results");
+    susc.compute<EDLib::gf::NOperator<double> >();
+    susc.save(ar, "results");
     EDLib::common::statistics.updateEvent("GF");
+    EDLib::StaticObervables<HamType> sd(params);
+    std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
+    EDLib::hdf5::save_static_observables(observables, ar, "results");
+    
     EDLib::common::statistics.updateEvent("total");
     EDLib::common::statistics.print();
   } catch (std::exception & e) {

@@ -10,7 +10,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/StateDescription.h"
+#include "edlib/StaticObervables.h"
 #include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {
@@ -41,10 +41,10 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::StateDescription<HamType> sd(params);
+    EDLib::StaticObervables<HamType> sd(params);
     sd.print_static_observables(ham);
     for (const auto& pair :ham.eigenpairs()) {
-      sd.print(ham, pair, 256, 1e-5);
+      sd.print_major_electronic_configuration(ham, pair, 256, 1e-5);
     }
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);

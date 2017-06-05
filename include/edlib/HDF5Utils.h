@@ -56,6 +56,11 @@ namespace EDLib {
 #endif
     }
 
+    void save_static_observables(const std::map < std::string, std::vector < double>> &observables, alps::hdf5::archive& ar, const std::string &root_path) {
+      for(auto ob = observables.begin(); ob != observables.end(); ++ob){
+        ar[root_path + "/static_observables/" + ob->first]<<ob->second;
+      }
+    }
   }
 }
 

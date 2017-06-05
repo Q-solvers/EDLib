@@ -10,14 +10,20 @@
 
 namespace EDLib {
   template<class Hamiltonian>
-  class StateDescription {
+  class StaticObervables {
   protected:
     typedef typename Hamiltonian::ModelType::precision precision;
     typedef typename Hamiltonian::ModelType::Sector sector;
 
   public:
 
-    StateDescription(alps::params &p) :
+    const static std::string _N_;
+    const static std::string _N_UP_;
+    const static std::string _N_DN_;
+    const static std::string _M_;
+    const static std::string _D_OCC_;
+
+    StaticObervables(alps::params &p) :
       _beta(p["lanc.BETA"].as<precision>()),
       _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
     {
@@ -78,11 +84,11 @@ namespace EDLib {
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
       std::map<std::string, std::vector<precision>> avg = {
-        {"n", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+        {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_N_DN_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
       };
       precision sum = 0.0;
       const EigenPair<precision, sector> &groundstate =  *ham.eigenpairs().begin();
@@ -106,15 +112,15 @@ namespace EDLib {
         }
         sum += boltzmann_f;
       }
-      for(auto ivar = avg.begin(); ivar != avg.end(); ++ivar){
-        for(int i = 0; i < (*ivar).second.size(); ++i){
-          (*ivar).second[i] /= sum;
+      for(auto ob = avg.begin(); ob != avg.end(); ++ob){
+        for(int i = 0; i < (*ob).second.size(); ++i){
+          (*ob).second[i] /= sum;
         }
       }
-      return avg;
+      return std::move(avg);
     }
 
-    std::vector<std::pair<long long, precision>> find(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
+    std::vector<std::pair<long long, precision>> find_major_electronic_configuration(Hamiltonian &_ham, const EigenPair <precision, sector> &pair, size_t nmax, precision trivial){
       _ham.model().symmetry().set_sector(pair.sector());
       _ham.storage().reset();
       int count = std::min(nmax, pair.eigenvector().size());
@@ -172,8 +178,8 @@ namespace EDLib {
 #endif
     }
 
-    void print(Hamiltonian& _ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
-      std::vector<std::pair<long long, precision>> contribs = find(_ham, pair, nmax, trivial);
+    void print_major_electronic_configuration(Hamiltonian &_ham, const EigenPair <precision, sector> &pair, size_t nmax, precision trivial){
+      std::vector<std::pair<long long, precision>> contribs = find_major_electronic_configuration(_ham, pair, nmax, trivial);
 #ifdef USE_MPI
       int myid;
       MPI_Comm_rank(_ham.comm(), &myid);
@@ -240,7 +246,7 @@ namespace EDLib {
         long long nst = ham.model().symmetry().state();
         for(int orb = 0; orb < ham.model().interacting_orbitals(); ++orb){
           int el_up = ham.model().checkState(nst, orb, ham.model().max_total_electrons());
-          int el_down = ham.model().checkState(nst, orb + ham.model().interacting_orbitals(), ham.model().max_total_electrons());
+          int el_down = ham.model().checkState(nst, orb + ham.model().orbitals(), ham.model().max_total_electrons());
           n[orb] += (el_up + el_down) * weight;
           n_up[orb] += el_up * weight;
           n_down[orb] += el_down * weight;
@@ -249,27 +255,27 @@ namespace EDLib {
         }
       }
       std::map<std::string, std::vector<precision>> result = {
-        {"n", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
-        {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
+        {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_N_DN_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)}
       };
 #ifdef USE_MPI
       // Add the sums from all processes.
-      MPI_Reduce(n.data(), result["n"].data(), n.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
-      MPI_Reduce(n_up.data(), result["n_up"].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
-      MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
-      MPI_Reduce(m.data(), result["m"].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
-      MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n.data(), result[_N_].data(), n.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_up.data(), result[_N_UP_].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(n_down.data(), result[_N_DN_].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(m.data(), result[_M_].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
-      result["n"] = n;
-      result["n_up"] = n_up;
-      result["n_down"] = n_down;
-      result["m"] = m;
-      result["d_occ"] = d_occ;
+      result[_N_] = n;
+      result[_N_up_] = n_up;
+      result[_N_dn_] = n_down;
+      result[_M_] = m;
+      result[_D_OCC_] = d_occ;
 #endif
-     return result;
+     return std::move(result);
     }
 
     /// Inverse temperature
@@ -278,6 +284,17 @@ namespace EDLib {
     precision _cutoff;
 
   };
+
+  template<class Hamiltonian>
+  const std::string StaticObervables<Hamiltonian>::_N_ = "N";
+  template<class Hamiltonian>
+  const std::string StaticObervables<Hamiltonian>::_N_UP_ = "N_up";
+  template<class Hamiltonian>
+  const std::string StaticObervables<Hamiltonian>::_N_DN_ = "N_dn";
+  template<class Hamiltonian>
+  const std::string StaticObervables<Hamiltonian>::_M_ = "M";
+  template<class Hamiltonian>
+  const std::string StaticObervables<Hamiltonian>::_D_OCC_ = "D_occ";
 
 }
 
