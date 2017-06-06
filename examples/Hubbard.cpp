@@ -15,6 +15,7 @@
 #include "edlib/SpinResolvedStorage.h"
 #include "edlib/StaticObervables.h"
 #include "edlib/MeshFactory.h"
+#include "edlib/ExecutionStatistic.h"
 
 
 
@@ -39,8 +40,10 @@ int main(int argc, const char ** argv) {
 #else
     EDLib::SRSHubbardHamiltonian ham(params);
 #endif
+    EDLib::common::statistics.registerEvent("total");
     ham.diag();
-    EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
+    EDLib::common::statistics.updateEvent("total");
+    /*EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < EDLib::SRSHubbardHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
     greensFunction.compute();
     greensFunction.save(ar, "results");
@@ -48,7 +51,8 @@ int main(int argc, const char ** argv) {
     susc.compute();
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
-    susc.save(ar, "results");
+    susc.save(ar, "results");*/
+    EDLib::common::statistics.print();
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(comm.rank() == 0) std::cerr<<e.what();
