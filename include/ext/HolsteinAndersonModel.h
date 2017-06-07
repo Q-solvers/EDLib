@@ -65,7 +65,7 @@ namespace EDLib {
         class BosonInnerState : public InnerState < prec > {
 
         public:
-          BosonInnerState(int ib, prec value, int cutoff, prec avg, bool dag) : _b(ib), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _dag(dag) {}
+          BosonInnerState(int ib, prec value, int cutoff, prec avg, bool dag) : _b(ib), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _avg(avg), _dag(dag) {}
 
           virtual int valid(long long nst, int Ns, int Nb) const {
             // extract bosonic part of state
