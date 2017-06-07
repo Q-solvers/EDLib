@@ -65,30 +65,30 @@ namespace EDLib {
         class BosonInnerState : public InnerState < prec > {
 
         public:
-          BosonInnerState(int ib, prec value, int cutoff, bool dag = false) : _b(ib), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _dag(dag) {}
+          BosonInnerState(int ib, prec value, int cutoff, prec avg, bool dag) : _b(ib), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _dag(dag) {}
 
           virtual int valid(long long nst, int Ns, int Nb) const {
             // extract bosonic part of state
             long long int bnst = nst & ((1 << Nb) - 1);
             // extract current boson from N-dimensional representation
             long long cbos = ((bnst >> (_bit_cutoff * _b)) & _cutoff);
-            return (this->checkState(nst >> Nb, 0, Ns) + this->checkState(nst >> Nb, Ns, Ns) - 1) * (_dag ? (cbos) < _cutoff : cbos > 0);
+            return (std::abs(this->checkState(nst >> Nb, 0, Ns) + this->checkState(nst >> Nb, Ns, Ns) - _avg) >1e-9) * (_dag ? (cbos) < _cutoff : cbos > 0);
           }
 
           virtual prec set(long long nst, long long &k, int &sign, int Ns, int Nb) const {
-            int N = (this->checkState(nst>>Nb, 0, Ns) + this->checkState(nst>>Nb, Ns, Ns) - 1);
+            double N = (this->checkState(nst>>Nb, 0, Ns) + this->checkState(nst>>Nb, Ns, Ns) - _avg);
             long long int bnst = nst & ((1 << Nb) - 1);
             long long cbos = ((bnst >> (_bit_cutoff * _b)) & _cutoff);
             if (_dag) {
               // create boson
               k = nst + (1 << (_bit_cutoff * _b));
-              sign = N;
-              return _value * std::sqrt(cbos + 1);
+              sign = 1;
+              return N*_value * std::sqrt(cbos + 1);
             } else {
               // destroy boson
               k = nst - (1 << (_bit_cutoff * _b));
-              sign = N;
-              return _value * std::sqrt(cbos);
+              sign = 1;
+              return N * _value * std::sqrt(cbos);
             }
           }
         private:
@@ -97,6 +97,7 @@ namespace EDLib {
           int _bit_cutoff;
           long long _cutoff;
           bool _dag;
+          prec _avg;
           prec _value;
         };
       }
@@ -138,6 +139,8 @@ namespace EDLib {
           input_data >> alps::make_pvp("Eps0/values", _Eps);
           input_data >> alps::make_pvp("mu", _xmu);
           input_data >> alps::make_pvp("U", _U);
+          double avg;
+          input_data >> alps::make_pvp("AVG", avg);
 
           int cutoff = p["NBBITS"].as<int>();
           input_data.close();
@@ -167,9 +170,9 @@ namespace EDLib {
           for (int ib = 0; ib < _W.size(); ++ib) {
             if (std::abs(_W[ib]) > 1e-10) {
               // destroy boson
-              _B_states.push_back(BSt(ib, _W[ib], cutoff, false));
+              _B_states.push_back(BSt(ib, _W[ib], cutoff, avg, false));
               // create boson
-              _B_states.push_back(BSt(ib, _W[ib], cutoff, true));
+              _B_states.push_back(BSt(ib, _W[ib], cutoff, avg, true));
             }
           }
         }

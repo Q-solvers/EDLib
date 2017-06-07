@@ -4,6 +4,7 @@ import h5py
 import numpy as np
 
 
+avg = 1.0
 U = 1.0
 xmu = 0.5
 Eps0 = np.array([0.,0.])
@@ -45,6 +46,8 @@ hop_g = data.create_group("Eps0")
 hop_g.create_dataset("values", data=Eps0)
 
 int_ds = data.create_dataset("U", shape=(), data=U)
+
+int_ds = data.create_dataset("AVG", shape=(), data=avg)
 
 #int_g = data.create_group("chemical_potential")
 int_ds = data.create_dataset("mu", shape=(), data=xmu)
