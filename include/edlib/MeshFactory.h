@@ -10,7 +10,7 @@
 #include <alps/gf/grid.hpp>
 
 /**
- * @brief MeshFactory class
+ * @brief Factory class for frequency mesh initialization. Creates proper Mesh-object based on the Mesh type .
  *
  * @author iskakoff
  */

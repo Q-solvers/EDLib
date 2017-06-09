@@ -29,6 +29,11 @@ namespace EDLib {
         return _omega;
       }
     protected:
+      /**
+       * Lanczos basis construction
+       * @param v - initial vector
+       * @return number of Lanczos iteration
+       */
       int lanczos(std::vector < precision > &v) {
         int nlanc = 0;
         unsigned long size = v.size();
@@ -129,6 +134,14 @@ namespace EDLib {
         return _beta;
       }
 
+      /**
+       * Computes complex value for frequency.
+       * For Matsubara frequecy z = i*omega_n. For real frequency add small imaginary temperature dependent broadering z = omega_n + i\delta
+       *
+       * @tparam M - mesh type
+       * @param index frequency index
+       * @return proper complex representation for current frequency
+       */
       template<typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, std::complex<double>>::type
       freq_point(int index) {
@@ -141,6 +154,13 @@ namespace EDLib {
         return std::complex<double>(_omega.points()[index], M_PI/_beta);
       };
 
+      /**
+       * Compute smallest index for frequency. Since Lanczos continued fraction can not compute zero Matsubara frequency bosonic Green's function
+       * we should compute it from first non-zero Matsubara and treat zero frequency separately.
+       *
+       * @tparam M - mesh type
+       * @return valid smallest index for frequency
+       */
       template<typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, int>::type
       zero_freq() {
@@ -166,19 +186,26 @@ namespace EDLib {
       };
 
     private:
+      /// frequency mesh
       Mesh _omega;
+      /// inverse temperature
       precision _beta;
 
+      /// maximum number of Lanczos iteration
       int _Nl;
+      /// Hamiltonain object
       Hamiltonian &ham;
 
+      /// Lanczos tridiagonal matrix
       std::vector < precision > alfalanc;
       std::vector < precision > betalanc;
 
+      /// continued fraction arrays
       std::vector < std::complex < double > > det;
       std::vector < std::complex < double > > dl;
 
       /**
+       * Computes continued fraction for specific frequency
        *
        * @param expectation_value
        * @param nlanc - number of Lanczos operation have been performed

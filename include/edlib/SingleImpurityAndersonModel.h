@@ -177,6 +177,11 @@ namespace EDLib {
         prec _U;
       };
     }
+    /**
+     * Single multi-orbital Impurity Anderson Model class
+     *
+     * @tparam prec - floating point precision
+     */
     template<typename prec>
     class SingleImpurityAndersonModel : public FermionicModel {
     public:
@@ -223,7 +228,7 @@ namespace EDLib {
         if(b_ind != _Ns - _ml) {
           throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
         }
-
+        // fill hybridization part
         for (int im = 0; im < _ml; ++im) {
           for (int ik = 0; ik < _Vk[im].size(); ++ik) {
             for (int is = 0; is < _ms; ++is) {
@@ -235,6 +240,7 @@ namespace EDLib {
             }
           }
         }
+        // fill off-diagonal interaction term
         for (int is1 = 0; is1 < _ms; ++is1) {
           for (int is2 = 0; is2 < _ms; ++is2) {
             for (int i = 0; i < _ml; ++i) {
@@ -256,6 +262,11 @@ namespace EDLib {
         }
       }
 
+      /**
+       * computes diagonal contribution for the specific occupation basis state
+       * @param state - occupation basis state
+       * @return <state | H | state>
+       */
       inline const precision diagonal(long long state) const {
         precision xtemp = 0.0;
         for (int im = 0; im < _ml; ++im) {
@@ -278,6 +289,9 @@ namespace EDLib {
         return xtemp;
       }
 
+      /**
+       * @deprecated
+       */
       inline long long interacting_states(long long nst) {
         long long up = 0;
         for (int is = 0; is < _ms; ++is) {
@@ -287,31 +301,63 @@ namespace EDLib {
         return (up<<_ml) + down;
       }
 
+      /**
+       * Check that state describes valid transition for basis vector |nst>
+       * @param state - transition state
+       * @param nst - occupation basis vector
+       * @return 1 or 0 wheater the transition is possible or not respectively
+       */
       inline int valid(const St &state, long long nst) {
         return state.valid(nst, _Ns);
       }
 
+      /**
+       * Perform transition "state" from state |nst> to |k>
+       * @param state
+       * @param nst
+       * @param k
+       * @param sign
+       * @return contribution to off-diagonal Hamilonian element
+       */
       inline precision set(const St &state, long long nst, long long &k, int &sign) {
         state.set(nst, k, sign, _Ns);
         return state.value();
       }
 
+      /**
+       * Model symmetry type
+       */
       SYMMETRY &symmetry() {
         return _symmetry;
       }
 
+      /**
+       * @return Hybridization transitions
+       */
       inline const std::vector<HSt>& T_states() const {
         return _T_states;
       }
-
+      /**
+       * @return Off-diagonal Coulomb transitions
+       */
       inline const std::vector<USt>& V_states() const {
         return _V_states;
       }
 
+      /**
+       * Only impurity orbitals have Coulomb interaction. Bath is non-interacting.
+       * @return number of impurity orbitals
+       */
       int interacting_orbitals() const {
         return _ml;
       }
 
+      /**
+       * Computes bare Green's function
+       * @tparam Mesh - Green's function frequency mesh
+       * @param bare_gf - Bare Green's function container
+       * @param beta - inverse temperature
+       */
       template<typename Mesh>
       void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
         for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
@@ -329,19 +375,28 @@ namespace EDLib {
       }
 
     private:
+      /// model symmetry
       SYMMETRY _symmetry;
+      /// number of impurity orbitals
       int _ml;
-      int _Nk;
-      precision _xmu;
-      std::vector < std::vector < precision > > _Eps;
-      std::vector < std::vector < std::vector < precision > > > _Vk;
-      std::vector < std::vector < std::vector < precision > > > _Epsk;
+      /// Coulomb interaction matrix
       std::vector < std::vector < std::vector < std::vector < precision > > > > _U;
+      /// chemical potential
+      precision _xmu;
+      /// impurity orbitals energy
+      std::vector < std::vector < precision > > _Eps;
+      /// number of bath states
+      int _Nk;
+      /// Hybridization with bath
+      std::vector < std::vector < std::vector < precision > > > _Vk;
+      /// Bath energy levels
+      std::vector < std::vector < std::vector < precision > > > _Epsk;
+      /// indices for bath
       std::vector<int> _bath_ind;
 
-      // Kinetic part of the off-diagonal Hamiltonian elements
+      /// Kinetic part of the off-diagonal Hamiltonian elements
       std::vector < HSt > _T_states;
-      // Interaction part of the off-diagonal Hamiltonian elements
+      /// Interaction part of the off-diagonal Hamiltonian elements
       std::vector < USt > _V_states;
     };
 

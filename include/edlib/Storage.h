@@ -94,7 +94,6 @@ namespace EDLib {
         evals.resize(nconv);
         seupd(&rvec, howmny, &select[0], &evals[0], &v[0], &ldv, &sigma, bmat, &n, which, &nev, &tol, &resid[0], &ncv, &v[0],
               &ldv, &iparam[0], &ipntr[0], &workd[0], &workl[0], &lworkl, &info);
-        // TODO: need to recover the eigenvectors from v
         if (info < 0) {
           std::cout << "' '" << std::endl;
           std::cout << "' Error with _seupd, info = '  " << info << std::endl;
@@ -102,7 +101,6 @@ namespace EDLib {
           std::cout << "' '" << std::endl;
           return finalize(info);
         }
-        // TODO: save eigenvalues for current sector in local array. Merge all fouded eigen pairs together and keep only N smallest
         if (_eval_only == 0) {
           evecs.assign(nconv, std::vector < prec >(n, prec(0.0)));
           for (int i = 0; i < nconv; ++i) {
@@ -148,16 +146,22 @@ namespace EDLib {
         return 0;
       }
 
+      /**
+       * @return eigen-values
+       */
       const std::vector < prec > &eigenvalues() const {
         return evals;
       }
 
-      const std::vector < std::vector < prec > > &eigenvectors() const {
-        return evecs;
-      }
-
       std::vector < prec > &eigenvalues() {
         return evals;
+      }
+
+      /**
+       * @return eigen-vectors
+       */
+      const std::vector < std::vector < prec > > &eigenvectors() const {
+        return evecs;
       }
 
       std::vector < std::vector < prec > > &eigenvectors() {
@@ -169,9 +173,24 @@ namespace EDLib {
        * Should be implemented based on storage type
        */
       virtual void av(prec *v, prec *w, int n, bool clear = true) = 0;
+      /**
+       * Perfrom additional routines under ARPACK work array if necessary
+       * @param w - working array pointer
+       * @param shift - offset in working array
+       */
       virtual void prepare_work_arrays(prec *w, size_t shift = 0){};
+      /**
+       * Finilize diagonalization for current Hamiltonian matrix sector
+       * @param info - diagoanlization result code
+       * @param bcast - perform broadcast of eigen values
+       * @param empty - arrays are empty for this CPU
+       * @return diagonalization result code
+       */
       virtual int finalize(int info, bool bcast = true, bool empty = false){return info;};
 
+      /**
+       * ARPACK wrappers
+       */
       void saupd(int *ido, char *bmat, int *n, char *which, int *nev, prec *tol, prec *resid, int *ncv, prec *v, int *ldv, int *iparam, int *ipntr,
                  prec *workd, prec *workl, int *lworkl, int *info) {};
 
@@ -188,7 +207,9 @@ namespace EDLib {
       }
 #endif
     protected:
+      /// current CPU dimension
       int &n() { return _n; }
+      /// total matrix dimesion
       int &ntot() { return _ntot; }
 
 #ifdef USE_MPI
@@ -211,9 +232,13 @@ namespace EDLib {
     private:
       int _ntot;
       int _n;
+      /// number of eigenvalues to be computed
       int _nev;
+      /// number of converged ritz values
       int _ncv;
+      /// compute only eigenvalues to reduce memory requirements
       int _eval_only;
+      ///
       std::vector < prec > v;
       std::vector < prec > resid;
       std::vector < prec > workd;

@@ -25,7 +25,7 @@ namespace EDLib {
     }
 
     /**
-     *
+     * reset to initial state
      */
     inline void init_state(int ik, std::vector < int > &vec) {
       for (int i = 0; i < ik; i++) {
@@ -34,7 +34,7 @@ namespace EDLib {
     }
 
     /**
-     *
+     * compute next combination in lexicographicaly ordered basis
      */
     inline bool next_combination(int n, int k, std::vector < int > &old) {
       for (int i = k - 1; i >= 0; i--) {
@@ -50,6 +50,7 @@ namespace EDLib {
     }
 
   private:
+    /// chached values for combination k of n
     std::vector < std::vector < int > > _c_n_k;
 
     /**

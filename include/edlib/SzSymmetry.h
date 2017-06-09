@@ -26,10 +26,18 @@ namespace EDLib {
 
         Sector(int up, int down, size_t size) : _nup(up), _ndown(down), _size(size) {};
 
+        /**
+         * @return number of electrons with spin-up
+         */
         int nup() const { return _nup; }
-
+        /**
+         * @return number of electrons with spin-down
+         */
         int ndown() const { return _ndown; }
 
+        /**
+         * @return sector dimension
+         */
         size_t size() const { return _size; }
 
         void print() const {

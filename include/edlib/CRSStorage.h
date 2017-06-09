@@ -66,12 +66,12 @@ namespace EDLib {
         int isign = 0;
         while (_model.symmetry().next_state()) {
           long long nst = _model.symmetry().state();
-          /// Compute diagonal element for current i state
+          // Compute diagonal element for current i state
           addDiagonal(i, _model.diagonal(nst));
-          /// non-diagonal terms calculation
-          /// hoppings
+          // non-diagonal terms calculation
+          // hoppings
           off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
-          /// interactions
+          // interactions
           off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
           i++;
         }
@@ -189,9 +189,9 @@ namespace EDLib {
         long long k = 0;
         int isign = 0;
         for (int kkk = 0; kkk < states.size(); ++kkk) {
-          /// check that there is transition for current state
+          // check that there is transition for current state
           if (_model.valid(states[kkk], nst)) {
-            /// set new state
+            // set new state
             prec val = _model.set(states[kkk], nst, k, isign);
             int k_index = _model.symmetry().index(k);
             addElement(i, k_index, val, isign);
@@ -199,7 +199,7 @@ namespace EDLib {
         }
       };
 
-      /// update the reference to the matrix end
+      // update the reference to the matrix end
       void endMatrix() {
         row_ptr[n()] = _vind;
       }
