@@ -17,10 +17,12 @@
 namespace EDLib {
   namespace Storage {
 
-    template<class Model>
-    class SpinResolvedStorage : public Storage < typename Model::precision > {
+    template<class ModelType>
+    class SpinResolvedStorage : public Storage < typename ModelType::precision > {
+      static_assert(std::is_base_of<Symmetry::SzSymmetry, typename ModelType::SYMMETRY>::value, "Model have wrong symmetry.");
+    public:
+      typedef ModelType Model;
       typedef typename Model::precision prec;
-      static_assert(std::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value, "Model have wrong symmetry.");
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;

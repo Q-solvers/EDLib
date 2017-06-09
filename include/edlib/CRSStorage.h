@@ -13,12 +13,13 @@
 
 namespace EDLib {
   namespace Storage {
-    template<class Model>
-    class CRSStorage : public Storage < typename Model::precision > {
-      typedef typename Model::precision prec;
+    template<class ModelType>
+    class CRSStorage : public Storage < typename ModelType::precision > {
+      typedef typename ModelType::precision prec;
       using Storage < prec >::n;
       using Storage < prec >::ntot;
     public:
+      typedef ModelType Model;
 #ifdef USE_MPI
       CRSStorage(alps::params &p, Model &s, MPI_Comm comm) : Storage < prec >(p, comm),
 #else

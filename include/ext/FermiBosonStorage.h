@@ -19,10 +19,11 @@ namespace EDLib {
      *
      * @author iskakoff
      */
-    template<class Model>
-    class FermiBosonStorage : public Storage < typename Model::precision > {
-      typedef typename Model::precision prec;
+    template<class ModelType>
+    class FermiBosonStorage : public Storage < typename ModelType::precision > {
+      typedef typename ModelType::precision prec;
     public:
+      typedef ModelType Model;
 #ifdef USE_MPI
       FermiBosonStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage(p, comm), _model(m), _el_symmetry(p[""].as<int>()) {}
 #else
