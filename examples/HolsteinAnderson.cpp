@@ -38,7 +38,7 @@ int main(int argc, const char ** argv) {
 #ifdef USE_MPI
   if(!comm.rank())
 #endif
-    ar.open(params["OUTPUT_FILE"], "w");
+    ar.open(params["OUTPUT_FILE"].as<std::string>(), "w");
   try {
     // Construct Hamiltonian object
 #ifdef USE_MPI
