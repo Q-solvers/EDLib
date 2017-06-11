@@ -15,10 +15,11 @@
 namespace EDLib {
   namespace Storage {
 
-    template<class Model>
-    class SOCRSStorage : public Storage < typename Model::precision > {
-      typedef typename Model::precision prec;
+    template<class ModelType>
+    class SOCRSStorage : public Storage < typename ModelType::precision > {
+      typedef typename ModelType::precision prec;
     public:
+      typedef ModelType Model;
       using Storage < prec >::n;
       using Storage < prec >::ntot;
 #ifdef USE_MPI

@@ -14,43 +14,89 @@
 
 namespace EDLib {
   namespace gf {
+    /**
+     * Base class for susceptibility bosonic operator
+     * @tparam precision - floating point precision
+     */
     template<typename precision>
     class BosonicOperator{
     public:
+      /**
+       * @param avg - average value for zero Matsubara frequency correction
+       */
       BosonicOperator(precision avg) : _avg(avg) {}
       precision average () const {
         return _avg;
       }
     private:
+      /// operator average value
       precision _avg;
     };
 
+    /**
+     * Spin operator
+     * @tparam precision -- floating point precision
+     */
     template<typename precision>
     class SzOperator: public BosonicOperator<precision> {
     public:
+      /**
+       * @param avg -- average value of spin operator. By default we consider paramagnetic system and
+       * average spin is 0.
+       */
       SzOperator(precision avg = 0.0) : BosonicOperator<precision>(avg) {};
+      /**
+       *
+       * @tparam ModelType -- specific model type
+       * @param state - occupation basis state
+       * @param iii - electonic orbital
+       * @param model - model instance
+       * @return value of the total spin for site 'iii' in the basis state 'state'
+       */
       template<class ModelType>
       precision action(long long state, int iii, const ModelType & model) const {
-        /// 0.5 * (n_up - n_down)
+        // 0.5 * (n_up - n_down)
         return 0.5*(model.checkState(state, iii, model.max_total_electrons()) -
                     model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
+      /**
+       * @return operator name
+       */
       std::string name() const {return "Sz";};
     };
 
+    /**
+     * Charge operator
+     * @tparam precision - floating point precision
+     */
     template<typename precision>
     class NOperator: public BosonicOperator<precision> {
     public:
       NOperator(precision avg = 1.0) : BosonicOperator<precision>(avg) {};
+      /**
+       *
+       * @tparam ModelType -- specific model type
+       * @param state - occupation basis state
+       * @param iii - electonic orbital
+       * @param model - model instance
+       * @return value of the total charge for site 'iii' in the basis state 'state'
+       */
       template<class ModelType>
       precision action(long long state, int iii, const ModelType & model) const {
-        /// (n_up + n_down)
+        // (n_up + n_down)
         return (model.checkState(state, iii, model.max_total_electrons()) +
                 model.checkState(state, iii + model.orbitals(), model.max_total_electrons()));
       }
       std::string name() const {return "N";};
     };
 
+    /**
+     * General class for local susceptibilities calculation.
+     *
+     * @tparam Hamiltonian - Hamiltonian instance type
+     * @tparam Mesh - type of frequency mesh. can be either alps::gf::real_frequency_mesh or alps::gf::matsubara_positive_only
+     * @tparam Args - additional parameters for Mesh. For matsubara mesh should be alps::gf::statistics::statistics_type
+     */
     template<class Hamiltonian, class Mesh, typename ... Args>
     class ChiLoc : public Lanczos < Hamiltonian, Mesh, Args... > {
       using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
@@ -60,9 +106,16 @@ namespace EDLib {
       using Lanczos < Hamiltonian, Mesh, Args... >::compute_sym_continued_fraction;
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
+      /**
+       *
+       * @param p - ALPSCore parameters
+       * @param h - Hamiltonian instance
+       * @param args - additional parameters for mesh. For example for matsubara mesh should it be alps::gf::statistics::statistics_type::BOSONIC
+       */
       ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
+        // we can not evaluate Green's function if eigenvectors have not been computed.
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
@@ -72,26 +125,32 @@ namespace EDLib {
        * Compute two-particle Green's function for specific operator Op.
        *
        * @tparam Op type of bosonic operator (should be either SzOperator or NOperator)
+       * @param avg_ptr - pointer to the operator average value. If null -- the default average vlues will be used for specific operator.
        */
       template<typename Op = SzOperator<precision> >
       void compute(const double * avg_ptr = nullptr) {
         static_assert(std::is_base_of<BosonicOperator<precision>, Op>::value, "Wrong bosonic operator.");
-        // cleanup
+        // reset to 0
         gf *= 0.0;
         _Z = 0.0;
+        // check that at least one eigen-value have computed
         if(hamiltonian().eigenpairs().empty())
           return;
 #ifdef USE_MPI
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
+        // get groundstate
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
+        // compute partition function
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
+        // init bosonic operator
         const Op op = (avg_ptr == nullptr ? Op() : Op(*avg_ptr));
         _type = op.name();
+        // loop over all eigen-pairs
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
@@ -114,6 +173,7 @@ namespace EDLib {
               if(rank==0){
 #endif
               std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+                // compute symmetrized Lanczos continued fraction
                 compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
 #ifdef USE_MPI
             }
@@ -124,37 +184,54 @@ namespace EDLib {
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
+        // normalize Green's function
         gf/= _Z;
+        // Compute zero-frequency contribution
         zero_freq_contribution(op);
 #ifdef USE_MPI
         }
 #endif
       }
 
+      /**
+       * zero Matsubara frequency contribution. Since for bosonic Green's function Lanczos continued fraction can not
+       * properly evaluate zero frequency contribution we compute it from the following sum-rule:
+       * \Chi(w_0) = \beta \Chi(tau = 0) - 2 \sum_{n!=0} \Chi(w_n)
+       *
+       * @tparam O - type of operator
+       * @tparam M - Mesh type
+       * @param op - operator instance
+       */
       template<typename O, typename M= Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
-        /// Compute static susceptibility
+        // Compute static susceptibility for each orbital
         for (int i = 0; i < _model.interacting_orbitals(); ++i) {
           double chiSum = 0.0;
-          /// Susceptibility decays as c2/w^2 + c4/w^4
-          /// compute c2 and c4 from two largest freq points
-          /// and for next pair as well to check convergence
+          // Susceptibility decays as c2/w^2 + c4/w^4
+          // compute c2 and c4 from two largest freq points
+          // and for next pair as well to check convergence
           double c2, c4;
           double c2_2, c4_2;
           double tail, tail2;
+          // check that we have enough Matsubara frequencies and we already sit in the high-frequency tail regime
           get_tail(i, omega().extent()-1, c2, c4, tail);
           get_tail(i, omega().extent()-2, c2_2, c4_2, tail2);
           if(std::abs(tail-tail2)/std::abs(tail) > 1e-4) {
             std::cerr<<"Not enough frequencies to compute high frequency tail. Please increase number of frequencies. Diff: "<<std::abs(tail-tail2)/std::abs(tail)<<std::endl;
           }
+          // loop over non-zero Matsubara frequencies
           for (int iomega = 1; iomega < omega().extent(); ++iomega) {
             double om = omega().points()[iomega];
             chiSum = chiSum + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
           }
+          // computes zero-frequency contribution
           gf(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
         }
       };
 
+      /**
+       * For real frequency mesh there is nothing to do. Zero frequency has been already correctly computed.
+       */
       template<typename O, typename M= Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
 
@@ -181,6 +258,11 @@ namespace EDLib {
         tail= c2 * beta() * beta() / 24.0 + c4 * beta() * beta() * beta() * beta() / 1440.0;
       }
 
+      /**
+       * Save susceptibility to HDF5 archive and to the text-file
+       * @param ar - hdf5 archive file
+       * @param path - root path in hdf5 archive
+       */
       void save(alps::hdf5::archive& ar, const std::string & path) {
 #ifdef USE_MPI
         int rank;
@@ -201,10 +283,15 @@ namespace EDLib {
       }
 
     private:
+      /// Green's function conatainer type
       typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
+      /// Green's function conatainer
       GF_TYPE gf;
+      /// Specific model
       typename Hamiltonian::ModelType &_model;
+      /// Boltsman-factor cut-off
       precision _cutoff;
+      /// Partition function
       precision _Z;
       /// type of recently computed susceptibility
       std::string _type;

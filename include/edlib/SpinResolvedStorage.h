@@ -17,10 +17,12 @@
 namespace EDLib {
   namespace Storage {
 
-    template<class Model>
-    class SpinResolvedStorage : public Storage < typename Model::precision > {
+    template<class ModelType>
+    class SpinResolvedStorage : public Storage < typename ModelType::precision > {
+      static_assert(std::is_base_of<Symmetry::SzSymmetry, typename ModelType::SYMMETRY>::value, "Model have wrong symmetry.");
+    public:
+      typedef ModelType Model;
       typedef typename Model::precision prec;
-      static_assert(std::is_base_of<Symmetry::SzSymmetry, typename Model::SYMMETRY>::value, "Model have wrong symmetry.");
     public:
       using Storage < prec >::n;
       using Storage < prec >::ntot;
@@ -55,38 +57,38 @@ namespace EDLib {
 
       virtual void av(prec *v, prec *w, int n, bool clear = true) {
 #ifdef USE_MPI
-        /// Initialize inter-processor communications
-        /// we collect all data from the remote processes into _vecval array
+        // Initialize inter-processor communications
+        // we collect all data from the remote processes into _vecval array
         MPI_Win_fence(MPI_MODE_NOPRECEDE, _win);
         for(int i = 0; i<_procs.size(); ++i) {
           if(_procs[i]!=0)
           MPI_Get(&_vecval[_proc_offset[i]], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), i, _loc_min[i], _proc_size[i], alps::mpi::detail::mpi_type<prec>(), _win);
         }
 #endif
-        /// Iteration over diagonal contribution.
+        // Iteration over diagonal contribution.
         for (int i = 0; i < n; ++i) {
-          /// Diagonal contribution.
+          // Diagonal contribution.
           w[i] = _diagonal[i] * v[i] + (clear ? 0.0 : w[i]);
         }
-        /// Off-diagonal contribution. Process spin-down contribution for each spin-up block
-        /// iterate over spin-up blocks
+        // Off-diagonal contribution. Process spin-down contribution for each spin-up block
+        // iterate over spin-up blocks
         for (int k = 0; k < _up_size; ++k) {
-          /// Iteration over rows.
+          // Iteration over rows.
           for (int i = 0; i < _down_symmetry.sector().size(); ++i) {
-            /// Iteration over columns.
+            // Iteration over columns.
             for (int j = H_down.row_ptr()[i]; j < H_down.row_ptr()[i + 1]; ++j) {
               w[i + k * _down_symmetry.sector().size()] += H_down.values()[j] * v[H_down.col_ind()[j] + k * _down_symmetry.sector().size()];
             }
           }
         }
 #ifdef USE_MPI
-        /// Waiting for the data to be received
+        // Waiting for the data to be received
         MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOPUT | MPI_MODE_NOSTORE, _win);
 #endif
-        /// Process spin-up hopping contribution
-        /// Iteration over rows.
+        // Process spin-up hopping contribution
+        // Iteration over rows.
         for (int i = 0; i < _up_size; ++i) {
-          /// Iteration over columns.
+          // Iteration over columns.
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             for (int k = 0; k < _down_symmetry.sector().size(); ++k) {
 #ifdef USE_MPI
@@ -98,8 +100,8 @@ namespace EDLib {
           }
         }
 
-        /// Off-diagonal interaction contribution
-        /// Check that we have off-diagonal interaction elements
+        // Off-diagonal interaction contribution
+        // Check that we have off-diagonal interaction elements
         if(H_loc.row_ptr().size()!=0)
         for (size_t i = _int_start; i < n; ++i) {
           for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
@@ -112,26 +114,29 @@ namespace EDLib {
         }
       }
 
+      /**
+       * Fill Hamiltonain matrix for current symmetry sector
+       */
       void fill() {
         reset();
         if(n()==0) {
-          /// Do nothing if the matrix size is zero;
+          // Do nothing if the matrix size is zero;
           return;
         }
-        /// Hopping term
-        /// fill off-diagonal matrix for each spin
+        // Hopping term
+        // fill off-diagonal matrix for each spin
         fill_spin(_up_symmetry, _Ns, H_up);
         fill_spin(_down_symmetry, 0, H_down);
-        /// fill local part;
+        // fill local part;
         int isign;
         long long k;
         _int_start = _locsize;
         for(size_t i =0; i<_locsize; ++i) {
           _model.symmetry().next_state();
           long long nst = _model.symmetry().state();
-          /// add diagonal contribution
+          // add diagonal contribution
           _diagonal[i] = _model.diagonal(nst);
-          /// Add off-diagonal contribution from interaction term
+          // Add off-diagonal contribution from interaction term
           if(_model.V_states().size() > 0) {
             for (int kkk = 0; kkk < _model.V_states().size(); ++kkk) {
               if (_model.valid(_model.V_states()[kkk], nst)) {
@@ -159,30 +164,36 @@ namespace EDLib {
        */
       void reset() {
         _model.symmetry().init();
+        // For spin-resolved storage we should guarantee that model is spin-symmetric.
         const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
+        // get current symmetry sector
         const Symmetry::SzSymmetry::Sector &sector = symmetry.sector();
+        // get symmetries for each spin
         _up_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.nup(), symmetry.comb().c_n_k(_Ns, sector.nup())));
         _down_symmetry.set_sector(Symmetry::NSymmetry::Sector(sector.ndown(), symmetry.comb().c_n_k(_Ns, sector.ndown())));
+        // get each spin dimensions
         size_t up_size = _up_symmetry.sector().size();
         size_t down_size = _down_symmetry.sector().size();
+        // init hopping Hamiltonians for each spin
         H_up.init(up_size, 100);
         H_down.init(down_size, 100);
 #ifdef USE_MPI
+        // communicator to be used during diagonalization
         MPI_Comm run_comm;
-        /// check that there is data for the current CPU
+        // check that there is data for the current CPU
         int color = _myid < up_size ? 1 : MPI_UNDEFINED;
-        /// Create new MPI communicator for the processors with defined color
+        // Create new MPI communicator for the processors with defined color
         MPI_Comm_split(_comm, color, _myid, &run_comm);
         if(color == 1) {
-          /// there is data for current CPU
-          /// update working communicator
+          // there is data for current CPU
+          // update working communicator
           _run_comm = run_comm;
-          /// get CPU rank and size for recently created working communicator
+          // get CPU rank and size for recently created working communicator
           int myid;
           MPI_Comm_rank(_run_comm,&myid);
           int size;
           MPI_Comm_size(_run_comm,&size);
-          /// compute the size of local arrays and the offset from the beginning
+          // compute the size of local arrays and the offset from the beginning
           int locsize = up_size / size;
           if ((up_size % size) > myid) {
             locsize += 1;
@@ -190,22 +201,22 @@ namespace EDLib {
           } else {
             _offset = (myid* locsize + (up_size % size))* _down_symmetry.sector().size();
           }
-          /// local dimension for the spin-up hopping Hamiltonian matrix
+          // local dimension for the spin-up hopping Hamiltonian matrix
           _up_size = locsize;
-          /// offet in the spin-up channel
+          // offet in the spin-up channel
           _up_shift = _offset / down_size;
-          /// local dimension for the whole Hamiltonian matrix
+          // local dimension for the whole Hamiltonian matrix
           _locsize = locsize * down_size;
-          /// apply offset to the symmetry object to generate proper configuration state
+          // apply offset to the symmetry object to generate proper configuration state
           _model.symmetry().set_offset(_offset);
-          /// inter processor communactions
-          /// array with flags for each processor
+          // inter processor communactions
+          // array with flags for each processor
           _procs.assign(size, 0);
-          /// offset of each processor in the vecval array
+          // offset of each processor in the vecval array
           _proc_offset.assign(size, 0);
-          /// data amount to be received
+          // data amount to be received
           _proc_size.assign(size, 0);
-          /// index of the first element to be received
+          // index of the first element to be received
           _loc_min.assign(size, 0);
         } else {
           _up_size = 0;
@@ -216,16 +227,16 @@ namespace EDLib {
         _up_size = up_size;
         _up_shift = 0;
 #endif
-        /// allocate memory for local Hamiltonian
-        /// density-density contribution
+        // allocate memory for local Hamiltonian
+        // density-density contribution
         _diagonal.assign(_locsize, prec(0.0));
-        /// off-diagonal contribution
+        // off-diagonal contribution
         if(_model.V_states().size()>0) {
           H_loc.init(_locsize, 3);
         }
-        /// local dimension of the Hamiltonian matrix
+        // local dimension of the Hamiltonian matrix
         n() = _locsize;
-        /// total dimension of the Hamiltonian matrix
+        // total dimension of the Hamiltonian matrix
         ntot() = sector.size();
       }
 
@@ -235,26 +246,26 @@ namespace EDLib {
        * @return size of local vector for the specific symmetry sector
        */
       size_t vector_size(typename Model::Sector sector) {
-        /// get the total dimension for the current symmetry sector
+        // get the total dimension for the current symmetry sector
         size_t sector_size = sector.size();
 #ifdef USE_MPI
         int myid,size;
-        /// get rank and size for current CPU in the global communicator
+        // get rank and size for current CPU in the global communicator
         MPI_Comm_rank(_comm,&myid);
         MPI_Comm_size(_comm,&size);
         size_t up_size = _model.symmetry().comb().c_n_k(_Ns, sector.nup());
         size_t down_size = sector_size / up_size;
         size = up_size>size ? size : up_size;
-        /// there is no data for current CPU
+        // there is no data for current CPU
         if(myid >= size) {
           return 0;
         }
-        /// compute local dimension for the spin-up channel
+        // compute local dimension for the spin-up channel
         size_t locsize = up_size / size;
         if ((up_size % size) > myid) {
           locsize += 1;
         }
-        /// compute and return the total dimension
+        // compute and return the total dimension
         return locsize * down_size;
 #else
         return sector_size;
@@ -271,15 +282,15 @@ namespace EDLib {
        * @param a -- destroy particle if true, create otherwise
        */
       void a_adag(int i, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
-        /// local dimension of current vector
+        // local dimension of current vector
         size_t locsize = invec.size();
-        /// maximal local dimension of current vector
+        // maximal local dimension of current vector
         size_t locsize_max = locsize;
-        /// dimension of the resulting symmetry sector
+        // dimension of the resulting symmetry sector
         size_t next_size = next_sec.size();
-        /// dimension of spin-up channel Hamiltonian matrix
+        // dimension of spin-up channel Hamiltonian matrix
         size_t up_size = _model.symmetry().comb().c_n_k(_Ns, next_sec.nup());
-        /// dimension of spin-down channel Hamiltonian matrix
+        // dimension of spin-down channel Hamiltonian matrix
         size_t down_size = next_size / up_size;
         long long k;
         int sign;
@@ -291,47 +302,47 @@ namespace EDLib {
         int size;
         MPI_Comm_size(_comm,&size);
         int t = 0;
-        /// synchronization flag
+        // synchronization flag
         bool fence = false;
-        /// adjust maximal local dimension
+        // adjust maximal local dimension
         if(_up_symmetry.sector().size()%size != 0) {
           locsize_max+= _down_symmetry.sector().size();
         }
-        /// communication buffer
+        // communication buffer
         std::vector<prec> buff(1000, 0.0);
-        /// communication window
+        // communication window
         MPI_Win eigwin;
         MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, MPI_COMM_WORLD, &eigwin);
         MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
 #endif
-        /// iterate over local part of vector
+        // iterate over local part of vector
         for (int ind = 0; ind < locsize_max; ++ind) {
 #ifdef USE_MPI
-          /// perfrom one-sided communication
+          // perfrom one-sided communication
           if(fence)
             MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
           fence=false;
 #endif
-          /// destroy (create) particle if index is within boundary
+          // try to destroy (create) particle if index is within boundary
           if(ind<locsize) {
             _model.symmetry().next_state();
             long long nst = _model.symmetry().state();
-            /// check that particle can be destroyed (created)
+            // check that particle can be destroyed (created)
             if (_model.checkState(nst, i, _model.max_total_electrons()) == (a ? 1 : 0)) {
               if (a) _model.a(i, nst, k, sign);
               else _model.adag(i, nst, k, sign);
-              /// compute index of the new state
+              // compute index of the new state
               int i1 = _model.symmetry().index(k, next_sec);
 #ifdef USE_MPI
               int size;
               MPI_Comm_size(_run_comm, &size);
-              /// compute CPU id and local index of new state
+              // compute CPU id and local index of new state
               calcIndex(ci, cid, i1, up_size, down_size, size);
-              /// avoid intra-CPU MPI communications
+              // avoid intra-CPU MPI communications
               if(myid == cid) {
                 outvec[ci] = sign * invec[ind];
               } else {
-                /// initiate one-sided communication
+                // initiate one-sided communication
                 buff[t]=sign*invec[ind];
                 MPI_Put(&buff[t],1,alps::mpi::detail::mpi_type<prec>(),cid,ci,1,alps::mpi::detail::mpi_type<prec>(), eigwin);
               }
@@ -343,9 +354,9 @@ namespace EDLib {
             }
           }
 #ifdef USE_MPI
-          /// check buffer boundary
+          // check buffer boundary
           if((t+1)==buff.size()){fence=true;t=0;}
-          /// synchronize if necessary
+          // synchronize if necessary
           if(fence)
             MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
 #endif
@@ -422,6 +433,9 @@ namespace EDLib {
         return info;
       }
 
+      /**
+       * @return offset from 0 for current CPU
+       */
       size_t offset(){
         return _offset;
       }
@@ -442,6 +456,7 @@ namespace EDLib {
       /// array to store remote processes communication data
       std::vector < prec > _vecval;
 
+      /// symmetries for each spin
       Symmetry::NSymmetry _up_symmetry;
       Symmetry::NSymmetry _down_symmetry;
 
@@ -483,14 +498,14 @@ namespace EDLib {
        */
       void find_neighbours() {
         int ci, cid;
-        /// size of the working communicator
+        // size of the working communicator
         int nprocs;
         MPI_Comm_size(_run_comm, &nprocs);
         std::vector<int> loc_offset(nprocs, 0);
-        /// Find smallest and largest index in the current Hamiltonian
+        // Find smallest and largest index in the current Hamiltonian
         std::vector<int> l_loc_max(_loc_min.size(), INT_MIN);
         std::vector<int> l_loc_min(_loc_min.size(), INT_MAX);
-        /// For the spin-up channel
+        // For the spin-up channel
         for(int i = 0; i< _up_size; ++ i) {
           for (int j = H_up.row_ptr()[i+_up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);
@@ -499,7 +514,7 @@ namespace EDLib {
             if(_procs[cid]==0)  {_procs[cid]=1;}
           }
         }
-        /// For the off-diagonal interaction term
+        // For the off-diagonal interaction term
         if(H_loc.row_ptr().size()!=0) {
           for (size_t i = _int_start; i < _locsize; ++i) {
             for (int j = H_loc.row_ptr()[i]; j < H_loc.row_ptr()[i + 1]; ++j) {
@@ -514,9 +529,9 @@ namespace EDLib {
         for(int i=0; i < nprocs; i++) {
           if(_procs[i]) {
             _procs[i]=1;
-            /// calculate offset for i-th CPU
+            // calculate offset for i-th CPU
             _proc_offset[i]=oset * _down_symmetry.sector().size() + l_loc_min[i];
-            /// The index of the first element of the vector to be received from i-th CPU
+            // The index of the first element of the vector to be received from i-th CPU
             _loc_min[i] = l_loc_min[i];
             int ls=_up_symmetry.sector().size()/nprocs;
             if((_up_symmetry.sector().size()% nprocs) > i) {
@@ -525,14 +540,14 @@ namespace EDLib {
             }else{
               loc_offset[i] = i * ls + (_up_symmetry.sector().size() % nprocs) - oset;
             }
-            /// number of elements to be received from the i-th CPU
+            // number of elements to be received from the i-th CPU
             _proc_size[i]= l_loc_max[i] - l_loc_min[i] + _down_symmetry.sector().size();
             oset+=ls;
           }
         }
-        /// alloacte memory for the working array
+        // alloacte memory for the working array
         _vecval.assign(oset * _down_symmetry.sector().size(), prec(0.0));
-        /// adjust indexes
+        // adjust indexes
         for (int i = 0; i < _up_size; ++i) {
           for (int j = H_up.row_ptr()[i + _up_shift]; j < H_up.row_ptr()[i + _up_shift + 1]; ++j) {
             calcIndex(ci, cid, H_up.col_ind()[j]*_down_symmetry.sector().size(), _up_symmetry.sector().size(), _down_symmetry.sector().size(), nprocs);

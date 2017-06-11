@@ -13,6 +13,15 @@
 
 namespace EDLib {
   namespace gf {
+    /**
+     * Class for evaluation of the single-particle Green's function.
+     *
+     *
+     *
+     * @tparam Hamiltonian - type of Hamiltonian object
+     * @tparam Mesh - type of frequency mesh. can be either alps::gf::real_frequency_mesh or alps::gf::matsubara_positive_only
+     * @tparam Args - additional Mesh parametrization for alps::gf::matsubara_positive_only
+     */
     template<class Hamiltonian, typename Mesh, typename... Args>
     class GreensFunction : public Lanczos < Hamiltonian, Mesh, Args...> {
       using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
@@ -22,6 +31,13 @@ namespace EDLib {
       using Lanczos < Hamiltonian, Mesh, Args... >::compute_continued_fraction;
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
+      /**
+       * Construct Green's function class
+       *
+       * @param p - AlpsCore parameter object
+       * @param h - Hamiltonain instance
+       * @param args - additional parameters for Mesh. For example for Matsubara mesh should it be alps::gf::statistics::statistics_type::FERMIONIC
+       */
       GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
@@ -30,29 +46,35 @@ namespace EDLib {
         }
       }
 
+      /**
+       * Evaluates Green's function by Lanczos continued fraction method.
+       * For each eigenvalue checks Boltsman factor cut-off
+       */
       void compute() {
+        // init Green's function with 0
         gf *= 0.0;
+        // init Partition function
         _Z = 0.0;
+        // Check that there is at least one eigen-value
         if(hamiltonian().eigenpairs().empty())
           return;
 #ifdef USE_MPI
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        /// get groundstate
+        // get groundstate
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
-        /// compute statsum
+        // compute statsum
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
         }
-        common::statistics.registerEvent("Greens function");
-        /// iterate over eigen-pairs
+        // iterate over eigen-pairs
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
-          /// compute Boltzmann-factor
+          // compute Boltzmann-factor
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
-          /// Skip all eigenvalues with Boltzmann-factor smaller than cutoff
+          // Skip all eigenvalues with Boltzmann-factor smaller than cutoff
           if (boltzmann_f < _cutoff) {
             continue;
           }
@@ -60,31 +82,31 @@ namespace EDLib {
           if(rank==0)
 #endif
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << pair.sector() << std::endl;
-          /// iterate over interacting orbitals
+          // iterate over interacting orbitals
           for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-            /// iterate over spins
+            // iterate over spins
             for (int is = 0; is < _model.spins(); ++is) {
               std::vector < precision > outvec(1, precision(0.0));
               precision expectation_value = 0;
               _model.symmetry().set_sector(pair.sector());
-              /// first we are going to create particle and compute contribution to Green's function
+              // first we are going to create particle and compute contribution to Green's function
               if (create_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
-                /// Perform Lanczos factorization for starting vector |outvec>
+                // Perform Lanczos factorization for starting vector |outvec>
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
                if(rank==0){
 #endif
                 std::cout << "orbital: " << i << "   spin: " << (is == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                /// Using computed Lanczos factorization compute approximation for \frac{1}{z - H} by calculation of a continued fraction
+                // Using computed Lanczos factorization compute approximation for \frac{1}{z - H} by calculation of a continued fraction
                  compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i),
                                             alps::gf::index_mesh::index_type(is));
 #ifdef USE_MPI
                }
 #endif
               }
-              /// restore symmetry sector
+              // restore symmetry sector
               _model.symmetry().set_sector(pair.sector());
-              /// perform the same for destroying of a particle
+              // perform the same for destroying of a particle
               if (annihilate_particle(i, is, pair.eigenvector(), outvec, expectation_value)) {
                 int nlanc = lanczos(outvec);
 #ifdef USE_MPI
@@ -103,16 +125,16 @@ namespace EDLib {
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
-        /// normalize Green's function by statsum Z.
+        // normalize Green's function by Z.
         gf /= _Z;
 #ifdef USE_MPI
         }
 #endif
-        common::statistics.updateEvent("Greens function");
       }
 
       /**
-       * Save Green's function in the hdf5 archive and in plain text file
+       * Save Green's function into the hdf5 archive and in plain text file
+       *
        * @param ar -- hdf5 archive to save Green's function
        * @param path -- root path in hdf5 archive
        */
@@ -135,9 +157,17 @@ namespace EDLib {
 #endif
       }
 
+      /**
+       * Comutes self-energy from Dyson equation based on model specific bare Green's function
+       *
+       * @param ar -- hdf5 archive to save self-energy
+       * @param path -- root path in hdf5 archive
+       */
       void compute_selfenergy(alps::hdf5::archive &ar, const std::string &path){
+        // Bare Green's function and Self-energy should be defined on the same grid
         GF_TYPE bare(gf.mesh1(), gf.mesh2(), gf.mesh3());
         GF_TYPE sigma(gf.mesh1(), gf.mesh2(), gf.mesh3());
+        // obtain model-specific bare Green's function
         _model.bare_greens_function(bare, beta());
         bare.save(ar, path + "/G0_omega");
         std::ostringstream Gomega_name;
@@ -145,6 +175,7 @@ namespace EDLib {
         std::ofstream G_omega_file(Gomega_name.str().c_str());
         G_omega_file << std::setprecision(14) << bare;
         G_omega_file.close();
+        // solve Dyson equation
         for(int iw = 0; iw< bare.mesh1().points().size(); ++iw) {
           typename Mesh::index_type w(iw);
           for (int im: bare.mesh2().points()) {
@@ -154,6 +185,7 @@ namespace EDLib {
             }
           }
         }
+        // store to file
         sigma.save(ar, path + "/Sigma_omega");
         Gomega_name.str("");
         Gomega_name << "Sigma_omega";

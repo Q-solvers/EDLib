@@ -19,10 +19,11 @@
 #include "SingleImpurityAndersonModel.h"
 
 namespace EDLib {
-  template<class Storage, class Model>
+  template<class Storage>
   class Hamiltonian {
   public:
-    typedef Model ModelType;
+    typedef typename Storage::Model Model;
+    typedef typename Storage::Model ModelType;
     typedef Storage StorageType;
     typedef typename Model::precision prec;
 
@@ -128,18 +129,18 @@ namespace EDLib {
 
   };
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < double > >, Model::HubbardModel < double > > CSRHubbardHamiltonian;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < double > >, Model::HubbardModel < double > > SRSHubbardHamiltonian;
-  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < double > >, Model::HubbardModel < double > > SOCSRHubbardHamiltonian;
+  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < double > > > CSRHubbardHamiltonian;
+  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < double > > > SRSHubbardHamiltonian;
+  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < double > > > SOCSRHubbardHamiltonian;
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < float > >, Model::HubbardModel < float > > CSRHubbardHamiltonian_float;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < float > >, Model::HubbardModel < float > > SRSHubbardHamiltonian_float;
-  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < float > >, Model::HubbardModel < float > > SOCSRHubbardHamiltonian_float;
+  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < float > > > CSRHubbardHamiltonian_float;
+  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < float > > > SRSHubbardHamiltonian_float;
+  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < float > > > SOCSRHubbardHamiltonian_float;
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < double > >, Model::SingleImpurityAndersonModel < double > > CSRSIAMHamiltonian;
-  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < float > >, Model::SingleImpurityAndersonModel < float > > CSRSIAMHamiltonian_float;
+  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < double > > > CSRSIAMHamiltonian;
+  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < float > > > CSRSIAMHamiltonian_float;
 
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < double > >, Model::SingleImpurityAndersonModel < double > > SRSSIAMHamiltonian;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < float > >, Model::SingleImpurityAndersonModel < float > > SRSSIAMHamiltonian_float;
+  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < double > > > SRSSIAMHamiltonian;
+  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < float > > > SRSSIAMHamiltonian_float;
 }
 #endif //HUBBARD_HAMILTONIAN_H

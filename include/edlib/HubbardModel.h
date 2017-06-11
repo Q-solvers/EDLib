@@ -51,7 +51,6 @@ namespace EDLib {
         _Hmag = 0.0;
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
-        input_data >> alps::make_pvp("BETA", _beta);
         if(input_data.is_data("magnetic_field")) {
           input_data >> alps::make_pvp("magnetic_field", _Hmag);
         } else{
@@ -84,6 +83,15 @@ namespace EDLib {
         return (checkState(nst, state.indicies().first + state.spin() * _Ns, _Ip) * (1 - checkState(nst, state.indicies().second + state.spin() * _Ns, _Ip)));
       }
 
+      /**
+       * Compute off-diagonal term for transition from nst-state to k-state
+       *
+       * @param state - transition state
+       * @param nst - initial basis state
+       * @param k - resulting basis state
+       * @param sign - fermionic sign for transition
+       * @return contribution to off-diagonal element for transition state
+       */
       inline precision set(const St &state, long long nst, long long &k, int &sign) {
         long long k1, k2;
         int isign1, isign2;
@@ -113,19 +121,37 @@ namespace EDLib {
         return xtemp;
       }
 
+      /**
+       * @deprecated
+       */
       inline long long interacting_states(long long nst) {
         return nst;
       }
 
 
+      /**
+       * @return hopping transitions
+       */
       const std::vector < St > &T_states() const { return _states; };
       // We have only diagonal interaction
+      /**
+       * @return off-diagonal interaction transitions
+       */
       const std::vector < St > &V_states() const { return _V_states; };
 
+      /**
+       * For Hubbard model all orbitals are interacting
+       *
+       * @return total number of sites
+       */
       int interacting_orbitals() const {
         return _Ns;
       }
 
+      /**
+       * For Hubbard model Hamiltonian comutes with spin-operator ([Sz, H] = 0)
+       * @return symmetry object
+       */
       inline const Symmetry::SzSymmetry &symmetry() const {
         return _symmetry;
       }
@@ -134,6 +160,13 @@ namespace EDLib {
         return _symmetry;
       }
 
+      /**
+       * Compute bare Green's function for specific mesh
+       *
+       * @tparam Mesh - mesh-type
+       * @param bare_gf - bare Green's function container
+       * @param beta - inverse temperature
+       */
       template<typename Mesh>
       void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
         for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
@@ -148,22 +181,20 @@ namespace EDLib {
       }
 
     private:
-      // Symmetry
+      /// Symmetry
       Symmetry::SzSymmetry _symmetry;
-      // Hopping
+      /// Hopping
       std::vector < std::vector < precision > > t;
-      // Interaction
+      /// Interaction
       std::vector < precision > U;
-      // Chemical potential
+      /// Chemical potential
       std::vector < precision > _xmu;
-      // Magnetic field
+      /// Magnetic field
       precision _Hmag;
-      // site energy shift
+      /// site energy shift
       std::vector < std::vector < precision > > _Eps;
-      // Inverse temperature
-      double _beta;
 
-      // Non-diagonal states iterator
+      /// Non-diagonal states iterators
       std::vector < St > _states;
       std::vector < St > _V_states;
     };

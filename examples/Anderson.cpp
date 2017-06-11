@@ -17,47 +17,55 @@
 #include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {
+// Init MPI if enabled
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
   alps::mpi::communicator comm;
 #endif
+// Define and read model parameters
   alps::params params(argc, argv);
   EDLib::define_parameters(params);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  alps::hdf5::archive ar(params["OUTPUT_FILE"], alps::hdf5::archive::WRITE);
+  // open output file
+  alps::hdf5::archive ar;
 #ifdef USE_MPI
-  if(comm.rank())
-    ar.close();
+  if(!comm.rank())
 #endif
+    ar.open(params["OUTPUT_FILE"].as<std::string>(), "w");
+// Start calculations
   try {
+    // Construct Hamiltonian object
 #ifdef USE_MPI
     EDLib::SRSSIAMHamiltonian ham(params, comm);
 #else
     EDLib::SRSSIAMHamiltonian ham(params);
 #endif
-    EDLib::common::statistics.registerEvent("total");
-    EDLib::common::statistics.registerEvent("diag");
+    // Diagonalize Hamiltonian
     ham.diag();
-    EDLib::common::statistics.updateEvent("diag");
-    EDLib::common::statistics.registerEvent("GF");
+    // Save eigenvalues to HDF5 file
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
+    // Construct Green's function object
     EDLib::gf::GreensFunction < EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> greensFunction(params, ham);
+    // Compute and save Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
-    greensFunction.compute_selfenergy(ar, "results");
+    // Init two particle Green's function object
     EDLib::gf::ChiLoc<EDLib::SRSSIAMHamiltonian, alps::gf::real_frequency_mesh> susc(params, ham);
+    // Compute and save spin susceptibility
     susc.compute();
     susc.save(ar, "results");
+    // Compute and save charge susceptibility
     susc.compute<EDLib::gf::NOperator<double> >();
     susc.save(ar, "results");
-    EDLib::common::statistics.updateEvent("GF");
-    EDLib::common::statistics.updateEvent("total");
-    EDLib::common::statistics.print();
   } catch (std::exception & e) {
 #ifdef USE_MPI
-    if(comm.rank() == 0) std::cerr<<e.what();
+    if(comm.rank() == 0) {
+      std::cerr<<e.what();
+      ar.close();
+      MPI_Abort(MPI_COMM_WORLD, -1);
+    }
 #else
     std::cerr<<e.what();
 #endif

@@ -19,35 +19,43 @@
 #include "ext/HolsteinAndersonParameter.h"
 
 int main(int argc, const char ** argv) {
-  typedef EDLib::Hamiltonian<EDLib::Storage::CRSStorage<EDLib::Ext::Model::HolsteinAndersonModel<double> >, EDLib::Ext::Model::HolsteinAndersonModel<double> > HamType;
+  // Define Hamiltonian object type
+  typedef EDLib::Hamiltonian<EDLib::Storage::CRSStorage<EDLib::Ext::Model::HolsteinAndersonModel<double> > > HamType;
+  // Initialize MPI environment if enabled
 #ifdef USE_MPI
   MPI_Init(&argc, (char ***) &argv);
   alps::mpi::communicator comm;
 #endif
+  // Define and read parameters
   alps::params params(argc, argv);
   EDLib::define_parameters(params);
   EDLib::Ext::define_parameters(params);
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  alps::hdf5::archive ar(params["OUTPUT_FILE"], alps::hdf5::archive::WRITE);
+  // Open output HDF5 archive
+  alps::hdf5::archive ar;
 #ifdef USE_MPI
-  if(comm.rank())
-    ar.close();
+  if(!comm.rank())
 #endif
+    ar.open(params["OUTPUT_FILE"].as<std::string>(), "w");
   try {
+    // Construct Hamiltonian object
 #ifdef USE_MPI
     HamType ham(params, comm);
 #else
     HamType ham(params);
 #endif
+    // Perform Hamiltonian matrix diagonalization
     ham.diag();
-    EDLib::common::statistics.updateEvent("diag");
-    EDLib::common::statistics.registerEvent("GF");
+    // Store eigenvalues in HDF5 archive
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
+    // Construct single-particle Green's function object
     EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, alps::gf::statistics::FERMIONIC);
+    // Compute and store single particle Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
+    // Construct static observables object
     EDLib::StaticObervables<HamType> sd(params);
     // compute static observables
     std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
@@ -57,6 +65,7 @@ int main(int argc, const char ** argv) {
     for(auto x : observables[sd._M_]) {
       avg += x / (2.0*observables[sd._M_].size());
     }
+    // compute spin susceptibility
     susc.compute<EDLib::gf::SzOperator<double>>(&avg);
     susc.save(ar, "results");
     // compute average occupancy moment
@@ -64,11 +73,12 @@ int main(int argc, const char ** argv) {
     for(auto x : observables[sd._N_]) {
       avg += x / double(observables[sd._N_].size());
     }
+    // Compute sharge susceptibility
     susc.compute<EDLib::gf::NOperator<double>>(&avg);
     susc.save(ar, "results");
     EDLib::common::statistics.updateEvent("GF");
     EDLib::hdf5::save_static_observables(observables, ar, "results");
-    
+
     EDLib::common::statistics.updateEvent("total");
     EDLib::common::statistics.print();
   } catch (std::exception & e) {
