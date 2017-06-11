@@ -29,10 +29,12 @@ int main(int argc, const char ** argv) {
   if(params.help_requested(std::cout)) {
     exit(0);
   }
-  alps::hdf5::archive ar(params["OUTPUT_FILE"], alps::hdf5::archive::WRITE);
+  alps::hdf5::archive ar;
 #ifdef USE_MPI
-  if(comm.rank())
-    ar.close();
+  if(!comm.rank())
+    ar.open(params["OUTPUT_FILE"], "w");
+#else
+  ar.open(params["OUTPUT_FILE"], "w");
 #endif
   try {
 #ifdef USE_MPI
