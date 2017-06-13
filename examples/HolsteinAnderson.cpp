@@ -13,7 +13,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/StaticObervables.h"
+#include "edlib/StaticObservables.h"
 #include "edlib/MeshFactory.h"
 #include "ext/HolsteinAndersonModel.h"
 #include "ext/HolsteinAndersonParameter.h"
@@ -56,7 +56,7 @@ int main(int argc, const char ** argv) {
     greensFunction.compute();
     greensFunction.save(ar, "results");
     // Construct static observables object
-    EDLib::StaticObervables<HamType> sd(params);
+    EDLib::StaticObservables<HamType> sd(params);
     // compute static observables
     std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
     EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type > susc(params, ham, alps::gf::statistics::BOSONIC);

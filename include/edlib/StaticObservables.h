@@ -10,7 +10,7 @@
 
 namespace EDLib {
   template<class Hamiltonian>
-  class StaticObervables {
+  class StaticObservables {
   protected:
     typedef typename Hamiltonian::ModelType::precision precision;
     typedef typename Hamiltonian::ModelType::Sector sector;
@@ -23,7 +23,7 @@ namespace EDLib {
     const static std::string _M_;
     const static std::string _D_OCC_;
 
-    StaticObervables(alps::params &p) :
+    StaticObservables(alps::params &p) :
       _beta(p["lanc.BETA"].as<precision>()),
       _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
     {
@@ -286,15 +286,15 @@ namespace EDLib {
   };
 
   template<class Hamiltonian>
-  const std::string StaticObervables<Hamiltonian>::_N_ = "N";
+  const std::string StaticObservables<Hamiltonian>::_N_ = "N";
   template<class Hamiltonian>
-  const std::string StaticObervables<Hamiltonian>::_N_UP_ = "N_up";
+  const std::string StaticObservables<Hamiltonian>::_N_UP_ = "N_up";
   template<class Hamiltonian>
-  const std::string StaticObervables<Hamiltonian>::_N_DN_ = "N_dn";
+  const std::string StaticObservables<Hamiltonian>::_N_DN_ = "N_dn";
   template<class Hamiltonian>
-  const std::string StaticObervables<Hamiltonian>::_M_ = "M";
+  const std::string StaticObservables<Hamiltonian>::_M_ = "M";
   template<class Hamiltonian>
-  const std::string StaticObervables<Hamiltonian>::_D_OCC_ = "D_occ";
+  const std::string StaticObservables<Hamiltonian>::_D_OCC_ = "D_occ";
 
 }
 

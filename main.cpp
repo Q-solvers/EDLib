@@ -10,7 +10,7 @@
 #include "edlib/ChiLoc.h"
 #include "edlib/HDF5Utils.h"
 #include "edlib/SpinResolvedStorage.h"
-#include "edlib/StaticObervables.h"
+#include "edlib/StaticObservables.h"
 #include "edlib/MeshFactory.h"
 
 int main(int argc, const char ** argv) {
@@ -41,7 +41,7 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::StaticObervables<HamType> sd(params);
+    EDLib::StaticObservables<HamType> sd(params);
     sd.print_static_observables(ham);
     for (const auto& pair :ham.eigenpairs()) {
       sd.print_major_electronic_configuration(ham, pair, 256, 1e-5);

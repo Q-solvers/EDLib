@@ -16,7 +16,7 @@ add_custom_target(edlib SOURCES Combination.h
     SingleImpurityAndersonModel.h
     SOCRSStorage.h
     SpinResolvedStorage.h
-    StaticObervables.h
+    StaticObservables.h
     Storage.h
     Symmetry.h
     SzSymmetry.h
