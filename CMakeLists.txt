@@ -17,8 +17,6 @@ include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
 
 
-
-
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DBOOST_DISABLE_ASSERTS -DNDEBUG -g -O3")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -m64")
 
@@ -44,6 +42,7 @@ if(USE_MPI)
     set(parlibs ${PARPACK_LIB}
                 ${MPI_CXX_LIBRARIES}
                 ${MPI_Fortran_LIBRARIES})
+    message(INFO " Using parallel libraries: ${parlibs}")
 endif(USE_MPI)
 
 
