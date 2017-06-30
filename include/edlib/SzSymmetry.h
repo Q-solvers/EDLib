@@ -178,7 +178,7 @@ namespace EDLib {
         _ind = 0;
         for (int i = 0; i <= _Ns; ++i) {
           int cnk = _comb.c_n_k(_Ns, i);
-          basis[i].reserve(cnk);
+          basis[i].resize(cnk);
           for (int k = 0; k < cnk; ++k) {
             basis[i][k] = next_basis(_Ns, i, upstate, k == 0);
             ninv[i][basis[i][k]] = k;
