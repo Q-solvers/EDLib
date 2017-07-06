@@ -41,7 +41,19 @@ namespace EDLib {
         std::vector<std::vector<int>> _sectors;
         input_file >> alps::make_pvp("densitymatrix_sectors/values", _sectors);
         for (int i = 0; i < _sectors.size(); ++i) {
-         secA.push_back(sector(_sectors[i][0], _sectors[i][1], (size_t)(symA[0].comb().c_n_k(Ns_A, _sectors[i][0]) * symA[0].comb().c_n_k(Ns_A, _sectors[i][1]))));
+         secA.push_back(sector(_sectors[i][0], _sectors[i][1], (size_t)(
+             symA[0].comb().c_n_k(Ns_A, _sectors[i][0]) *
+             symA[0].comb().c_n_k(Ns_A, _sectors[i][1])
+         )));
+        }
+      }else{
+        for (int i = 0; i <= Ns_A; ++i) {
+          for (int j = 0; j <= Ns_A; ++j) {
+            secA.push_back(sector(i, j, (size_t)(
+              symA[0].comb().c_n_k(Ns_A, i) *
+              symA[0].comb().c_n_k(Ns_A, j)
+            )));
+          }
         }
       }
       input_file.close();
@@ -77,15 +89,39 @@ namespace EDLib {
         compute_eigenvector(rho, ham, pair, boltzmann_f);
         sum += boltzmann_f;
       }
+      for(size_t isect = 0; isect < secA.size(); ++isect){
+        std::cout << "Density matrix sector " << secA[isect].nup() << " " << secA[isect].ndown() << std::endl;
+        for(size_t jj = 0; jj < secA[isect].size(); ++jj){
+          for(size_t kk = 0; kk < secA[isect].size(); ++kk){
+            if(kk){
+              std::cout << "\t";
+            }
+            std::cout << rho[isect][jj][kk];
+          }
+          std::cout << std::endl;
+        }
+      }
       return rho;
     }
 
   private:
 
     void compute_eigenvector(std::map<size_t, std::vector<std::vector<precision>>>& rho, Hamiltonian& ham, const EigenPair<precision, sector>& pair, precision multiplier) {
+      ham.model().symmetry().set_sector(pair.sector());
       for(size_t isect = 0; isect < secA.size(); ++isect){
+std::cout << "secA " << secA[isect].nup() << " " << secA[isect].ndown() << " " << secA[isect].size() << std::endl;
         symA[0].set_sector(secA[isect]);
-        sector secB = sector(pair.sector().nup() - secA[isect].nup(), pair.sector().ndown() - secA[isect].ndown(), pair.sector().size() / secA[isect].size());
+        int nupB = pair.sector().nup() - secA[isect].nup();
+        int ndownB = pair.sector().ndown() - secA[isect].ndown();
+        if(
+         (nupB < 0) ||
+         (ndownB < 0)){
+         continue;
+        }
+        sector secB = sector(nupB, ndownB,
+          symB[0].comb().c_n_k(Ns_B, nupB) * symB[0].comb().c_n_k(Ns_B, ndownB)
+        );
+std::cout << "secB " << secB.nup() << " " << secB.ndown() << " " << secB.size() << std::endl;
         symB[0].set_sector(secB);
         for(size_t ii = 0; ii < secB.size(); ++ii){
           symB[0].next_state();
@@ -101,7 +137,10 @@ namespace EDLib {
               symA[1].next_state();
               stateA[1] = symA[1].state();
               state[1] = mergestate(ham, stateA[1], stateB);
-              rho[isect][ii][jj] += multiplier * pair.eigenvector()[state[0]] * pair.eigenvector()[state[1]];
+std::cout << "mult " << multiplier << " " << pair.eigenvector()[ham.model().symmetry().index(state[0])] << " " << pair.eigenvector()[ham.model().symmetry().index(state[1])] << std::endl;
+              rho[isect][ii][jj] += multiplier *
+                pair.eigenvector()[ham.model().symmetry().index(state[0])] *
+                pair.eigenvector()[ham.model().symmetry().index(state[1])];
             }
           }
         }
@@ -111,22 +150,24 @@ namespace EDLib {
 
     long long mergestate(Hamiltonian& ham, long long stateA, long long stateB){
       long long state = 0;
+      long long newstate = 0;
+      int isign;
       for(size_t ispin = 0; ispin < Nspins; ++ispin){
         for(size_t iorb = 0; iorb < orbsA.size(); ++iorb){
-          state += ham.model().checkState(stateA, iorb + ispin * Ns_A, Ip) * std::pow(2, orbsA[iorb]  + ispin * Ns_A);
+          if(ham.model().checkState(stateA, iorb + ispin * Ns_A, Nspins * Ns_A)){
+            ham.model().adag(orbsA[iorb]  + ispin * Ns, state, newstate, isign);
+            state = newstate;
+          }
         }
         for(size_t iorb = 0; iorb < orbsB.size(); ++iorb){
-          state += ham.model().checkState(stateB, iorb + ispin * Ns_B, Ip) * std::pow(2, orbsB[iorb]  + ispin * Ns_B);
+          if(ham.model().checkState(stateB, iorb + ispin * Ns_B, Nspins * Ns_B)){
+            ham.model().adag(orbsB[iorb]  + ispin * Ns, state, newstate, isign);
+            state = newstate;
+          }
         }
       }
       return state;
     }
-
-/* FIXME Copypasta from FermionicModel.h */
-    int inline checkState(long long nst, const int &im, int Ip) const {
-      return (int) ((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
-    }
-
 
     std::vector<symmetry> symA;
     std::vector<symmetry> symB; // FIXME What's the fucking difference from just symmetry symB -- it won't compile!
