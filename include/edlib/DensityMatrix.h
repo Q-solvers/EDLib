@@ -82,12 +82,18 @@ namespace EDLib {
          -(pair.eigenvalue() - groundstate.eigenvalue()) * beta
         );
         if(boltzmann_f < cutoff){
-//          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
           continue;
         }
         // Sum the contributions.
         compute_eigenvector(rho, ham, pair, boltzmann_f);
         sum += boltzmann_f;
+      }
+      for(size_t isect = 0; isect < secA.size(); ++isect){
+        for(size_t jj = 0; jj < secA[isect].size(); ++jj){
+          for(size_t kk = 0; kk < secA[isect].size(); ++kk){
+           rho[isect][jj][kk] /= sum;
+          }
+        }
       }
       for(size_t isect = 0; isect < secA.size(); ++isect){
         std::cout << "Density matrix sector " << secA[isect].nup() << " " << secA[isect].ndown() << std::endl;
@@ -109,7 +115,6 @@ namespace EDLib {
     void compute_eigenvector(std::map<size_t, std::vector<std::vector<precision>>>& rho, Hamiltonian& ham, const EigenPair<precision, sector>& pair, precision multiplier) {
       ham.model().symmetry().set_sector(pair.sector());
       for(size_t isect = 0; isect < secA.size(); ++isect){
-std::cout << "secA " << secA[isect].nup() << " " << secA[isect].ndown() << " " << secA[isect].size() << std::endl;
         symA[0].set_sector(secA[isect]);
         int nupB = pair.sector().nup() - secA[isect].nup();
         int ndownB = pair.sector().ndown() - secA[isect].ndown();
@@ -121,7 +126,6 @@ std::cout << "secA " << secA[isect].nup() << " " << secA[isect].ndown() << " " <
         sector secB = sector(nupB, ndownB,
           symB[0].comb().c_n_k(Ns_B, nupB) * symB[0].comb().c_n_k(Ns_B, ndownB)
         );
-std::cout << "secB " << secB.nup() << " " << secB.ndown() << " " << secB.size() << std::endl;
         symB[0].set_sector(secB);
         for(size_t ii = 0; ii < secB.size(); ++ii){
           symB[0].next_state();
@@ -137,7 +141,6 @@ std::cout << "secB " << secB.nup() << " " << secB.ndown() << " " << secB.size() 
               symA[1].next_state();
               stateA[1] = symA[1].state();
               state[1] = mergestate(ham, stateA[1], stateB);
-std::cout << "mult " << multiplier << " " << pair.eigenvector()[ham.model().symmetry().index(state[0])] << " " << pair.eigenvector()[ham.model().symmetry().index(state[1])] << std::endl;
               rho[isect][ii][jj] += multiplier *
                 pair.eigenvector()[ham.model().symmetry().index(state[0])] *
                 pair.eigenvector()[ham.model().symmetry().index(state[1])];
