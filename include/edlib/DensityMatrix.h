@@ -24,39 +24,44 @@ namespace EDLib {
     {
       std::string input = p["INPUT_FILE"];
       alps::hdf5::archive input_file(input, "r");
-      input_file >> alps::make_pvp("densitymatrix_orbs/values", orbsA);
-      std::sort(orbsA.begin(), orbsA.end());
-      orbsA.erase(std::unique(orbsA.begin(), orbsA.end()), orbsA.end());
-      symA = std::vector<symmetry>(2, symmetry(orbsA.size()));
-      symB = std::vector<symmetry>(1, symmetry(Ns - orbsA.size()));
-      Ns_A = orbsA.size();
-      Ns_B = Ns - Ns_A;
-      for(int iorb = 0; iorb < Ns; ++iorb){
-        orbsB.push_back(iorb);
-      }
-      for(int iorb = 0; iorb < orbsA.size(); ++iorb){
-        orbsB.erase(orbsB.begin() + orbsA[iorb]);
-      }
-      if(p.exists("densitymatrix.SECTOR") && bool(p["densitymatrix.SECTOR"])){
-        std::vector<std::vector<int>> _sectors;
-        input_file >> alps::make_pvp("densitymatrix_sectors/values", _sectors);
-        for (int i = 0; i < _sectors.size(); ++i) {
-         secA.push_back(sector(_sectors[i][0], _sectors[i][1], (size_t)(
-             symA[0].comb().c_n_k(Ns_A, _sectors[i][0]) *
-             symA[0].comb().c_n_k(Ns_A, _sectors[i][1])
-         )));
+      if(input_file.is_data("densitymatrix_orbs/values") && p["storage.EIGENVALUES_ONLY"] == 0){
+        input_file >> alps::make_pvp("densitymatrix_orbs/values", orbsA);
+        std::sort(orbsA.begin(), orbsA.end());
+        orbsA.erase(std::unique(orbsA.begin(), orbsA.end()), orbsA.end());
+        symA = std::vector<symmetry>(2, symmetry(orbsA.size()));
+        symB = std::vector<symmetry>(1, symmetry(Ns - orbsA.size()));
+        Ns_A = orbsA.size();
+        Ns_B = Ns - Ns_A;
+        for(int iorb = 0; iorb < Ns; ++iorb){
+          orbsB.push_back(iorb);
         }
-      }else{
-        for (int i = 0; i <= Ns_A; ++i) {
-          for (int j = 0; j <= Ns_A; ++j) {
-            secA.push_back(sector(i, j, (size_t)(
-              symA[0].comb().c_n_k(Ns_A, i) *
-              symA[0].comb().c_n_k(Ns_A, j)
-            )));
+        for(int iorb = 0; iorb < orbsA.size(); ++iorb){
+          orbsB.erase(orbsB.begin() + orbsA[iorb]);
+        }
+        if(p.exists("densitymatrix.SECTOR") && bool(p["densitymatrix.SECTOR"])){
+          std::vector<std::vector<int>> _sectors;
+          input_file >> alps::make_pvp("densitymatrix_sectors/values", _sectors);
+          for (int i = 0; i < _sectors.size(); ++i) {
+           secA.push_back(sector(_sectors[i][0], _sectors[i][1], (size_t)(
+               symA[0].comb().c_n_k(Ns_A, _sectors[i][0]) *
+               symA[0].comb().c_n_k(Ns_A, _sectors[i][1])
+           )));
+          }
+        }else{
+          for (int i = 0; i <= Ns_A; ++i) {
+            for (int j = 0; j <= Ns_A; ++j) {
+              secA.push_back(sector(i, j, (size_t)(
+                symA[0].comb().c_n_k(Ns_A, i) *
+                symA[0].comb().c_n_k(Ns_A, j)
+              )));
+            }
           }
         }
+        input_file.close();
+      }else{
+       Ns_A = 0;
+       std::cout << "Density matrix can not be calculated. " << std::endl;
       }
-      input_file.close();
     }
 
     std::map<size_t, std::vector<std::vector<precision>>> compute(Hamiltonian& ham) {
