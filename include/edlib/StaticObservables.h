@@ -20,8 +20,8 @@ namespace EDLib {
   public:
 
     StaticObservables(alps::params &p) :
-      _beta(p["lanc.BETA"].as<precision>()),
-      _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
+      beta(p["lanc.BETA"].as<precision>()),
+      cutoff(p["lanc.BOLTZMANN_CUTOFF"])
     {
       if(p["storage.EIGENVALUES_ONLY"] == 1) {
         throw std::logic_error("Eigenvectors have not been computed. StaticObservables can not continue.");
@@ -95,9 +95,9 @@ namespace EDLib {
         const EigenPair<precision, sector>& pair = *ipair;
         // Calculate Boltzmann factor, skip the states with trivial contribution.
         precision boltzmann_f = std::exp(
-         -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
+         -(pair.eigenvalue() - groundstate.eigenvalue()) * beta
         );
-        if(boltzmann_f < _cutoff){
+        if(boltzmann_f < cutoff){
 //          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
           continue;
         }
@@ -369,9 +369,9 @@ namespace EDLib {
     }
 
     /// Inverse temperature
-    precision _beta;
+    precision beta;
     /// Boltzmann-factor cutoff
-    precision _cutoff;
+    precision cutoff;
 
   };
 
