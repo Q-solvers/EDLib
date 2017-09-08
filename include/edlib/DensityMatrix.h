@@ -118,6 +118,33 @@ namespace EDLib {
   private:
 
     void compute_eigenvector(std::map<size_t, std::vector<std::vector<precision>>>& rho, Hamiltonian& ham, const EigenPair<precision, sector>& pair, precision multiplier) {
+#ifdef USE_MPI
+      int myid;
+      int nprocs;
+      MPI_Comm_rank(ham.comm(), &myid);
+      MPI_Comm_size(ham.comm(), &nprocs);
+      std::vector<int> counts(nprocs);
+      std::vector<int> displs(nprocs + 1);
+      std::vector<precision> evec(pair.sector().size());
+      std::cout << pair.eigenvector().size() << " " << pair.sector().size() << std::endl;
+      size_t size = pair.eigenvector().size();
+      MPI_Allgather(&size, 1,
+                    alps::mpi::detail::mpi_type<size_t>(),
+                    counts.data(), 1,
+                    alps::mpi::detail::mpi_type<size_t>(),
+                    ham.comm()
+      );
+      displs[0] = 0;
+      for(size_t i = 0; i < nprocs; ++i){
+       displs[i + 1] = displs[i] + counts[i];
+      }
+      MPI_Allgatherv(pair.eigenvector().data(), pair.eigenvector().size(),
+                     alps::mpi::detail::mpi_type<precision>(),
+                     evec.data(), counts.data(), displs.data(),
+                     alps::mpi::detail::mpi_type<precision>(),
+                     ham.comm()
+      );
+#endif
       ham.model().symmetry().set_sector(pair.sector());
       for(size_t isect = 0; isect < secA.size(); ++isect){
         symA[0].set_sector(secA[isect]);
@@ -147,8 +174,13 @@ namespace EDLib {
               stateA[1] = symA[1].state();
               state[1] = mergestate(ham, stateA[1], stateB);
               rho[isect][ii][jj] += multiplier *
+#ifdef USE_MPI
+                evec[ham.model().symmetry().index(state[0])] *
+                evec[ham.model().symmetry().index(state[1])];
+#else
                 pair.eigenvector()[ham.model().symmetry().index(state[0])] *
                 pair.eigenvector()[ham.model().symmetry().index(state[1])];
+#endif
             }
           }
         }
