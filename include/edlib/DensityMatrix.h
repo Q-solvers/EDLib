@@ -126,12 +126,11 @@ namespace EDLib {
       std::vector<int> counts(nprocs);
       std::vector<int> displs(nprocs + 1);
       std::vector<precision> evec(pair.sector().size());
-      std::cout << pair.eigenvector().size() << " " << pair.sector().size() << std::endl;
-      size_t size = pair.eigenvector().size();
+      int size = pair.eigenvector().size();
       MPI_Allgather(&size, 1,
-                    alps::mpi::detail::mpi_type<size_t>(),
+                    alps::mpi::detail::mpi_type<int>(),
                     counts.data(), 1,
-                    alps::mpi::detail::mpi_type<size_t>(),
+                    alps::mpi::detail::mpi_type<int>(),
                     ham.comm()
       );
       displs[0] = 0;
@@ -173,7 +172,7 @@ namespace EDLib {
               symA[1].next_state();
               stateA[1] = symA[1].state();
               state[1] = mergestate(ham, stateA[1], stateB);
-              rho[isect][ii][jj] += multiplier *
+              rho[isect][jj][kk] += multiplier *
 #ifdef USE_MPI
                 evec[ham.model().symmetry().index(state[0])] *
                 evec[ham.model().symmetry().index(state[1])];
