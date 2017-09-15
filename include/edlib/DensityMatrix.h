@@ -35,7 +35,7 @@ namespace EDLib {
         for(int iorb = 0; iorb < Ns; ++iorb){
           orbsB.push_back(iorb);
         }
-        for(int iorb = 0; iorb < orbsA.size(); ++iorb){
+        for(int iorb = orbsA.size() - 1; iorb >= 0; --iorb){
           orbsB.erase(orbsB.begin() + orbsA[iorb]);
         }
         if(p.exists("densitymatrix.SECTOR") && bool(p["densitymatrix.SECTOR"])){
@@ -100,6 +100,11 @@ namespace EDLib {
           }
         }
       }
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.comm(), &myid);
+      if(!myid)
+#endif
       for(size_t isect = 0; isect < secA.size(); ++isect){
         std::cout << "Density matrix sector " << secA[isect].nup() << " " << secA[isect].ndown() << std::endl;
         for(size_t jj = 0; jj < secA[isect].size(); ++jj){
@@ -151,7 +156,10 @@ namespace EDLib {
         int ndownB = pair.sector().ndown() - secA[isect].ndown();
         if(
          (nupB < 0) ||
-         (ndownB < 0)){
+         (ndownB < 0) ||
+         (nupB > Ns_B) ||
+         (ndownB > Ns_B)
+        ){
          continue;
         }
         sector secB = sector(nupB, ndownB,
