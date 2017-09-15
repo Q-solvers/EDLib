@@ -169,24 +169,21 @@ namespace EDLib {
         for(size_t ii = 0; ii < secB.size(); ++ii){
           symB[0].next_state();
           long long stateB = symB[0].state();
-          long long stateA[2];
-          long long state[2];
+          symA[0].set_sector(secA[isect]);
           for(size_t jj = 0; jj < secA[isect].size(); ++jj){
             symA[0].next_state();
-            stateA[0] = symA[0].state();
-            state[0] = mergestate(ham, stateA[0], stateB);
+            long long state0 = mergestate(ham, symA[0].state(), stateB);
             symA[1].set_sector(secA[isect]);
             for(size_t kk = 0; kk < secA[isect].size(); ++kk){
               symA[1].next_state();
-              stateA[1] = symA[1].state();
-              state[1] = mergestate(ham, stateA[1], stateB);
+              long long state1 = mergestate(ham, symA[1].state(), stateB);
               rho[isect][jj][kk] += multiplier *
 #ifdef USE_MPI
-                evec[ham.model().symmetry().index(state[0])] *
-                evec[ham.model().symmetry().index(state[1])];
+                evec[ham.model().symmetry().index(state0)] *
+                evec[ham.model().symmetry().index(state1)];
 #else
-                pair.eigenvector()[ham.model().symmetry().index(state[0])] *
-                pair.eigenvector()[ham.model().symmetry().index(state[1])];
+                pair.eigenvector()[ham.model().symmetry().index(state0)] *
+                pair.eigenvector()[ham.model().symmetry().index(state1)];
 #endif
             }
           }
