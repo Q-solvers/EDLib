@@ -15,12 +15,13 @@ namespace EDLib {
 
   public:
 
-    DensityMatrix(alps::params &p) :
+    DensityMatrix(alps::params &p, Hamiltonian& ham__) :
       Ns(int(p["NSITES"])),
       Ip(int(p["NSPINS"]) * int(p["NSITES"])),
       Nspins(int(p["NSPINS"])),
       beta(p["lanc.BETA"].as<precision>()),
-      cutoff(p["lanc.BOLTZMANN_CUTOFF"])
+      cutoff(p["lanc.BOLTZMANN_CUTOFF"]),
+      ham_(ham__)
     {
       std::string input = p["INPUT_FILE"];
       alps::hdf5::archive input_file(input, "r");
@@ -58,29 +59,35 @@ namespace EDLib {
           }
         }
         input_file.close();
+        for(size_t isect = 0; isect < secA.size(); ++isect){
+          rho.insert(
+            std::pair<size_t, std::vector<std::vector<precision>>>(
+              isect,
+              std::vector<std::vector<precision>>(
+                secA[isect].size(),
+                std::vector<precision>(secA[isect].size(), 0.0)
+              )
+            )
+          );
+        }
       }else{
        Ns_A = 0;
        std::cout << "Density matrix can not be calculated. " << std::endl;
       }
     }
 
-    std::map<size_t, std::vector<std::vector<precision>>> compute(Hamiltonian& ham) {
-      std::map<size_t, std::vector<std::vector<precision>>> rho;
+    const std::map<size_t, std::vector<std::vector<precision>>> &compute() {
       for(size_t isect = 0; isect < secA.size(); ++isect){
-        rho.insert(
-          std::pair<size_t, std::vector<std::vector<precision>>>(
-            isect,
-            std::vector<std::vector<precision>>(
-              secA[isect].size(),
-              std::vector<precision>(secA[isect].size(), 0.0)
-            )
-          )
-        );
+        for(size_t jj = 0; jj < secA[isect].size(); ++jj){
+          for(size_t kk = 0; kk < secA[isect].size(); ++kk){
+           rho[isect][jj][kk] = 0.0;
+          }
+        }
       }
       precision sum = 0.0;
-      const EigenPair<precision, sector> &groundstate = *ham.eigenpairs().begin();
+      const EigenPair<precision, sector> &groundstate = *ham_.eigenpairs().begin();
       // Loop over all eigenpairs.
-      for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
+      for(auto ipair = ham_.eigenpairs().begin(); ipair != ham_.eigenpairs().end(); ++ipair){
         const EigenPair<precision, sector>& pair = *ipair;
         // Calculate Boltzmann factor, skip the states with trivial contribution.
         precision boltzmann_f = std::exp(
@@ -90,7 +97,7 @@ namespace EDLib {
           continue;
         }
         // Sum the contributions.
-        compute_eigenvector(rho, ham, pair, boltzmann_f);
+        compute_eigenvector(pair, boltzmann_f);
         sum += boltzmann_f;
       }
       for(size_t isect = 0; isect < secA.size(); ++isect){
@@ -100,9 +107,13 @@ namespace EDLib {
           }
         }
       }
+      return rho;
+    }
+
+    void print() {
 #ifdef USE_MPI
       int myid;
-      MPI_Comm_rank(ham.comm(), &myid);
+      MPI_Comm_rank(ham_.comm(), &myid);
       if(!myid)
 #endif
       for(size_t isect = 0; isect < secA.size(); ++isect){
@@ -117,17 +128,31 @@ namespace EDLib {
           std::cout << std::endl;
         }
       }
-      return rho;
     }
+
+  inline const std::vector<sector> &sectors()
+  const {
+   return secA;
+  }
+
+  inline const std::map<size_t, std::vector<std::vector<precision>>> &matrix()
+  const {
+   return rho;
+  }
+
+  inline const Hamiltonian &ham()
+  const {
+   return ham_;
+  }
 
   private:
 
-    void compute_eigenvector(std::map<size_t, std::vector<std::vector<precision>>>& rho, Hamiltonian& ham, const EigenPair<precision, sector>& pair, precision multiplier) {
+    void compute_eigenvector(const EigenPair<precision, sector>& pair, precision multiplier) {
 #ifdef USE_MPI
       int myid;
       int nprocs;
-      MPI_Comm_rank(ham.comm(), &myid);
-      MPI_Comm_size(ham.comm(), &nprocs);
+      MPI_Comm_rank(ham_.comm(), &myid);
+      MPI_Comm_size(ham_.comm(), &nprocs);
       std::vector<int> counts(nprocs);
       std::vector<int> displs(nprocs + 1);
       std::vector<precision> evec(pair.sector().size());
@@ -136,7 +161,7 @@ namespace EDLib {
                     alps::mpi::detail::mpi_type<int>(),
                     counts.data(), 1,
                     alps::mpi::detail::mpi_type<int>(),
-                    ham.comm()
+                    ham_.comm()
       );
       displs[0] = 0;
       for(size_t i = 0; i < nprocs; ++i){
@@ -146,10 +171,10 @@ namespace EDLib {
                      alps::mpi::detail::mpi_type<precision>(),
                      evec.data(), counts.data(), displs.data(),
                      alps::mpi::detail::mpi_type<precision>(),
-                     ham.comm()
+                     ham_.comm()
       );
 #endif
-      ham.model().symmetry().set_sector(pair.sector());
+      ham_.model().symmetry().set_sector(pair.sector());
       for(size_t isect = 0; isect < secA.size(); ++isect){
         symA[0].set_sector(secA[isect]);
         int nupB = pair.sector().nup() - secA[isect].nup();
@@ -172,18 +197,18 @@ namespace EDLib {
           symA[0].set_sector(secA[isect]);
           for(size_t jj = 0; jj < secA[isect].size(); ++jj){
             symA[0].next_state();
-            long long state0 = mergestate(ham, symA[0].state(), stateB);
+            long long state0 = mergestate(symA[0].state(), stateB);
             symA[1].set_sector(secA[isect]);
             for(size_t kk = 0; kk < secA[isect].size(); ++kk){
               symA[1].next_state();
-              long long state1 = mergestate(ham, symA[1].state(), stateB);
+              long long state1 = mergestate(symA[1].state(), stateB);
               rho[isect][jj][kk] += multiplier *
 #ifdef USE_MPI
-                evec[ham.model().symmetry().index(state0)] *
-                evec[ham.model().symmetry().index(state1)];
+                evec[ham_.model().symmetry().index(state0)] *
+                evec[ham_.model().symmetry().index(state1)];
 #else
-                pair.eigenvector()[ham.model().symmetry().index(state0)] *
-                pair.eigenvector()[ham.model().symmetry().index(state1)];
+                pair.eigenvector()[ham_.model().symmetry().index(state0)] *
+                pair.eigenvector()[ham_.model().symmetry().index(state1)];
 #endif
             }
           }
@@ -191,27 +216,31 @@ namespace EDLib {
       }
     }
 
-
-    long long mergestate(Hamiltonian& ham, long long stateA, long long stateB){
+    long long mergestate(long long stateA, long long stateB){
       long long state = 0;
       long long newstate = 0;
       int isign;
       for(size_t ispin = 0; ispin < Nspins; ++ispin){
         for(size_t iorb = 0; iorb < orbsA.size(); ++iorb){
-          if(ham.model().checkState(stateA, iorb + ispin * Ns_A, Nspins * Ns_A)){
-            ham.model().adag(orbsA[iorb]  + ispin * Ns, state, newstate, isign);
+          if(ham_.model().checkState(stateA, iorb + ispin * Ns_A, Nspins * Ns_A)){
+            ham_.model().adag(orbsA[iorb]  + ispin * Ns, state, newstate, isign);
             state = newstate;
           }
         }
         for(size_t iorb = 0; iorb < orbsB.size(); ++iorb){
-          if(ham.model().checkState(stateB, iorb + ispin * Ns_B, Nspins * Ns_B)){
-            ham.model().adag(orbsB[iorb]  + ispin * Ns, state, newstate, isign);
+          if(ham_.model().checkState(stateB, iorb + ispin * Ns_B, Nspins * Ns_B)){
+            ham_.model().adag(orbsB[iorb]  + ispin * Ns, state, newstate, isign);
             state = newstate;
           }
         }
       }
       return state;
     }
+
+    // The hamiltonian of the system A+B
+    Hamiltonian& ham_;
+    // Reduced density matrix for the system A
+    std::map<size_t, std::vector<std::vector<precision>>> rho;
 
     std::vector<symmetry> symA;
     std::vector<symmetry> symB; // FIXME What's the fucking difference from just symmetry symB -- it won't compile!
