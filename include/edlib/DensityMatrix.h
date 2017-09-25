@@ -76,6 +76,11 @@ namespace EDLib {
       }
     }
 
+    /**
+     * Compute reduced density matrix.
+     *
+     * @return sectors of the reduced density matrix
+     */
     const std::map<size_t, std::vector<std::vector<precision>>> &compute() {
       for(size_t isect = 0; isect < secA.size(); ++isect){
         for(size_t jj = 0; jj < secA[isect].size(); ++jj){
@@ -110,6 +115,9 @@ namespace EDLib {
       return rho;
     }
 
+    /**
+     * Print the reduced density matrix.
+     */
     void print() {
 #ifdef USE_MPI
       int myid;
@@ -130,6 +138,28 @@ namespace EDLib {
       }
     }
 
+    /**
+     * Combine the sectors of reduced density matrix.
+     *
+     * @return the whole reduced density matrix
+     */
+    const std::vector<std::vector<precision>> full() const {
+      size_t fullsize = std::pow(2, Ns_A * Nspins);
+      std::vector<std::vector<precision>> result(
+        fullsize, std::vector<precision>(fullsize, 0.0)
+      );
+      size_t shift = 0;
+      for(size_t isect = 0; isect < secA.size(); ++isect){
+        for(size_t ii = 0; ii < secA[isect].size(); ++ii){
+          for(size_t jj = 0; jj < secA[isect].size(); ++jj){
+            result[shift + ii][shift + jj] = rho.at(isect)[ii][jj];
+          }
+        }
+        shift += secA[isect].size();
+      }
+      return result;
+    }
+
   inline const std::vector<sector> &sectors()
   const {
    return secA;
@@ -147,7 +177,13 @@ namespace EDLib {
 
   private:
 
-    void compute_eigenvector(const EigenPair<precision, sector>& pair, precision multiplier) {
+    /**
+     * Compute the contribution of an eigenvector to the density matrix.
+     *
+     * @param pair   the eigenpair
+     * @param weight additional multiplier (Boltzmann factor)
+     */
+    void compute_eigenvector(const EigenPair<precision, sector>& pair, precision weight) {
 #ifdef USE_MPI
       int myid;
       int nprocs;
@@ -202,7 +238,7 @@ namespace EDLib {
             for(size_t kk = 0; kk < secA[isect].size(); ++kk){
               symA[1].next_state();
               long long state1 = mergestate(symA[1].state(), stateB);
-              rho[isect][jj][kk] += multiplier *
+              rho[isect][jj][kk] += weight *
 #ifdef USE_MPI
                 evec[ham_.model().symmetry().index(state0)] *
                 evec[ham_.model().symmetry().index(state1)];
@@ -216,6 +252,13 @@ namespace EDLib {
       }
     }
 
+    /**
+     * Combine basis vectors.
+     *
+     * @param  stateA basis vector of subsystem A
+     * @param  stateB basis vector of subsystem B
+     * @return        basis vector of the whole system
+     */
     long long mergestate(long long stateA, long long stateB){
       long long state = 0;
       long long newstate = 0;
