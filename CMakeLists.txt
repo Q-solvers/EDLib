@@ -59,6 +59,7 @@ if(Testing)
     add_test(SzSymmetryTest test/SzSymmetryTest)
     add_test(NSymmetryTest test/NSymmetryTest)
     add_test(HubbardModelTest test/HubbardModelTest)
+    add_test(DensityMatrixTest test/DensityMatrixTest)
 
 endif (Testing)
 

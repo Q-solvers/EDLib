@@ -47,6 +47,7 @@ namespace EDLib {
         _Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
         t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
         U.assign(p["NSITES"], precision(0.0));
+        J.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
         _xmu.assign(p["NSITES"], precision(0.0));
         _Hmag = 0.0;
         std::string input = p["INPUT_FILE"];
@@ -60,6 +61,9 @@ namespace EDLib {
 
         input_data >> alps::make_pvp("hopping/values", t);
         input_data >> alps::make_pvp("interaction/values", U);
+        if(input_data.is_data("exchange/values")) {
+          input_data >> alps::make_pvp("exchange/values", J);
+        }
         input_data >> alps::make_pvp("chemical_potential/values", _xmu);
         input_data.close();
         for (int ii = 0; ii < _Ns; ++ii) {
@@ -95,6 +99,12 @@ namespace EDLib {
           }
           xtemp += U[im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
           xtemp += _Hmag * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
+          for (int im2 = 0; im2 < _Ns; ++im2) {
+            xtemp +=
+              J[im][im2] *
+              (checkState(state, im, _Ip) - checkState(state, im + _Ns, _Ip)) *
+              (checkState(state, im2, _Ip) - checkState(state, im2 + _Ns, _Ip));
+          }
         }
         return xtemp;
       }
@@ -139,6 +149,8 @@ namespace EDLib {
       std::vector < std::vector < precision > > t;
       // Interaction
       std::vector < precision > U;
+      // Exchange
+      std::vector < std::vector < precision > > J;
       // Chemical potential
       std::vector < precision > _xmu;
       // Magnetic field
