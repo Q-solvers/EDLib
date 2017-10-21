@@ -153,6 +153,18 @@ namespace EDLib {
       freq_point(int index) {
         return std::complex<double>(_omega.points()[index], M_PI/_beta);
       };
+      
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, std::string>::type
+      suffix() {
+        return "";
+      };
+
+      template<typename M=Mesh>
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, std::string>::type
+      suffix() {
+        return "_r";
+      };
 
       /**
        * Compute smallest index for frequency. Since Lanczos continued fraction can not compute zero Matsubara frequency bosonic Green's function

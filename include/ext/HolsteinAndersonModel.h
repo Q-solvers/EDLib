@@ -65,18 +65,18 @@ namespace EDLib {
         class BosonInnerState : public InnerState < prec > {
 
         public:
-          BosonInnerState(int ib, prec value, int cutoff, prec avg, bool dag) : _b(ib), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _avg(avg), _dag(dag) {}
+          BosonInnerState(int ib, int i, prec value, int cutoff, prec avg, bool dag) : _b(ib), _i(i), _value(value), _bit_cutoff(cutoff), _cutoff((1 << cutoff) - 1), _avg(avg), _dag(dag) {}
 
           virtual int valid(long long nst, int Ns, int Nb) const {
             // extract bosonic part of state
             long long int bnst = nst & ((1 << Nb) - 1);
             // extract current boson from N-dimensional representation
             long long cbos = ((bnst >> (_bit_cutoff * _b)) & _cutoff);
-            return (std::abs(this->checkState(nst >> Nb, 0, Ns) + this->checkState(nst >> Nb, Ns, Ns) - _avg) >1e-9) * (_dag ? (cbos) < _cutoff : cbos > 0);
+            return (std::abs(this->checkState(nst >> Nb, _i, Ns) + this->checkState(nst >> Nb, Ns+_i, Ns) - _avg) >1e-9) * (_dag ? (cbos) < _cutoff : cbos > 0);
           }
 
           virtual prec set(long long nst, long long &k, int &sign, int Ns, int Nb) const {
-            double N = (this->checkState(nst>>Nb, 0, Ns) + this->checkState(nst>>Nb, Ns, Ns) - _avg);
+            double N = (this->checkState(nst>>Nb, _i, Ns) + this->checkState(nst>>Nb, Ns+_i, Ns) - _avg);
             long long int bnst = nst & ((1 << Nb) - 1);
             long long cbos = ((bnst >> (_bit_cutoff * _b)) & _cutoff);
             if (_dag) {
@@ -93,6 +93,7 @@ namespace EDLib {
           }
         private:
           int _b;
+          int _i;
           // number of bits per boson
           int _bit_cutoff;
           long long _cutoff;
@@ -117,7 +118,8 @@ namespace EDLib {
         typedef typename Symmetry::SzSymmetryWithBoson::Sector Sector;
 
 
-        HolsteinAndersonModel(alps::params &p) : FermionicModel(p), _symmetry(p), _Nb(p["NBBITS"].as<int>() * p["NBLEVEL"].as<int>()) {
+        HolsteinAndersonModel(alps::params &p) : FermionicModel(p), _symmetry(p), _Nb(p["NBBITS"].as<int>() * p["NBLEVEL"].as<int>()), _ml(p["NORBITALS"].as<int>()),
+               _U(p["NORBITALS"].as<int>(), std::vector<precision>(p["NORBITALS"].as<int>(), 0.0) ) {
           std::string input = p["INPUT_FILE"];
           alps::hdf5::archive input_data(input.c_str(), "r");
           if (_ms != 2) {
@@ -136,43 +138,75 @@ namespace EDLib {
           s.str("");
           s << "Bath/W" << "/values";
           input_data >> alps::make_pvp(s.str().c_str(), _W);
+          s.str("");
+          s<<"tk/values";
+          input_data >> alps::make_pvp(s.str().c_str(), _tk);
           input_data >> alps::make_pvp("Eps0/values", _Eps);
           input_data >> alps::make_pvp("mu", _xmu);
-          input_data >> alps::make_pvp("U", _U);
-          double avg;
+          precision U;
+          input_data >> alps::make_pvp("U", U);
+          precision V;
+          input_data >> alps::make_pvp("V", V);
+          // TODO: replace with full density-density interaction matrix
+          for (int i = 0; i< _ml; ++i) {
+            for (int j = 0; j< _ml; ++j) {
+              if(i==j) _U[i][j] = U;
+              if(i!=j) _U[i][j] = V;
+            }
+          }
+
+          std::cout<<"ml:"<<_ml<<"\n";
+          precision avg;
           input_data >> alps::make_pvp("AVG", avg);
 
           int cutoff = p["NBBITS"].as<int>();
           input_data.close();
-          if (_Vk.size() != _Epsk.size()) {
-            throw std::invalid_argument("Incorrect bosonic bath. Please check input file.");
-          }
-          if (_w0.size() != _W.size()) {
-            throw std::invalid_argument("Incorrect bosonic bath. Please check input file.");
+          for (int i = 0; i< _ml; ++i) {
+            if (_Vk[i].size() != _Epsk.size()) {
+              throw std::invalid_argument("Incorrect bosonic bath. Please check input file.");
+            }
+            if (_w0.size() != _W[i].size()) {
+              throw std::invalid_argument("Incorrect bosonic bath. Please check input file.");
+            }
           }
           if(_w0.size() != p["NBLEVEL"].as<int>()) {
             throw std::invalid_argument("Incorrect bosonic bath. Number of bosonic levels in input file inconsistent with parameters. Please check input file.");
           }
           // Fermionic bath
-          for (int ik = 0; ik < _Vk.size(); ++ik) {
-            for (int is = 0; is < _ms; ++is) {
-              if (std::abs(_Vk[ik][is]) > 1e-10) {
-                int imk = ik + 1;
-                // hoppings
-                // from impurity to bath
-                _F_states.push_back(HSt(0, imk, is, _Vk[ik][is]));
-                // from bath to impurity
-                _F_states.push_back(HSt(imk, 0, is, _Vk[ik][is]));
+          // interorbital hoppings
+          for (int im = 0; im < _ml; ++im) {
+            for (int jm = 0; jm < im; ++jm) {
+              for(int is = 0; is< _ms; ++is) {
+                if (std::abs(_tk[im][jm]) > 1e-10) {
+                  _F_states.push_back(HSt(im, jm, is, _tk[im][jm]));
+                  _F_states.push_back(HSt(jm, im, is, _tk[im][jm]));
+                }
+                std::cout<<"hopping\n";
               }
             }
           }
-          // Bosonic bath
-          for (int ib = 0; ib < _W.size(); ++ib) {
-            if (std::abs(_W[ib]) > 1e-10) {
-              // destroy boson
-              _B_states.push_back(BSt(ib, _W[ib], cutoff, avg, false));
-              // create boson
-              _B_states.push_back(BSt(ib, _W[ib], cutoff, avg, true));
+          for (int i = 0; i< _ml; ++i) {
+            for (int ik = 0; ik < _Vk[i].size(); ++ik) {
+              for (int is = 0; is < _ms; ++is) {
+                if (std::abs(_Vk[i][ik][is]) > 1e-10) {
+                  int imk = _ml + ik;
+                  // hoppings
+                  // from impurity to bath
+                  _F_states.push_back(HSt(i, imk, is, _Vk[i][ik][is]));
+                  // from bath to impurity
+                  _F_states.push_back(HSt(imk, i, is, _Vk[i][ik][is]));
+                }
+              }
+            }
+            // Bosonic bath
+            for (int ib = 0; ib < _W[i].size(); ++ib) {
+              std::cout<<"Wb["<<i<<"]["<<ib<<"]="<<_W[i][ib]<<"\n";
+              if (std::abs(_W[i][ib]) > 1e-10) {
+                // destroy boson
+                _B_states.push_back(BSt(ib, i, _W[i][ib], cutoff, avg, false));
+                // create boson
+                _B_states.push_back(BSt(ib, i, _W[i][ib], cutoff, avg, true));
+              }
             }
           }
         }
@@ -180,17 +214,30 @@ namespace EDLib {
         inline const precision diagonal(long long full_state) const {
           precision xtemp = 0.0;
           long long bosons = full_state & ((1 << _Nb) - 1);
-
+          // density term
           for (int is = 0; is < _ms; ++is) {
             for (int ik = 0; ik < _Epsk.size(); ++ik) {
-              int ikm = ik + 1;
+              int ikm = _ml + ik;
               xtemp += (_Epsk[ik][is] * checkState(full_state, ikm + is * _Ns, _Ip));
             }
-            xtemp += (_Eps[is] - _xmu) * checkState(full_state, is * _Ns, _Ip);
+            for( int i = 0; i < _ml; ++i) {
+              xtemp += (_Eps[i][is] - _xmu) * checkState(full_state, i + is * _Ns, _Ip);
+            }
           }
-          xtemp += _U * checkState(full_state, 0, _Ip) * checkState(full_state, _Ns, _Ip);
+          // interaction term
+          for( int i = 0; i < _ml; ++i) {
+            xtemp += _U[i][i] * checkState(full_state, i, _Ip) * checkState(full_state, _Ns + i, _Ip);
+            for( int j = 0; j < _ml; ++j) {
+              if(i!=j) {
+                xtemp += 0.5*(_U[i][j] * checkState(full_state, i, _Ip) * checkState(full_state, _Ns + j, _Ip) +
+                     _U[i][j] * checkState(full_state, _Ns + i, _Ip) * checkState(full_state, j, _Ip) +
+                     _U[i][j] * checkState(full_state, i, _Ip) * checkState(full_state, j, _Ip) +
+                     _U[i][j] * checkState(full_state, _Ns + i, _Ip) * checkState(full_state, _Ns + j, _Ip) );
+              }
+            }
+          }
 
-          int bit_cutoff = _Nb / _w0.size();
+          int bit_cutoff = _Nb > 0 ? (_Nb / _w0.size()) :0;
           long long cutoff = (1 << bit_cutoff) - 1;
           for (int i = 0; i < _w0.size(); ++i) {
             long long cbos = ((bosons >> (bit_cutoff * i)) & cutoff);
@@ -275,15 +322,21 @@ namespace EDLib {
         Symmetry::SzSymmetryWithBoson _symmetry;
         int _Nb;
         // impurity parameters
+        // number of sites in cluster impurity
+        int _ml;
+        // chemical potential
         precision _xmu;
-        precision _U;
-        std::vector< precision > _Eps;
+        // local interaction
+        std::vector< std::vector< precision > > _U;
+        std::vector< std::vector< precision > > _Eps;
+        // intracluster hoppings
+        std::vector< std::vector < precision > > _tk;
         // fermionic bath
-        std::vector< std::vector < precision > > _Vk;
+        std::vector< std::vector< std::vector < precision > > > _Vk;
         std::vector< std::vector < precision > > _Epsk;
         // bosonic bath
         std::vector < precision > _w0;
-        std::vector < precision > _W;
+        std::vector< std::vector < precision > > _W;
 
 
         // Fermionic non-digaonal part of Hamiltonian

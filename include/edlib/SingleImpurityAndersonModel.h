@@ -195,6 +195,7 @@ namespace EDLib {
       SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
                                                     _Epsk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
                                                     _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
+                                                    _tk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
                                                     _bath_ind(p["siam.NORBITALS"], 0) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
@@ -212,6 +213,9 @@ namespace EDLib {
           s.str("");
           s<<"Bath/Epsk_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _Epsk[im]);
+          s.str("");
+          s<<"tk_"<<im<<"/values";
+          input_data >> alps::make_pvp(s.str().c_str(), _tk[im]);
         }
         input_data >> alps::make_pvp("Eps0/values", _Eps);
         input_data >> alps::make_pvp("mu", _xmu);
@@ -225,8 +229,24 @@ namespace EDLib {
           _bath_ind[im] = b_ind;
           b_ind += _Vk[im].size();
         }
+        for(int im = 0; im< _ml; ++im ){
+          if(_tk[im].size()>_ml) {
+            throw std::invalid_argument("Inter orbital hoopings array dimension are bigger than number of impurity orbitals");
+          }
+        }
         if(b_ind != _Ns - _ml) {
           throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
+        }
+        // interorbital hoppings
+        for (int im = 0; im < _ml; ++im) {
+          for (int jm = 0; jm < im; ++jm) {
+            for (int is = 0; is < _ms; ++is) {
+              if (std::abs(_tk[im][jm][is]) > 1e-10) {
+                _T_states.push_back(HSt(im, jm, is, _tk[im][jm][is]));
+                _T_states.push_back(HSt(jm, im, is, _tk[im][jm][is]));
+              }
+            }
+          }
         }
         // fill hybridization part
         for (int im = 0; im < _ml; ++im) {
@@ -387,6 +407,8 @@ namespace EDLib {
       std::vector < std::vector < precision > > _Eps;
       /// number of bath states
       int _Nk;
+      /// Hoppings between orbitals
+      std::vector < std::vector < std::vector < precision > > > _tk;
       /// Hybridization with bath
       std::vector < std::vector < std::vector < precision > > > _Vk;
       /// Bath energy levels
