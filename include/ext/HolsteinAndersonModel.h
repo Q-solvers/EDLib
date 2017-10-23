@@ -303,7 +303,7 @@ namespace EDLib {
         }
 
         int interacting_orbitals() const {
-          return 1;
+          return _ml;
         }
 
         template<typename Mesh>
