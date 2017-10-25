@@ -30,7 +30,7 @@ int main(int argc, const char ** argv) {
   alps::params params(argc, argv);
   EDLib::define_parameters(params);
   EDLib::Ext::define_parameters(params);
-  params.define<bool>("NORBITALS", 1, "");
+  params.define<int>("NORBITALS", 1, "");
   params.define<bool>("COMPUTE_REAL", false, "");
   if(params.help_requested(std::cout)) {
     exit(0);
