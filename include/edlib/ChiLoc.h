@@ -61,7 +61,7 @@ namespace EDLib {
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
       ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(h.model().interacting_orbitals())),
+                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -71,7 +71,7 @@ namespace EDLib {
         if(input_file.is_data("ChiLoc_orbitals/values")){
           input_file >> alps::make_pvp("ChiLoc_orbitals/values", gf_orbs);
         }else{
-          // Or calculate all diagonal indices.
+          // Or calculate only the diagonal part.
           gf_orbs.clear();
           for(int i = 0; i < h.model().interacting_orbitals(); ++i){
             gf_orbs.push_back({i, i});
@@ -87,7 +87,7 @@ namespace EDLib {
         }
         std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
         diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
-        // Find nondiagonal indices.
+        // Find offdiagonal indices.
         offdiagonal_orbs.clear();
         for(int i = 0; i < gf_orbs.size(); ++i){
           if(gf_orbs[i][0] != gf_orbs[i][1]){
@@ -143,7 +143,7 @@ namespace EDLib {
               if(rank==0){
 #endif
               std::cout << "orbital: " << diagonal_orbs[iorb] << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(diagonal_orbs[iorb]), alps::gf::index_mesh::index_type(diagonal_orbs[iorb]));
+                compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(diagonal_orbs[iorb]));
 #ifdef USE_MPI
             }
 #endif
@@ -178,9 +178,9 @@ namespace EDLib {
           }
           for (int iomega = 1; iomega < omega().extent(); ++iomega) {
             double om = omega().points()[iomega];
-            chiSum = chiSum + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
+            chiSum = chiSum + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
           }
-          gf(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
+          gf(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
         }
       };
 
@@ -203,8 +203,8 @@ namespace EDLib {
         double om2 = omega().points()[freq-1];
         double om1_2 = om1*om1;
         double om2_2 = om2*om2;
-        double g1 = gf(typename Mesh::index_type(freq), alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(i)).real();
-        double g2 = gf(typename Mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i), alps::gf::index_mesh::index_type(i)).real();
+        double g1 = gf(typename Mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
+        double g2 = gf(typename Mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
         c2 = - (g2*om2_2*om2_2 - g1*om1_2*om1_2)/(om1_2-om2_2);
         c4 = - (g1*om1_2*om1_2*om2_2 - g2*om2_2*om2_2*om1_2)/(om1_2-om2_2);
         tail= c2 * beta() * beta() / 24.0 + c4 * beta() * beta() * beta() * beta() / 1440.0;
@@ -230,7 +230,7 @@ namespace EDLib {
       }
 
     private:
-      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh>  GF_TYPE;
+      typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
       GF_TYPE gf;
       typename Hamiltonian::ModelType &_model;
       precision _cutoff;

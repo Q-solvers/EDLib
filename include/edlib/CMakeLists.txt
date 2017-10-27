@@ -3,7 +3,6 @@ project(edlib CXX)
 
 add_custom_target(edlib SOURCES Combination.h
     CRSStorage.h
-    DensityMatrix.h
     EDParams.h
     EigenPair.h
     FermionicModel.h

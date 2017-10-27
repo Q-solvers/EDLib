@@ -23,7 +23,8 @@ namespace EDLib {
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
       GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -33,12 +34,10 @@ namespace EDLib {
         if(input_file.is_data("GreensFunction_orbitals/values")){
           input_file >> alps::make_pvp("GreensFunction_orbitals/values", gf_orbs);
         }else{
-          // Or calculate all possible indices.
+          // Or calculate only the diagonal part.
           gf_orbs.clear();
           for(int i = 0; i < h.model().interacting_orbitals(); ++i){
-            for(int j = 0; j < h.model().interacting_orbitals(); ++j){
-              gf_orbs.push_back({i, j});
-            }
+            gf_orbs.push_back({i, i});
           }
         }
         input_file.close();
@@ -51,7 +50,7 @@ namespace EDLib {
         }
         std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
         diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
-        // Find nondiagonal indices.
+        // Find offdiagonal indices.
         offdiagonal_orbs.clear();
         for(int i = 0; i < gf_orbs.size(); ++i){
           if(gf_orbs[i][0] != gf_orbs[i][1]){
@@ -62,6 +61,7 @@ namespace EDLib {
 
       void compute() {
         gf *= 0.0;
+        gf_ij *= 0.0;
         _Z = 0.0;
         if(hamiltonian().eigenpairs().empty())
           return;
@@ -91,18 +91,19 @@ namespace EDLib {
           if(rank==0)
 #endif
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << pair.sector() << std::endl;
-          compute_diagonal_contribution(pair, groundstate);
-          compute_operatorsum_contribution(pair, groundstate);
+          local_contribution(pair, groundstate);
+          nonlocal_contribution(pair, groundstate);
         }
-        compute_offdiagonal_gf();
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
         /// normalize Green's function by statsum Z.
         gf /= _Z;
+        gf_ij /= _Z;
 #ifdef USE_MPI
         }
 #endif
+        non_local_gf();
         common::statistics.updateEvent("Greens function");
       }
 
@@ -117,14 +118,23 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          gf.save(ar, path + "/G_omega");
-          std::ostringstream Gomega_name;
-          Gomega_name << "G_omega";
-          std::ofstream G_omega_file(Gomega_name.str().c_str());
-          G_omega_file << std::setprecision(14) << gf;
-          G_omega_file.close();
+          if(diagonal_orbs.size()){
+            gf.save(ar, path + "/G_omega");
+            std::ostringstream Gomega_name;
+            Gomega_name << "G_omega";
+            std::ofstream G_omega_file(Gomega_name.str().c_str());
+            G_omega_file << std::setprecision(14) << gf;
+            G_omega_file.close();
+          }
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
+          if(offdiagonal_orbs.size()){
+            std::ostringstream Gomega_name2;
+            Gomega_name2 << "G_ij_omega";
+            std::ofstream G_omega_file2(Gomega_name2.str().c_str());
+            G_omega_file2<< std::setprecision(14) << gf_ij;
+            G_omega_file2.close();
+          }
 #ifdef USE_MPI
         }
 #endif
@@ -145,7 +155,7 @@ namespace EDLib {
           for (int im: bare.mesh2().points()) {
             for (int is : bare.mesh3().points()) {
               sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) =
-                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
+                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
             }
           }
         }
@@ -159,7 +169,13 @@ namespace EDLib {
 
     private:
 
-      void compute_diagonal_contribution(const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair, const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& groundstate) {
+      /**
+       * Compute local Green's function G_ii
+       *
+       * @param groundstate -- system groundstate
+       * @param pair -- current Eigen-Pair
+       */
+      void local_contribution(const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair, const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& groundstate) {
 #ifdef USE_MPI
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
@@ -182,7 +198,7 @@ namespace EDLib {
               {
                 std::cout << "orbital: " << orb << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 /// Using computed Lanczos factorization compute approximation for \frac{1}{z - H} by calculation of a continued fraction
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, index_mesh_index(orb), index_mesh_index(orb), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, index_mesh_index(orb), index_mesh_index(ispin));
               }
             }
             /// restore symmetry sector
@@ -195,14 +211,20 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbital: " << orb << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, index_mesh_index(orb), index_mesh_index(orb), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, index_mesh_index(orb), index_mesh_index(ispin));
               }
             }
           }
         }
       }
 
-      void compute_operatorsum_contribution(const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair, const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& groundstate) {
+      /**
+       * Computes the part "<(c_i + c_j)(c_i^+ + c_j^+)>" of non-local Green's function G_ij
+       *
+       * @param groundstate -- system groundstate
+       * @param pair -- current Eigen-Pair
+       */
+      void nonlocal_contribution(const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair, const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& groundstate) {
 #ifdef USE_MPI
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
@@ -234,7 +256,7 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
               }
             }
             /// perform the same for destroying of a particle
@@ -258,33 +280,40 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
               }
             }
           }
         }
       }
 
-      void compute_offdiagonal_gf() {
+      /**
+       * Computes non-local Green's function G_ij = 0.5( <(c_i + c_j)(c_i^+ + c_j^+)> - <c_i c_i^+> - <c_j c_j^+> ).
+       *
+       * @tparam O -- bosonic operator type
+       * @param op -- bosonic operator
+       */
+      void non_local_gf() {
         for (int iomega = 0; iomega < omega().extent(); ++iomega) {
           for (int iorb = 0; iorb < offdiagonal_orbs.size(); ++iorb) {
             for (int ispin = 0; ispin < _model.spins(); ++ispin) {
               std::vector<int> orbs = offdiagonal_orbs[iorb];
               for (int j = 0; j < 2; ++j) {
-                gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(orbs[j]), index_mesh_index(ispin));
+                gf_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
               }
-              gf(frequency_mesh_index(iomega), index_mesh_index(orbs[0]), index_mesh_index(orbs[1]), index_mesh_index(ispin)) *= 0.5;
+              gf_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
             }
           }
         }
       }
 
       /// Green's function type
-      typedef alps::gf::four_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
+      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
       typedef typename alps::gf::index_mesh::index_type index_mesh_index;
       typedef typename Mesh::index_type frequency_mesh_index;
       /// Green's function container object
       GF_TYPE gf;
+      GF_TYPE gf_ij;
       /// Model we are solving
       typename Hamiltonian::ModelType &_model;
       /// Boltzmann-factor cutoff

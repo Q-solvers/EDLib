@@ -75,7 +75,7 @@ namespace EDLib {
        */
       template<typename GF_TYPE>
       void compute_continued_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
-                                      const alps::gf::index_mesh::index_type &site1, const alps::gf::index_mesh::index_type &site2, const alps::gf::index_mesh::index_type &spin) {
+                                      const alps::gf::index_mesh::index_type &site, const alps::gf::index_mesh::index_type &spin) {
         double expb = 0;
         double shift;
         if (_beta * (excited_state - groundstate) > 25)
@@ -89,7 +89,7 @@ namespace EDLib {
           std::complex < double > ener = freq_point(iomega) + (excited_state) * isign;
           swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
 
-          gf(mesh_index(iomega), site1, site2, spin) += swp;
+          gf(mesh_index(iomega), site, spin) += swp;
         }
       }
 
@@ -98,7 +98,7 @@ namespace EDLib {
        */
       template<typename GF_TYPE>
       void compute_sym_continued_fraction(double expectation_value, double excited_state, double groundstate, int nlanc, int isign, GF_TYPE &gf,
-                                          const alps::gf::index_mesh::index_type &site1, const alps::gf::index_mesh::index_type &site2) {
+                                          const alps::gf::index_mesh::index_type &site) {
         double expb = 0;
         double shift;
         if (_beta * (excited_state - groundstate) > 25)
@@ -106,14 +106,14 @@ namespace EDLib {
         else
           expb = exp(-_beta * (excited_state - groundstate));
         const std::vector < double > &freqs = _omega.points();
-        update_static(gf, site1, site2, expectation_value, expb);
+        update_static(gf, site, expectation_value, expb);
         for (int iomega = zero_freq(); iomega < _omega.extent(); ++iomega) {
           shift = 1.0;
           std::complex < double > ener =   freq_point(iomega) + (excited_state) * isign;
           std::complex < double > ener2 = -freq_point(iomega) + (excited_state) * isign;
           std::complex<double> swp = get_frac_point(expectation_value, nlanc, isign, expb, shift, ener);
           swp += get_frac_point(expectation_value, nlanc, isign, expb, shift, ener2);
-          gf(mesh_index(iomega), site1, site2) += swp;
+          gf(mesh_index(iomega), site) += swp;
         }
       }
 
@@ -155,13 +155,13 @@ namespace EDLib {
 
       template<typename GF_TYPE, typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type
-      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site1, const alps::gf::index_mesh::index_type &site2, double expectation_value, double expb) {
-        gf(mesh_index(0), site1, site2) -= expectation_value*_beta*expb;
+      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+        gf(mesh_index(0), site) -= expectation_value*_beta*expb;
       };
 
       template<typename GF_TYPE, typename M=Mesh>
       typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type
-      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site1, const alps::gf::index_mesh::index_type &site2, double expectation_value, double expb) {
+      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
 
       };
 

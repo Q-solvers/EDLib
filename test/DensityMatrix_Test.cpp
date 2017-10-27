@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/HubbardModel.h"
-#include "edlib/DensityMatrix.h"
+#include "ext/DensityMatrix.h"
 #include "edlib/Storage.h"
 #include "edlib/EDParams.h"
 
