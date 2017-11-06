@@ -76,6 +76,7 @@ namespace EDLib {
      *  n_up: average number of electrons with the spin up;
      *  n_down: average number of electrons with the spin down;
      *  m: average magnetic moment;
+     *  m_i m_j: product of magnetic moments on the i-th and j-th sites;
      *  d_occ: average double occupancy;
      *  N_eff: average effective dimension of Hilbert space;
      */
@@ -85,6 +86,7 @@ namespace EDLib {
         {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"m_i m_j", std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"N_eff", std::vector<precision>(1, 0.0)}
       };
@@ -319,6 +321,7 @@ namespace EDLib {
       std::vector<precision> n_up(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> n_down(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> m(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> mimj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
       precision inverse_N_eff = 0.0;
       ham.model().symmetry().set_sector(pair.sector());
@@ -336,6 +339,11 @@ namespace EDLib {
           n_up[orb] += el_up * weight;
           n_down[orb] += el_down * weight;
           m[orb] += (el_up - el_down) * weight;
+          for(int orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
+            int el_up2 = ham.model().checkState(nst, orb2, ham.model().max_total_electrons());
+            int el_down2 = ham.model().checkState(nst, orb2 + ham.model().interacting_orbitals(), ham.model().max_total_electrons());
+            mimj[ham.model().interacting_orbitals() * orb + orb2] += (el_up - el_down) * (el_up2 - el_down2) * weight;
+          }
           d_occ[orb] += el_up * el_down * weight;
         }
         inverse_N_eff += weight * weight;
@@ -345,6 +353,7 @@ namespace EDLib {
         {"n_up", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"n_down", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"m", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {"m_i m_j", std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {"d_occ", std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {"N_eff", std::vector<precision>(1, 0.0)}
       };
@@ -354,6 +363,7 @@ namespace EDLib {
       MPI_Reduce(n_up.data(), result["n_up"].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(n_down.data(), result["n_down"].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(m.data(), result["m"].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(mimj.data(), result["m_i m_j"].data(), mimj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(d_occ.data(), result["d_occ"].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(&inverse_N_eff, &result["N_eff"][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
@@ -361,6 +371,7 @@ namespace EDLib {
       result["n_up"] = n_up;
       result["n_down"] = n_down;
       result["m"] = m;
+      result["m_i m_j"] = mimj;
       result["d_occ"] = d_occ;
       result["N_eff"][0] = inverse_N_eff;
 #endif
