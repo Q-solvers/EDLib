@@ -99,12 +99,16 @@ namespace EDLib {
      */
     template<class Hamiltonian, class Mesh, typename ... Args>
     class ChiLoc : public Lanczos < Hamiltonian, Mesh, Args... > {
-      using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
-      using Lanczos < Hamiltonian, Mesh, Args... >::lanczos;
+      using Lanczos < Hamiltonian, Mesh, Args... >::zero_freq;
       using Lanczos < Hamiltonian, Mesh, Args... >::omega;
+      using Lanczos < Hamiltonian, Mesh, Args... >::lanczos;
+      using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
       using Lanczos < Hamiltonian, Mesh, Args... >::beta;
       using Lanczos < Hamiltonian, Mesh, Args... >::compute_sym_continued_fraction;
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
+      using Sector = typename Hamiltonian::ModelType::Sector;
+      /// Green's function conatainer type
+      typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
     public:
       /**
        *
@@ -114,6 +118,7 @@ namespace EDLib {
        */
       ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
+                                                        gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()*h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
         // we can not evaluate Green's function if eigenvectors have not been computed.
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
@@ -132,6 +137,7 @@ namespace EDLib {
         static_assert(std::is_base_of<BosonicOperator<precision>, Op>::value, "Wrong bosonic operator.");
         // reset to 0
         gf *= 0.0;
+        gf_ij *= 0.0;
         _Z = 0.0;
         // check that at least one eigen-value have computed
         if(hamiltonian().eigenpairs().empty())
@@ -163,34 +169,128 @@ namespace EDLib {
 #endif
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = "
                     << boltzmann_f << "; for sector" << pair.sector() << std::endl;
-          for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-            std::vector < precision > outvec(1, precision(0.0));
-            precision expectation_value = 0;
-            _model.symmetry().set_sector(pair.sector());
-            if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
-              int nlanc = lanczos(outvec);
-#ifdef USE_MPI
-              if(rank==0){
-#endif
-              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                // compute symmetrized Lanczos continued fraction
-                compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, alps::gf::index_mesh::index_type(i));
-#ifdef USE_MPI
-            }
-#endif
-            }
-          }
+          local_contribution(groundstate, op, pair);
+          nonlocal_contribution(groundstate, op, pair);
         }
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
         // normalize Green's function
-        gf/= _Z;
+        gf /= _Z;
+        gf_ij /= _Z;
         // Compute zero-frequency contribution
-        zero_freq_contribution(op);
+        local_correction(op);
+        // Compute non-local correction
+        non_local_correction(op);
 #ifdef USE_MPI
         }
 #endif
+      }
+
+      /**
+       * Evaluates static correction at zero matsubara frequency
+       *
+       * @tparam O -- bosonic operator type
+       * @param op -- bosonic operator
+       */
+      template<typename O>
+      void local_correction(const O&op) {
+        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+          zero_freq_contribution(op, gf, i);
+        }
+      }
+
+      /**
+       * Computes non-local Green's function from symmetrized averaged: G_ij = 0.5( <(op_i + op_j)(op_i + op_j)> - <op_i op_i> - <op_j op_j> ),
+       * and evaluates static correction at zero matsubara frequency
+       *
+       *
+       * @tparam O -- bosonic operator type
+       * @param op -- bosonic operator
+       */
+      template<typename O>
+      void non_local_correction(const O& op) {
+        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+          for (int j = 0; j < _model.interacting_orbitals(); ++j) {
+            zero_freq_contribution(op, gf_ij, i*_model.interacting_orbitals() + j);
+            for (int iomega = 0; iomega < omega().extent(); ++iomega) {
+              gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i*_model.interacting_orbitals() + j)) -=
+                 gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)) + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(j));
+            }
+          }
+        }
+        gf_ij *= 0.5;
+      };
+
+      /**
+       * Compute local Green's function G_ii
+       *
+       * @tparam Op -- type of bosonic operator
+       * @param groundstate -- system groundstate
+       * @param op -- bosonic operator
+       * @param pair -- current Eigen-Pair
+       */
+      template<typename Op = SzOperator<precision> >
+      void local_contribution(const EigenPair <precision, Sector> &groundstate, const Op op,
+                              const EigenPair <precision, Sector> &pair) {
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+#endif
+        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+          std::vector < precision > outvec(1, precision(0.0));
+          precision expectation_value = 0;
+          _model.symmetry().set_sector(pair.sector());
+          if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
+            int nlanc = lanczos(outvec);
+#ifdef USE_MPI
+            if(rank==0){
+#endif
+              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              // compute symmetrized Lanczos continued fraction
+              compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1,
+                                             gf, alps::gf::index_mesh::index_type(i));
+#ifdef USE_MPI
+            }
+#endif
+          }
+        }
+      }
+      /**
+       * Computes symmetrized non-local Green's function for operator op: G_ij = <(op_i + op_j)(op_i + op_j)>
+       *
+       * @tparam Op -- type of bosonic operator
+       * @param groundstate -- system groundstate
+       * @param op -- bosonic operator
+       * @param pair -- current Eigen-Pair
+       */
+      template<typename Op>
+      void nonlocal_contribution(const EigenPair <precision, Sector> &groundstate, const Op &op,
+                                 const EigenPair <precision, Sector> &pair) {
+#ifdef USE_MPI
+        int rank;
+        MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
+#endif
+        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+          for (int j = 0; j < _model.interacting_orbitals(); ++j) {
+            _model.symmetry().set_sector(pair.sector());
+            std::vector < precision > outvec(1, precision(0.0));
+            precision expectation_value = 0;
+            if(operation(i, j, pair.eigenvector(), outvec, expectation_value, op)) {
+              int nlanc = lanczos(outvec);
+#ifdef USE_MPI
+              if(rank==0){
+#endif
+              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              // compute symmetrized Lanczos continued fraction
+              compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1,
+                                             gf_ij, alps::gf::index_mesh::index_type(i * _model.interacting_orbitals() + j));
+#ifdef USE_MPI
+              }
+#endif
+            }
+          }
+        }
       }
 
       /**
@@ -203,37 +303,36 @@ namespace EDLib {
        * @param op - operator instance
        */
       template<typename O, typename M= Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
+      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type zero_freq_contribution(const O& op, GF_TYPE& G, int i) {
         // Compute static susceptibility for each orbital
-        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-          double chiSum = 0.0;
-          // Susceptibility decays as c2/w^2 + c4/w^4
-          // compute c2 and c4 from two largest freq points
-          // and for next pair as well to check convergence
-          double c2, c4;
-          double c2_2, c4_2;
-          double tail, tail2;
-          // check that we have enough Matsubara frequencies and we already sit in the high-frequency tail regime
-          get_tail(i, omega().extent()-1, c2, c4, tail);
-          get_tail(i, omega().extent()-2, c2_2, c4_2, tail2);
-          if(std::abs(tail-tail2)/std::abs(tail) > 1e-4) {
-            std::cerr<<"Not enough frequencies to compute high frequency tail. Please increase number of frequencies. Diff: "<<std::abs(tail-tail2)/std::abs(tail)<<std::endl;
-          }
-          // loop over non-zero Matsubara frequencies
-          for (int iomega = 1; iomega < omega().extent(); ++iomega) {
-            double om = omega().points()[iomega];
-            chiSum = chiSum + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
-          }
-          // computes zero-frequency contribution
-          gf(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
+
+        double chiSum = 0.0;
+        // Susceptibility decays as c2/w^2 + c4/w^4
+        // compute c2 and c4 from two largest freq points
+        // and for next pair as well to check convergence
+        double c2, c4;
+        double c2_2, c4_2;
+        double tail, tail2;
+        // check that we have enough Matsubara frequencies and we already sit in the high-frequency tail regime
+        get_tail(i, omega().extent()-1, G, c2, c4, tail);
+        get_tail(i, omega().extent()-2, G, c2_2, c4_2, tail2);
+        if(std::abs(tail-tail2)/std::abs(tail) > 1e-4) {
+          std::cerr<<"Not enough frequencies to compute high frequency tail. Please increase number of frequencies. Diff: "<<std::abs(tail-tail2)/std::abs(tail)<<std::endl;
         }
+        // loop over non-zero Matsubara frequencies
+        for (int iomega = 1; iomega < omega().extent(); ++iomega) {
+          double om = omega().points()[iomega];
+          chiSum = chiSum + G(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
+        }
+        // computes zero-frequency contribution
+        G(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
       };
 
       /**
        * For real frequency mesh there is nothing to do. Zero frequency has been already correctly computed.
        */
       template<typename O, typename M= Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type zero_freq_contribution(const O& op) {
+      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type zero_freq_contribution(const O& op, GF_TYPE& G, int i) {
 
       };
 
@@ -246,13 +345,13 @@ namespace EDLib {
        * @param c4 -- c_4 coefficient
        * @param tail -- analytical value of tail
        */
-      void get_tail(int i, int freq, double &c2, double& c4, double &tail) const {
+      void get_tail(int i, int freq, GF_TYPE& G, double &c2, double& c4, double &tail) const {
         double om1 = omega().points()[freq];
         double om2 = omega().points()[freq-1];
         double om1_2 = om1*om1;
         double om2_2 = om2*om2;
-        double g1 = gf(typename Mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
-        double g2 = gf(typename Mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
+        double g1 = G(typename Mesh::index_type(freq), alps::gf::index_mesh::index_type(i)).real();
+        double g2 = G(typename Mesh::index_type(freq - 1), alps::gf::index_mesh::index_type(i)).real();
         c2 = - (g2*om2_2*om2_2 - g1*om1_2*om1_2)/(om1_2-om2_2);
         c4 = - (g1*om1_2*om1_2*om2_2 - g2*om2_2*om2_2*om1_2)/(om1_2-om2_2);
         tail= c2 * beta() * beta() / 24.0 + c4 * beta() * beta() * beta() * beta() / 1440.0;
@@ -277,16 +376,22 @@ namespace EDLib {
           G_omega_file.close();
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
+
+          std::ostringstream Gomega_name2;
+          Gomega_name2 << "Chi_ij_"<<_type<<"_omega";
+          std::ofstream G_omega_file2(Gomega_name2.str().c_str());
+          G_omega_file2<< std::setprecision(14) << gf_ij;
+          G_omega_file2.close();
 #ifdef USE_MPI
         }
 #endif
       }
 
     private:
-      /// Green's function conatainer type
-      typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
       /// Green's function conatainer
       GF_TYPE gf;
+      /// Nonlocal
+      GF_TYPE gf_ij;
       /// Specific model
       typename Hamiltonian::ModelType &_model;
       /// Boltsman-factor cut-off
@@ -322,7 +427,37 @@ namespace EDLib {
         }
         _model.symmetry().init();
         expectation_value = norm;
-        return true;
+        return expectation_value > 1e-9;
+      };
+
+      /**
+       * @brief Perform the symmetrized operation on the eigenstate
+       *
+       * @param mu - the first orbital to action
+       * @param mu - the second orbital to action
+       * @param invec - current eigenstate
+       * @param outvec - Op-vec product
+       * @param expectation_value - expectation value of aa*
+       * @return true if the particle has been created
+       */
+      template<typename Op>
+      bool operation(int mu, int nu, const std::vector < precision > &invec, std::vector < precision > &outvec, double &expectation_value, const Op& o) {
+        hamiltonian().storage().reset();
+        long long k = 0;
+        int sign = 0;
+        outvec.assign(hamiltonian().storage().vector_size(_model.symmetry().sector()), 0.0);
+        for(int i = 0; i< invec.size(); ++i) {
+          _model.symmetry().next_state();
+          long long nst = _model.symmetry().state();
+          outvec[i] = (o.action(nst, mu, _model) + o.action(nst, nu, _model) )* invec[i];
+        };
+        double norm = hamiltonian().storage().vv(outvec, outvec);
+        for (int i = 0; i < outvec.size(); ++i) {
+          outvec[i] /= std::sqrt(norm);
+        }
+        _model.symmetry().init();
+        expectation_value = norm;
+        return true;//expectation_value > 1e-9;
       };
     };
   }

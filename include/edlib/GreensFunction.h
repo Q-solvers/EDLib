@@ -29,6 +29,7 @@ namespace EDLib {
       using Lanczos < Hamiltonian, Mesh, Args... >::omega;
       using Lanczos < Hamiltonian, Mesh, Args... >::beta;
       using Lanczos < Hamiltonian, Mesh, Args... >::compute_continued_fraction;
+      using Lanczos < Hamiltonian, Mesh, Args... >::suffix;
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
       /**
@@ -144,9 +145,9 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          gf.save(ar, path + "/G_omega");
+          gf.save(ar, path + "/G_omega" + suffix());
           std::ostringstream Gomega_name;
-          Gomega_name << "G_omega";
+          Gomega_name << "G_omega"<<suffix();
           std::ofstream G_omega_file(Gomega_name.str().c_str());
           G_omega_file << std::setprecision(14) << gf;
           G_omega_file.close();

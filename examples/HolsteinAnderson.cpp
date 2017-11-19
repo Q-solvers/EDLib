@@ -30,6 +30,8 @@ int main(int argc, const char ** argv) {
   alps::params params(argc, argv);
   EDLib::define_parameters(params);
   EDLib::Ext::define_parameters(params);
+  params.define<int>("NORBITALS", 1, "");
+  params.define<bool>("COMPUTE_REAL", false, "");
   if(params.help_requested(std::cout)) {
     exit(0);
   }
@@ -55,6 +57,13 @@ int main(int argc, const char ** argv) {
     // Compute and store single particle Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
+    if(params["COMPUTE_REAL"].as<bool>()) {
+      // Construct Green's function object
+      EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greens(params, ham);
+      // Compute and save Green's function
+      greens.compute();
+      greens.save(ar, "results");
+    }
     // Construct static observables object
     EDLib::StaticObservables<HamType> sd(params);
     // compute static observables
