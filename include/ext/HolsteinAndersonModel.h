@@ -294,6 +294,18 @@ namespace EDLib {
           k = ((jold + (1ll << (_Ip - i - 1))) << _Nb) + bos;
         }
 
+        size_t bos_dim() const {
+          return _w0.size();
+        }
+
+        int number_of_bosons(long long nst, int orb) const {
+          long long bosons = nst & ((1 << _Nb) - 1);
+          int bit_cutoff = _Nb > 0 ? (_Nb / _w0.size()) :0;
+          long long cutoff = (1 << bit_cutoff) - 1;
+          long long cbos = ((bosons >> (bit_cutoff * orb)) & cutoff);
+          return int(cbos);
+        }
+
         inline const std::vector < HSt > &T_states() const {
           return _F_states;
         }
