@@ -203,7 +203,7 @@ namespace EDLib {
       for(size_t i = 0; i < nprocs; ++i){
        displs[i + 1] = displs[i] + counts[i];
       }
-      MPI_Allgatherv(pair.eigenvector().data(), pair.eigenvector().size(),
+      MPI_Allgatherv(const_cast<precision *>(pair.eigenvector().data()), pair.eigenvector().size(),
                      alps::mpi::detail::mpi_type<precision>(),
                      evec.data(), counts.data(), displs.data(),
                      alps::mpi::detail::mpi_type<precision>(),
