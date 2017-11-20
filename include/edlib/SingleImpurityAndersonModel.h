@@ -195,7 +195,7 @@ namespace EDLib {
       SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
                                                     _Epsk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
                                                     _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
-                                                    _tk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
+                                                    _tk(p["siam.NORBITALS"], std::vector<std::vector<double> >(p["siam.NORBITALS"], std::vector<double>(_ms, 0.0))),
                                                     _bath_ind(p["siam.NORBITALS"], 0) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
@@ -231,7 +231,7 @@ namespace EDLib {
         }
         for(int im = 0; im< _ml; ++im ){
           if(_tk[im].size()>_ml) {
-            throw std::invalid_argument("Inter orbital hoopings array dimension are bigger than number of impurity orbitals");
+            throw std::invalid_argument("Inter orbital hoppings array dimension are bigger than number of impurity orbitals");
           }
         }
         if(b_ind != _Ns - _ml) {
