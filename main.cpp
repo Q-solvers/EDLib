@@ -41,10 +41,11 @@ int main(int argc, const char ** argv) {
     HamType ham(params);
 #endif
     ham.diag();
-    EDLib::StaticObservables<HamType> sd(params);
-    sd.print_static_observables(ham);
+    EDLib::StaticObservables<HamType> so(params);
+    so.print_static_observables(ham);
     for (const auto& pair :ham.eigenpairs()) {
-      sd.print_major_electronic_configuration(ham, pair, 256, 1e-5);
+      so.print_major_electronic_configuration(ham, pair, 256, 1e-5);
+      so.print_class_contrib(ham, pair, 256, 1e-5, true);
     }
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);

@@ -124,6 +124,35 @@ namespace EDLib {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
+        std::string input = p["INPUT_FILE"];
+        alps::hdf5::archive input_file(input.c_str(), "r");
+        if(input_file.is_data("ChiLoc_orbitals/values")){
+          input_file >> alps::make_pvp("ChiLoc_orbitals/values", gf_orbs);
+        }else{
+          // Or calculate only the diagonal part.
+          gf_orbs.clear();
+          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
+            gf_orbs.push_back({i, i});
+          }
+        }
+        input_file.close();
+        // Find all unique indices for the diagonal part.
+        diagonal_orbs.resize(gf_orbs.size() * 2);
+        for(int i = 0; i < gf_orbs.size(); ++i){
+         for(int j = 0; j < 2; ++j){
+           diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
+         }
+        }
+        std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
+        diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
+        // Find offdiagonal indices.
+        offdiagonal_orbs.clear();
+        for(int i = 0; i < gf_orbs.size(); ++i){
+          if(gf_orbs[i][0] != gf_orbs[i][1]){
+            throw std::logic_error("Offdiagonal susceptibility is not supported yet.");
+            offdiagonal_orbs.push_back(gf_orbs[i]);
+          }
+        }
       }
 
       /**
@@ -237,7 +266,8 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
+        for (int iorb = 0; iorb < diagonal_orbs.size(); ++iorb) {
+          int i = diagonal_orbs[iorb];
           std::vector < precision > outvec(1, precision(0.0));
           precision expectation_value = 0;
           _model.symmetry().set_sector(pair.sector());
@@ -279,7 +309,7 @@ namespace EDLib {
             if(operation(i, j, pair.eigenvector(), outvec, expectation_value, op)) {
               int nlanc = lanczos(outvec);
 #ifdef USE_MPI
-              if(rank==0){
+        if(rank == 0) {
 #endif
               std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
               // compute symmetrized Lanczos continued fraction
@@ -394,12 +424,18 @@ namespace EDLib {
       GF_TYPE gf_ij;
       /// Specific model
       typename Hamiltonian::ModelType &_model;
-      /// Boltsman-factor cut-off
+      /// Boltzmann-factor cut-off
       precision _cutoff;
       /// Partition function
       precision _Z;
       /// type of recently computed susceptibility
       std::string _type;
+      /// Orbital pairs to calculate the Green's function.
+      std::vector<std::vector<int>> gf_orbs;
+      /// Orbitals to calculate the diagonal Green's function.
+      std::vector<int> diagonal_orbs;
+      /// Orbital pairs to calculate the offdiagonal Green's function.
+      std::vector<std::vector<int>> offdiagonal_orbs;
 
       /**
        * @brief Perform the operation to the eigenstate
