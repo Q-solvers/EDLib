@@ -149,7 +149,6 @@ namespace EDLib {
         offdiagonal_orbs.clear();
         for(int i = 0; i < gf_orbs.size(); ++i){
           if(gf_orbs[i][0] != gf_orbs[i][1]){
-            throw std::logic_error("Offdiagonal susceptibility is not supported yet.");
             offdiagonal_orbs.push_back(gf_orbs[i]);
           }
         }
