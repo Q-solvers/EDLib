@@ -96,7 +96,7 @@ int main(int argc, const char ** argv) {
     double beta = params["lanc.BETA"].as<double>();
     int bos_dim = ham.model().bos_dim();
     std::vector<double> bosonic_occ(ham.model().bos_dim(), 0.0);
-    std::vector<std::vector<double> > bosonic_occd(ham.model().bos_dim(), std::vector<double>(7, 0.0) );
+    std::vector<std::vector<double> > bosonic_occd(ham.model().bos_dim(), std::vector<double>(100, 0.0) );
     const EDLib::EigenPair<double, sector> &groundstate =  *ham.eigenpairs().begin();
     for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
         const EDLib::EigenPair<double, sector>& pair = *ipair;
@@ -126,11 +126,14 @@ int main(int argc, const char ** argv) {
     }
     for(int orb = 0; orb < bos_dim; ++orb){
       bosonic_occ[orb]/= sum;
+      for(int nbos= 0; nbos<100;++nbos)
+      bosonic_occd[orb][nbos] /= sum;
     }
+    std::cout<<"statsum: "<<sum<<std::endl;
     std::cout<<"=========================\nBosonic occupancy:"<<std::endl;
     for(int orb = 0; orb < bos_dim; ++orb){
       std::cout<<bosonic_occ[orb]<<std::endl;
-      for(int i = 0; i< 7; ++i) {
+      for(int i = 0; i< 100; ++i) {
         std::cout<<bosonic_occd[orb][i]<<"\n";
       }
       std::cout<<std::endl;

@@ -214,10 +214,10 @@ namespace EDLib {
           s<<"Bath/Epsk_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _Epsk[im]);
           s.str("");
-          s<<"tk_"<<im<<"/values";
+          s<<"t0_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _tk[im]);
         }
-        input_data >> alps::make_pvp("Eps0/values", _Eps);
+        input_data >> alps::make_pvp("Eps0/values", _Eps0);
         input_data >> alps::make_pvp("mu", _xmu);
         input_data >> alps::make_pvp("interaction/values", _U);
         input_data.close();
@@ -295,7 +295,7 @@ namespace EDLib {
               int ikm = ik + _bath_ind[im] + _ml;
               xtemp+=(_Epsk[im][ik][is] * checkState(state, ikm + is * _Ns, _Ip));
             }
-            xtemp += (_Eps[im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
+            xtemp += (_Eps0[im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
           for(int jm = 0; jm < _ml; ++jm) {
@@ -388,7 +388,7 @@ namespace EDLib {
               for(int ik = 0; ik< _Epsk[im].size(); ++ik) {
                 delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[im][ik][is]);
               }
-              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Eps[im][is] - delta);
+              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Eps0[im][is] - delta);
             }
           }
         }
@@ -404,7 +404,7 @@ namespace EDLib {
       /// chemical potential
       precision _xmu;
       /// impurity orbitals energy
-      std::vector < std::vector < precision > > _Eps;
+      std::vector < std::vector < precision > > _Eps0;
       /// number of bath states
       int _Nk;
       /// Hoppings between orbitals

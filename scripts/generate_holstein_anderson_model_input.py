@@ -11,7 +11,7 @@ xmu = 1.5
 Eps0 = np.array([[0.,0.]])
 
 # inter-orbital hoppings
-tk =   np.array([ [ 0 ] ] )
+t0 =   np.array([[0]])
 
 Vk =   np.array([ [ [0.5,0.5], [0.1,0.1], [0.1,0.1], [0.5,0.5] ] ])
 Epsk = np.array([ [-1.5,-1.5], [-0.5,-0.5], [0.5,0.5], [1.5,1.5] ])
@@ -42,8 +42,8 @@ Epsk_g.create_dataset("values", shape=(len(Epsk),2,), data=Epsk, dtype=np.float)
 Vk_g = bath.create_group("Vk")
 Vk_g.create_dataset("values", data=np.array(Vk), dtype=np.float)
 
-tk_g = data.create_group("tk")
-tk_g.create_dataset("values", data=np.array(tk), dtype=np.float)
+tk_g = data.create_group("t0")
+tk_g.create_dataset("values", data=np.array(t0), dtype=np.float)
 
 w0_g = bath.create_group("w0")
 w0_g.create_dataset("values", shape=(len(w0),), data=w0, dtype=np.float)
