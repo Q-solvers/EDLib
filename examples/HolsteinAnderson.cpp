@@ -54,7 +54,7 @@ int main(int argc, const char ** argv) {
     // Store eigenvalues in HDF5 archive
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     // Construct single-particle Green's function object
-    /**EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, alps::gf::statistics::FERMIONIC);
+    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, alps::gf::statistics::FERMIONIC);
     // Compute and store single particle Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
@@ -87,7 +87,7 @@ int main(int argc, const char ** argv) {
     susc.compute<EDLib::gf::NOperator<double>>(&avg);
     susc.save(ar, "results");
     EDLib::common::statistics.updateEvent("GF");
-    EDLib::hdf5::save_static_observables(observables, ar, "results");*/
+    EDLib::hdf5::save_static_observables(observables, ar, "results");
 
     EDLib::common::statistics.updateEvent("total");
     EDLib::common::statistics.print();

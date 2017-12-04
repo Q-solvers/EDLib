@@ -144,16 +144,7 @@ namespace EDLib {
           input_data >> alps::make_pvp("Eps0/values", _Eps);
           input_data >> alps::make_pvp("mu", _xmu);
           precision U;
-          input_data >> alps::make_pvp("U", U);
-          precision V;
-          input_data >> alps::make_pvp("V", V);
-          // TODO: replace with full density-density interaction matrix
-          for (int i = 0; i< _ml; ++i) {
-            for (int j = 0; j< _ml; ++j) {
-              if(i==j) _U[i][j] = U;
-              if(i!=j) _U[i][j] = V;
-            }
-          }
+          input_data >> alps::make_pvp("U", _U);
 
           std::cout<<"ml:"<<_ml<<"\n";
           precision avg;
