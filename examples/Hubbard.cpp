@@ -50,12 +50,12 @@ int main(int argc, const char ** argv) {
     // Save eigenvalues to HDF5 file
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     // Construct single-particle local Green's function object
-    EDLib::gf::GreensFunction < EDLib::SRSHubbardHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
+    EDLib::gf::GreensFunction < EDLib::SRSHubbardHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::statistics_type::FERMIONIC);
     // Compute and store local Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
     // Construct two particle Green's function object
-    EDLib::gf::ChiLoc<EDLib::SRSHubbardHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
+    EDLib::gf::ChiLoc<EDLib::SRSHubbardHamiltonian, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::statistics_type::BOSONIC);
     // Compute and store spin susceptibility
     susc.compute();
     susc.save(ar, "results");

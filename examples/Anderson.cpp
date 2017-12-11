@@ -48,7 +48,7 @@ int main(int argc, const char ** argv) {
     // Save eigenvalues to HDF5 file
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     // Construct Green's function object
-    EDLib::gf::GreensFunction < HType,  alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
+    EDLib::gf::GreensFunction < HType,  alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::statistics_type::FERMIONIC);
     // Compute and save Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");

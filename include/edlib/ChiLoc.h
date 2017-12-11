@@ -115,8 +115,9 @@ namespace EDLib {
        * @param p - ALPSCore parameters
        * @param h - Hamiltonian instance
        * @param args - additional parameters for mesh. For example for matsubara mesh should it be alps::gf::statistics::statistics_type::BOSONIC
+       * @param gf_orbs - pairs of the orbitals to calculate the Green's function for
        */
-      ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
+      ChiLoc(alps::params &p, Hamiltonian &h, std::set<std::array<size_t, 2>> gf_orbs, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
                                                         gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()*h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
@@ -124,32 +125,17 @@ namespace EDLib {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
-        std::string input = p["INPUT_FILE"];
-        alps::hdf5::archive input_file(input.c_str(), "r");
-        if(input_file.is_data("ChiLoc_orbitals/values")){
-          input_file >> alps::make_pvp("ChiLoc_orbitals/values", gf_orbs);
-        }else{
-          // Or calculate only the diagonal part.
-          gf_orbs.clear();
-          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
-            gf_orbs.push_back({i, i});
+        for(auto orbpair : gf_orbs){
+          // Check that we will have the local GFs required by nonlocal GF.
+          for(int ii = 0; ii < 2; ++ii){
+            if(gf_orbs.find(std::array<size_t, 2> {orbpair[ii], orbpair[ii]}) == gf_orbs.end()){
+              throw std::logic_error("Nonlocal GF requires local GFs for both orbitals.");
+            }
           }
-        }
-        input_file.close();
-        // Find all unique indices for the diagonal part.
-        diagonal_orbs.resize(gf_orbs.size() * 2);
-        for(int i = 0; i < gf_orbs.size(); ++i){
-         for(int j = 0; j < 2; ++j){
-           diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
-         }
-        }
-        std::sort(diagonal_orbs.begin(), diagonal_orbs.end());
-        diagonal_orbs.erase(std::unique(diagonal_orbs.begin(), diagonal_orbs.end()), diagonal_orbs.end());
-        // Find offdiagonal indices.
-        offdiagonal_orbs.clear();
-        for(int i = 0; i < gf_orbs.size(); ++i){
-          if(gf_orbs[i][0] != gf_orbs[i][1]){
-            offdiagonal_orbs.push_back(gf_orbs[i]);
+          if(orbpair[0] == orbpair[1]){
+           _diagonal_orbs.push_back(orbpair[0]);
+          }else{
+           _offdiagonal_orbs.push_back(orbpair);
           }
         }
       }
@@ -223,8 +209,8 @@ namespace EDLib {
        */
       template<typename O>
       void local_correction(const O&op) {
-        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-          zero_freq_contribution(op, gf, i);
+        for (int iorb = 0; iorb < _diagonal_orbs.size(); ++iorb) {
+          zero_freq_contribution(op, gf, _diagonal_orbs[iorb]);
         }
       }
 
@@ -238,13 +224,12 @@ namespace EDLib {
        */
       template<typename O>
       void non_local_correction(const O& op) {
-        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-          for (int j = 0; j < _model.interacting_orbitals(); ++j) {
-            zero_freq_contribution(op, gf_ij, i*_model.interacting_orbitals() + j);
-            for (int iomega = 0; iomega < omega().extent(); ++iomega) {
-              gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i*_model.interacting_orbitals() + j)) -=
-                 gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)) + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(j));
-            }
+        for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
+          auto orbs = _offdiagonal_orbs[iorb];
+          zero_freq_contribution(op, gf_ij, orbs[0] * _model.interacting_orbitals() + orbs[1]);
+          for (int iomega = 0; iomega < omega().extent(); ++iomega) {
+            gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1])) -=
+               gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0])) + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[1]));
           }
         }
         gf_ij *= 0.5;
@@ -265,20 +250,20 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int iorb = 0; iorb < diagonal_orbs.size(); ++iorb) {
-          int i = diagonal_orbs[iorb];
+        for (int iorb = 0; iorb < _diagonal_orbs.size(); ++iorb) {
+          int orb = _diagonal_orbs[iorb];
           std::vector < precision > outvec(1, precision(0.0));
           precision expectation_value = 0;
           _model.symmetry().set_sector(pair.sector());
-          if (operation(i, pair.eigenvector(), outvec, expectation_value, op)) {
+          if (operation(orb, pair.eigenvector(), outvec, expectation_value, op)) {
             int nlanc = lanczos(outvec);
 #ifdef USE_MPI
             if(rank==0){
 #endif
-              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              std::cout << "orbital: " << orb << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
               // compute symmetrized Lanczos continued fraction
               compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1,
-                                             gf, alps::gf::index_mesh::index_type(i));
+                                             gf, alps::gf::index_mesh::index_type(orb));
 #ifdef USE_MPI
             }
 #endif
@@ -300,24 +285,23 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int i = 0; i < _model.interacting_orbitals(); ++i) {
-          for (int j = 0; j < _model.interacting_orbitals(); ++j) {
-            _model.symmetry().set_sector(pair.sector());
-            std::vector < precision > outvec(1, precision(0.0));
-            precision expectation_value = 0;
-            if(operation(i, j, pair.eigenvector(), outvec, expectation_value, op)) {
-              int nlanc = lanczos(outvec);
+        for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
+          auto orbs = _offdiagonal_orbs[iorb];
+          _model.symmetry().set_sector(pair.sector());
+          std::vector < precision > outvec(1, precision(0.0));
+          precision expectation_value = 0;
+          if(operation(orbs[0], orbs[1], pair.eigenvector(), outvec, expectation_value, op)) {
+            int nlanc = lanczos(outvec);
 #ifdef USE_MPI
-        if(rank == 0) {
+            if(rank == 0) {
 #endif
-              std::cout << "orbital: " << i << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
+              std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << " <n|" + op.name() + op.name() + "|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
               // compute symmetrized Lanczos continued fraction
               compute_sym_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1,
-                                             gf_ij, alps::gf::index_mesh::index_type(i * _model.interacting_orbitals() + j));
+                                             gf_ij, alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1]));
 #ifdef USE_MPI
-              }
-#endif
             }
+#endif
           }
         }
       }
@@ -397,20 +381,23 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          gf.save(ar, path + "/Chi" + _type +"_omega");
-          std::ostringstream Gomega_name;
-          Gomega_name << "Chi"<<_type<<"_omega";
-          std::ofstream G_omega_file(Gomega_name.str().c_str());
-          G_omega_file << std::setprecision(14) << gf;
-          G_omega_file.close();
+          if(_diagonal_orbs.size()){
+            gf.save(ar, path + "/Chi" + _type +"_omega");
+            std::ostringstream Gomega_name;
+            Gomega_name << "Chi"<<_type<<"_omega";
+            std::ofstream G_omega_file(Gomega_name.str().c_str());
+            G_omega_file << std::setprecision(14) << gf;
+            G_omega_file.close();
+          }
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
-
-          std::ostringstream Gomega_name2;
-          Gomega_name2 << "Chi_ij_"<<_type<<"_omega";
-          std::ofstream G_omega_file2(Gomega_name2.str().c_str());
-          G_omega_file2<< std::setprecision(14) << gf_ij;
-          G_omega_file2.close();
+          if(_offdiagonal_orbs.size()){
+           std::ostringstream Gomega_name2;
+            Gomega_name2 << "Chi_ij_"<<_type<<"_omega";
+            std::ofstream G_omega_file2(Gomega_name2.str().c_str());
+            G_omega_file2<< std::setprecision(14) << gf_ij;
+            G_omega_file2.close();
+          }
 #ifdef USE_MPI
         }
 #endif
@@ -429,12 +416,10 @@ namespace EDLib {
       precision _Z;
       /// type of recently computed susceptibility
       std::string _type;
-      /// Orbital pairs to calculate the Green's function.
-      std::vector<std::vector<int>> gf_orbs;
       /// Orbitals to calculate the diagonal Green's function.
-      std::vector<int> diagonal_orbs;
+      std::vector<size_t> _diagonal_orbs;
       /// Orbital pairs to calculate the offdiagonal Green's function.
-      std::vector<std::vector<int>> offdiagonal_orbs;
+      std::vector<std::array<size_t, 2> > _offdiagonal_orbs;
 
       /**
        * @brief Perform the operation to the eigenstate

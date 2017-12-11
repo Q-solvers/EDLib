@@ -38,41 +38,26 @@ namespace EDLib {
        * @param p - AlpsCore parameter object
        * @param h - Hamiltonain instance
        * @param args - additional parameters for Mesh. For example for Matsubara mesh should it be alps::gf::statistics::statistics_type::FERMIONIC
+       * @param gf_orbs - pairs of the orbitals to calculate the Green's function for
        */
-      GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
+      GreensFunction(alps::params &p, Hamiltonian &h, std::set<std::array<size_t, 2>> gf_orbs, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
-        std::string input = p["INPUT_FILE"];
-        alps::hdf5::archive input_file(input.c_str(), "r");
-        std::vector<std::vector<int>> gf_orbs;
-        if(input_file.is_data("GreensFunction_orbitals/values")){
-          input_file >> alps::make_pvp("GreensFunction_orbitals/values", gf_orbs);
-        }else{
-          // Or calculate only the diagonal part.
-          gf_orbs.clear();
-          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
-            gf_orbs.push_back({i, i});
+        for(auto orbpair : gf_orbs){
+          // Check that we will have the local GFs required by nonlocal GF.
+          for(int ii = 0; ii < 2; ++ii){
+            if(gf_orbs.find(std::array<size_t, 2> {orbpair[ii], orbpair[ii]}) == gf_orbs.end()){
+              throw std::logic_error("Nonlocal GF requires local GFs for both orbitals.");
+            }
           }
-        }
-        input_file.close();
-        // Find all unique indices for the diagonal part.
-        _diagonal_orbs.resize(gf_orbs.size() * 2);
-        for(int i = 0; i < gf_orbs.size(); ++i){
-         for(int j = 0; j < 2; ++j){
-           _diagonal_orbs[i + j * gf_orbs.size()] = gf_orbs[i][j];
-         }
-        }
-        std::sort(_diagonal_orbs.begin(), _diagonal_orbs.end());
-        _diagonal_orbs.erase(std::unique(_diagonal_orbs.begin(), _diagonal_orbs.end()), _diagonal_orbs.end());
-        // Find offdiagonal indices.
-        _offdiagonal_orbs.clear();
-        for(int i = 0; i < gf_orbs.size(); ++i){
-          if(gf_orbs[i][0] != gf_orbs[i][1]){
-            _offdiagonal_orbs.push_back({{size_t(gf_orbs[i][0]),size_t(gf_orbs[i][1])}});
+          if(orbpair[0] == orbpair[1]){
+           _diagonal_orbs.push_back(orbpair[0]);
+          }else{
+           _offdiagonal_orbs.push_back(orbpair);
           }
         }
       }
@@ -142,7 +127,7 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          if(_diagonal_orbs.size() > 0){
+          if(_diagonal_orbs.size()){
             gf.save(ar, path + "/G_omega" + suffix());
             std::ostringstream Gomega_name;
             Gomega_name << "G_omega"<<suffix();
@@ -152,7 +137,7 @@ namespace EDLib {
           }
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
-          if(_offdiagonal_orbs.size() > 0){
+          if(_offdiagonal_orbs.size()){
             std::ostringstream Gomega_name2;
             Gomega_name2 << "G_ij_omega"<<suffix();
             std::ofstream G_omega_file2(Gomega_name2.str().c_str());
@@ -332,7 +317,7 @@ namespace EDLib {
       /// Statsum
       precision _Z;
       /// Orbitals to calculate the diagonal Green's function.
-      std::vector<int> _diagonal_orbs;
+      std::vector<size_t> _diagonal_orbs;
       /// Orbital pairs to calculate the offdiagonal Green's function.
       std::vector<std::array<size_t, 2> > _offdiagonal_orbs;
 

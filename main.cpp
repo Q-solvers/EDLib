@@ -48,12 +48,12 @@ int main(int argc, const char ** argv) {
       so.print_class_contrib(ham, pair, 256, 1e-5, true);
     }
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
-    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
-    //EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greensFunction(params, ham);
+    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::statistics_type::FERMIONIC);
+    //EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greensFunction(params, ham, std::set<std::array<size_t, 2>> {{0, 0}});
     greensFunction.compute();
     greensFunction.save(ar, "results");
-    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, alps::gf::statistics::statistics_type::BOSONIC);
-    //EDLib::gf::ChiLoc< HamType, alps::gf::real_frequency_mesh> susc(params, ham);
+    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::statistics_type::BOSONIC);
+    //EDLib::gf::ChiLoc< HamType, alps::gf::real_frequency_mesh> susc(params, ham, std::set<std::array<size_t, 2>> {{0, 0}});
     susc.compute();
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
