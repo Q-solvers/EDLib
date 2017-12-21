@@ -1,7 +1,3 @@
-//
-// Created by iskakoff on 22/08/16.
-//
-
 #include <gtest/gtest.h>
 #include "edlib/Hamiltonian.h"
 #include "edlib/HubbardModel.h"
@@ -38,7 +34,7 @@ TEST(HubbardModelTest, ReferenceTest) {
   EDLib::define_parameters(p);
   p["NSITES"]=4;
   p["NSPINS"]=2;
-  p["INPUT_FILE"]="test/input/4ring/input.h5";
+  p["INPUT_FILE"]="test/input/4ring_nomagfield/input.h5";
   p["arpack.SECTOR"]=false;
   p["storage.MAX_SIZE"]=576;
   p["storage.MAX_DIM"]=36;
@@ -59,22 +55,27 @@ TEST(HubbardModelTest, ReferenceTest) {
 
   ham.diag();
 
-  // [arXiv:cond-mat/0101476 [cond-mat.str-el]]
-  ASSERT_NEAR(ham.eigenpairs().begin()->eigenvalue(), -11.8443, 1e-4);
-  ASSERT_EQ(ham.eigenpairs().begin()->sector().nup(), 2);
-  ASSERT_EQ(ham.eigenpairs().begin()->sector().ndown(), 2);
-
-  while(ham.model().symmetry().next_sector()) {
-    std::cout<<ham.model().symmetry().sector().size()<<std::endl;
-  }
-
   EDLib::StaticObservables<HamType> so(p);
-  std::map<std::string, std::vector<double>> obs = so.calculate_static_observables(ham);
+  std::map<std::string, std::vector<double>> result = so.calculate_static_observables(ham);
+
+  ASSERT_EQ(result["N"].size(), 4);
+  ASSERT_EQ(result["N_up"].size(), 4);
+  ASSERT_EQ(result["N_dn"].size(), 4);
+  ASSERT_EQ(result["M"].size(), 4);
+  ASSERT_EQ(result["D_occ"].size(), 4);
+  ASSERT_EQ(result["N_eff"].size(), 1);
+  ASSERT_EQ(result["M_i M_j"].size(), 16);
 
   for(int orb = 0; orb < ham.model().interacting_orbitals(); ++orb){
-   ASSERT_NEAR(obs["N"][orb], 1.0, 1e-8);
-   ASSERT_GT(obs["N_up"][orb], obs["N_dn"][orb]);
-   ASSERT_GT(obs["M"][orb], 0.0);
+   ASSERT_NEAR(result["N"][orb], 1.0, 1e-8);
+   ASSERT_NEAR(result["N_up"][orb], 0.5, 1e-8);
+   ASSERT_NEAR(result["N_dn"][orb], 0.5, 1e-8);
+   ASSERT_NEAR(result["M"][orb], 0.0, 1e-8);
   }
+
+  for(int orb = 1; orb < ham.model().interacting_orbitals(); ++orb){
+   ASSERT_NEAR(result["D_occ"][orb], result["D_occ"][0], 1e-8);
+  }
+  ASSERT_GT(result["N_eff"][0], 0.0);
 
 }

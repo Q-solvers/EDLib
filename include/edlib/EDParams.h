@@ -30,7 +30,7 @@ namespace EDLib {
     params.define < double >("lanc.EMAX", 3, "Largest real frequency value");
     params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
     params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
-    params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
+    params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltzmann factor");
 
     // Anderson model
     params.define < int >("siam.NORBITALS", 1, "Number of orbitals in single impurity Anderson Model.");
