@@ -17,8 +17,8 @@ namespace EDLib {
     // Symmetry parameters
     params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
     // Storage parameters
-    params.define < size_t >("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
-    params.define < size_t >("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
+    params.define < size_t >("storage.MAX_DIM", 5000, "Maximum dimension of the Hamiltonian matrix.");
+    params.define < size_t >("storage.MAX_SIZE", 70000, "Maximum size of the matrix arrays. Must be between MAX_DIM and MAX_DIM^2.");
     params.define < int >("storage.EIGENVALUES_ONLY", 0, "Compute only eigenvalues.");
     params.define < int >("spinstorage.ORBITAL_NUMBER", 1, "Number of orbitals with interaction");
     // ARPACK parameters
