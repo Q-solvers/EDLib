@@ -86,6 +86,9 @@ namespace EDLib {
 #endif
       }
 
+      void init() {
+        _model.symmetry().init();
+      }
       void reset() {
         _model.symmetry().init();
         size_t sector_size = _model.symmetry().sector().size();
