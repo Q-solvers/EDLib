@@ -360,7 +360,7 @@ namespace EDLib {
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
         common::statistics.registerEvent("adag");
         for(auto orb : orbitals) {
-          _model.symmetry().init();
+          hamiltonian().storage().init();
           std::vector<precision> tmpout(outvec.size());
           hamiltonian().storage().a_adag(orb + spin * _model.orbitals(), invec, tmpout, next_sec, false);
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());
@@ -398,7 +398,7 @@ namespace EDLib {
         outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0.0));
         common::statistics.registerEvent("a");
         for(auto orb : orbitals) {
-          _model.symmetry().init();
+          hamiltonian().storage().init();
           std::vector<precision> tmpout(outvec.size());
           hamiltonian().storage().a_adag(orb + spin * _model.orbitals(), invec, tmpout, next_sec, true);
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());

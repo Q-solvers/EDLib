@@ -158,6 +158,13 @@ namespace EDLib {
         // nothing to do
       }
 
+      void init() {
+        _model.symmetry().init();
+#ifdef USE_MPI
+        _model.symmetry().set_offset(_offset);
+#endif
+      }
+
       /**
        * Reset storage and symmetry object for the current symmetry sector.
        * Update MPI communicator if necessary, set local dimensions size, setup working arrays size.
