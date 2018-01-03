@@ -160,7 +160,9 @@ namespace EDLib {
 
       void init() {
         _model.symmetry().init();
+#ifdef USE_MPI
         _model.symmetry().set_offset(_offset);
+#endif
       }
 
       /**
