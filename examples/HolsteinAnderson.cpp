@@ -54,13 +54,13 @@ int main(int argc, const char ** argv) {
     // Store eigenvalues in HDF5 archive
     EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     // Construct single-particle Green's function object
-    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::FERMIONIC);
+    EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(params, ham, alps::gf::statistics::FERMIONIC);
     // Compute and store single particle Green's function
     greensFunction.compute();
     greensFunction.save(ar, "results");
     if(params["COMPUTE_REAL"].as<bool>()) {
       // Construct Green's function object
-      EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greens(params, ham, std::set<std::array<size_t, 2>> {{0, 0}});
+      EDLib::gf::GreensFunction < HamType, alps::gf::real_frequency_mesh> greens(params, ham);
       // Compute and save Green's function
       greens.compute();
       greens.save(ar, "results");
@@ -69,7 +69,7 @@ int main(int argc, const char ** argv) {
     EDLib::StaticObservables<HamType> sd(params);
     // compute static observables
     std::map < std::string, std::vector < double>> observables = sd.calculate_static_observables(ham);
-    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type > susc(params, ham, std::set<std::array<size_t, 2>> {{0, 0}}, alps::gf::statistics::BOSONIC);
+    EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type > susc(params, ham, alps::gf::statistics::BOSONIC);
     // compute average magnetic moment
     double avg = 0;
     for(auto x : observables[sd._M_]) {

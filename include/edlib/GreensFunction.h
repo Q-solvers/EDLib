@@ -35,29 +35,58 @@ namespace EDLib {
       /**
        * Construct Green's function class
        *
+       * By default, all local Green functions are computed. An array of orbital
+       * pairs can be supplied in the input file as the GreensFunction_orbitals
+       * group.
+       *
        * @param p - AlpsCore parameter object
        * @param h - Hamiltonain instance
        * @param args - additional parameters for Mesh. For example for Matsubara mesh should it be alps::gf::statistics::statistics_type::FERMIONIC
-       * @param gf_orbs - pairs of the orbitals to calculate the Green's function for
        */
-      GreensFunction(alps::params &p, Hamiltonian &h, std::set<std::array<size_t, 2>> gf_orbs, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
+      GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
                                                         gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
         }
-        for(auto orbpair : gf_orbs){
-          // Check that we will have the local GFs required by nonlocal GF.
-          for(int ii = 0; ii < 2; ++ii){
-            if(gf_orbs.find(std::array<size_t, 2> {orbpair[ii], orbpair[ii]}) == gf_orbs.end()){
+        std::string input = p["INPUT_FILE"];
+        alps::hdf5::archive input_file(input.c_str(), "r");
+        std::vector<std::vector<int>> gf_orbs;
+        if(input_file.is_data("GreensFunction_orbitals/values")){
+          input_file >> alps::make_pvp("GreensFunction_orbitals/values", gf_orbs);
+        }else{
+          // Or calculate only the diagonal part.
+          gf_orbs.clear();
+          for(int i = 0; i < h.model().interacting_orbitals(); ++i){
+            gf_orbs.push_back({i, i});
+          }
+        }
+        input_file.close();
+        for(size_t ii = 0; ii < gf_orbs.size(); ++ii){
+          if(gf_orbs[ii][0] == gf_orbs[ii][1]){
+           _diagonal_orbs.push_back(gf_orbs[ii][0]);
+          }else{
+           _offdiagonal_orbs.push_back(std::array<size_t, 2>{size_t(gf_orbs[ii][0]), size_t(gf_orbs[ii][1])});
+          }
+        }
+        // Find all unique indices for the diagonal part.
+        std::sort(_diagonal_orbs.begin(), _diagonal_orbs.end());
+        _diagonal_orbs.erase(std::unique(_diagonal_orbs.begin(), _diagonal_orbs.end()), _diagonal_orbs.end());
+        // Check that we will have the local GFs required by nonlocal GF.
+        for(size_t ii = 0; ii < _offdiagonal_orbs.size(); ++ii){
+          for(size_t jj = 0; jj < 2; ++jj){
+            bool found = false;
+            for(size_t kk = 0; kk < _diagonal_orbs.size(); ++kk){
+              if(_diagonal_orbs[kk] == _offdiagonal_orbs[ii][jj]){
+                found = true;
+                break;
+              }
+            }
+            if(!found){
+              std::ostringstream msg;
               throw std::logic_error("Nonlocal GF requires local GFs for both orbitals.");
             }
-          }
-          if(orbpair[0] == orbpair[1]){
-           _diagonal_orbs.push_back(orbpair[0]);
-          }else{
-           _offdiagonal_orbs.push_back(orbpair);
           }
         }
       }
