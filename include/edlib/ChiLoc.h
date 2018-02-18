@@ -456,7 +456,11 @@ namespace EDLib {
           long long nst = _model.symmetry().state();
           outvec[i] = o.action(nst, orbital, _model) * invec[i];
         };
-        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
+        double norm = hamiltonian().storage().vv(outvec, outvec
+#ifdef USE_MPI
+            , hamiltonian().comm()
+#endif
+        );
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }
@@ -486,7 +490,11 @@ namespace EDLib {
           long long nst = _model.symmetry().state();
           outvec[i] = (o.action(nst, mu, _model) + o.action(nst, nu, _model) )* invec[i];
         };
-        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
+        double norm = hamiltonian().storage().vv(outvec, outvec
+#ifdef USE_MPI
+            , hamiltonian().comm()
+#endif
+        );
         for (int i = 0; i < outvec.size(); ++i) {
           outvec[i] /= std::sqrt(norm);
         }

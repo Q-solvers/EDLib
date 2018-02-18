@@ -144,28 +144,12 @@ namespace EDLib {
        * @param index frequency index
        * @return proper complex representation for current frequency
        */
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, std::complex<double>>::type
-      freq_point(int index) {
-        return std::complex<double>(0.0, _omega.points()[index]);
+      std::complex<double> freq_point(int index) {
+        return std::is_base_of<alps::gf::matsubara_positive_mesh, Mesh>::value ? std::complex<double>(0.0, _omega.points()[index]) : std::complex<double>(_omega.points()[index], M_PI/_beta);
       };
 
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, std::complex<double>>::type
-      freq_point(int index) {
-        return std::complex<double>(_omega.points()[index], M_PI/_beta);
-      };
-      
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, std::string>::type
-      suffix() {
-        return "";
-      };
-
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, std::string>::type
-      suffix() {
-        return "_r";
+      std::string suffix() {
+        return std::is_base_of<alps::gf::real_frequency_mesh, Mesh>::value ? "_r" : "";
       };
 
       /**
@@ -175,28 +159,14 @@ namespace EDLib {
        * @tparam M - mesh type
        * @return valid smallest index for frequency
        */
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, int>::type
-      zero_freq() {
-        return 1;
+      int zero_freq() {
+        return std::is_base_of<alps::gf::matsubara_positive_mesh, Mesh>::value ? 1 : 0;
       };
 
-      template<typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, int>::type
-      zero_freq() {
-        return 0;
-      };
-
-      template<typename GF_TYPE, typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::matsubara_positive_mesh, M>::value, void>::type
-      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
-        gf(mesh_index(0), site) -= expectation_value*_beta*expb;
-      };
-
-      template<typename GF_TYPE, typename M=Mesh>
-      typename std::enable_if<std::is_base_of<alps::gf::real_frequency_mesh, M>::value, void>::type
-      update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
-
+      template<typename GF_TYPE>
+      void update_static(GF_TYPE& gf, const alps::gf::index_mesh::index_type &site, double expectation_value, double expb) {
+        if(std::is_base_of<alps::gf::matsubara_positive_mesh, Mesh>::value)
+          gf(mesh_index(0), site) -= expectation_value*_beta*expb;
       };
 
     private:
