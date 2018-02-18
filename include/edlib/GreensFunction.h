@@ -355,7 +355,6 @@ namespace EDLib {
         hamiltonian().storage().reset();
         int nup_new = _model.symmetry().sector().nup() + (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() + spin;
-
         typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().create_partice(spin);
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
         common::statistics.registerEvent("adag");
@@ -366,7 +365,7 @@ namespace EDLib {
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());
         }
         common::statistics.updateEvent("adag");
-        double norm = hamiltonian().storage().vv(outvec, outvec);
+        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }
@@ -404,7 +403,7 @@ namespace EDLib {
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());
         }
         common::statistics.updateEvent("a");
-        double norm = hamiltonian().storage().vv(outvec, outvec);
+        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }

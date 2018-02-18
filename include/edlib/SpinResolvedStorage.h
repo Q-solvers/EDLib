@@ -169,7 +169,7 @@ namespace EDLib {
        * Reset storage and symmetry object for the current symmetry sector.
        * Update MPI communicator if necessary, set local dimensions size, setup working arrays size.
        */
-      void reset() {
+      void reset(int t = 0) {
         _model.symmetry().init();
         // For spin-resolved storage we should guarantee that model is spin-symmetric.
         const Symmetry::SzSymmetry &symmetry = static_cast<Symmetry::SzSymmetry>(_model.symmetry());
@@ -188,13 +188,13 @@ namespace EDLib {
         // communicator to be used during diagonalization
         MPI_Comm run_comm;
         // check that there is data for the current CPU
-        int color = _myid < up_size ? 1 : MPI_UNDEFINED;
+        int color = _myid < up_size ? 1 : 0;//MPI_UNDEFINED;
         // Create new MPI communicator for the processors with defined color
         MPI_Comm_split(_comm, color, _myid, &run_comm);
+        // update working communicator
+        _run_comm = run_comm;
         if(color == 1) {
           // there is data for current CPU
-          // update working communicator
-          _run_comm = run_comm;
           // get CPU rank and size for recently created working communicator
           int myid;
           MPI_Comm_rank(_run_comm,&myid);
@@ -318,8 +318,13 @@ namespace EDLib {
         // communication buffer
         std::vector<prec> buff(1000, 0.0);
         // communication window
+        int rank;
+ 	MPI_Comm_rank(_run_comm, &rank);
+        MPI_Comm_size(_run_comm, &size);
+        size = outvec.size() > 0 ? 1 : 0;
+        MPI_Allreduce(MPI_IN_PLACE, &size, 1, alps::mpi::detail::mpi_type<int>(), MPI_SUM, _comm);
         MPI_Win eigwin;
-        MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, MPI_COMM_WORLD, &eigwin);
+        MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, _comm, &eigwin);
         MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
 #endif
         // iterate over local part of vector
@@ -341,8 +346,6 @@ namespace EDLib {
               // compute index of the new state
               int i1 = _model.symmetry().index(k, next_sec);
 #ifdef USE_MPI
-              int size;
-              MPI_Comm_size(_run_comm, &size);
               // compute CPU id and local index of new state
               calcIndex(ci, cid, i1, up_size, down_size, size);
               // avoid intra-CPU MPI communications
@@ -381,14 +384,26 @@ namespace EDLib {
        * @param w - ket-state
        * @return <v|w> product
        */
-      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {return vv(v, w
+#ifdef USE_MPI
+, comm()
+#endif
+);}
+
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w
+#ifdef USE_MPI
+, MPI_Comm com
+#endif
+) {
+
+      
         prec alf = prec(0.0);
         prec temp = prec(0.0);
         for (int k = 0; k < v.size(); ++k) {
           temp += w[k] * v[k];
         }
 #ifdef USE_MPI
-        MPI_Allreduce(&temp, &alf, 1, alps::mpi::detail::mpi_type<prec>(), MPI_SUM, comm());
+        MPI_Allreduce(&temp, &alf, 1, alps::mpi::detail::mpi_type<prec>(), MPI_SUM, com);
 #else
         alf = temp;
 #endif
@@ -433,10 +448,11 @@ namespace EDLib {
         }
         if(ntot() > 1 && n() > 0) {
           MPI_Win_free(&_win);
-          MPI_Comm run_comm = _run_comm;
-          MPI_Comm_free(&run_comm);
-          _run_comm = Storage < prec >::comm();
         }
+        MPI_Comm run_comm = _run_comm;
+        if(run_comm != MPI_COMM_WORLD && run_comm != MPI_COMM_NULL)
+        MPI_Comm_free(&run_comm);
+      	_run_comm = Storage < prec >::comm();
         return info;
       }
 
