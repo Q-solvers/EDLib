@@ -211,6 +211,12 @@ namespace EDLib {
         return sector.size();
       }
 
+#ifdef USE_MPI
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w, MPI_Comm com) {
+        return vv(v, w);
+      }
+#endif
+
       prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
         prec alf = prec(0.0);
         for (int k = 0; k < v.size(); ++k) {

@@ -185,6 +185,7 @@ namespace EDLib {
         H_up.init(up_size, 100);
         H_down.init(down_size, 100);
 #ifdef USE_MPI
+        // release communicator if needed
         if(_comm != _run_comm && _run_comm != MPI_COMM_NULL) {
           MPI_Comm_free(&_run_comm);
         };
