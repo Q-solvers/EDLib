@@ -365,7 +365,11 @@ namespace EDLib {
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());
         }
         common::statistics.updateEvent("adag");
-        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
+        double norm = hamiltonian().storage().vv(outvec, outvec
+#ifdef USE_MPI
+            , hamiltonian().comm()
+#endif
+        );
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }
@@ -403,7 +407,11 @@ namespace EDLib {
           std::transform(tmpout.begin(), tmpout.end(), outvec.begin(), outvec.begin(), std::plus<precision>());
         }
         common::statistics.updateEvent("a");
-        double norm = hamiltonian().storage().vv(outvec, outvec, hamiltonian().comm());
+        double norm = hamiltonian().storage().vv(outvec, outvec
+#ifdef USE_MPI
+            , hamiltonian().comm()
+#endif
+            );
         for (int j = 0; j < outvec.size(); ++j) {
           outvec[j] /= std::sqrt(norm);
         }

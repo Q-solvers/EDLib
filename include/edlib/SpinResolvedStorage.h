@@ -326,7 +326,7 @@ namespace EDLib {
         size = outvec.size() > 0 ? 1 : 0;
         MPI_Allreduce(MPI_IN_PLACE, &size, 1, alps::mpi::detail::mpi_type<int>(), MPI_SUM, _comm);
         MPI_Win eigwin;
-        MPI_Win_create(outvec.data(), sizeof(prec) * vector_size(next_sec), sizeof(prec), MPI_INFO_NULL, _comm, &eigwin);
+        MPI_Win_create(outvec.data(), sizeof(prec) * outvec.size(), sizeof(prec), MPI_INFO_NULL, _comm, &eigwin);
         MPI_Win_fence(MPI_MODE_NOPRECEDE,eigwin);
 #endif
         // iterate over local part of vector
@@ -386,33 +386,29 @@ namespace EDLib {
        * @param w - ket-state
        * @return <v|w> product
        */
-      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {return vv(v, w
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
 #ifdef USE_MPI
-, comm()
+        return vv(v, w, comm());
+#else
+        prec alf = prec(0.0);
+        for (int k = 0; k < v.size(); ++k) {
+          alf += w[k] * v[k];
+        }
+        return alf;
 #endif
-);}
+      }
 
-      prec vv(const std::vector<prec> & v, const std::vector<prec> & w
 #ifdef USE_MPI
-, MPI_Comm com
-#endif
-) {
-
-      
+      prec vv(const std::vector<prec> & v, const std::vector<prec> & w, MPI_Comm com) {
         prec alf = prec(0.0);
         prec temp = prec(0.0);
         for (int k = 0; k < v.size(); ++k) {
           temp += w[k] * v[k];
         }
-#ifdef USE_MPI
         MPI_Allreduce(&temp, &alf, 1, alps::mpi::detail::mpi_type<prec>(), MPI_SUM, com);
-#else
-        alf = temp;
-#endif
         return alf;
       }
 
-#ifdef USE_MPI
       /**
        * Initialize the communication window for the *data object from the specific offset
        * @param data -- input array
@@ -427,8 +423,6 @@ namespace EDLib {
         MPI_Info_set( info, (char *) "no_locks", (char *) "true");
         MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), MPI_INFO_NULL, _run_comm, &_win);
         MPI_Info_free(&info);
-        int size;
-        MPI_Comm_size(_run_comm, &size);
       }
 
       /**
