@@ -38,7 +38,7 @@ namespace EDLib {
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _model(m),_interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _run_comm(MPI_COMM_NULL), _model(m),_interaction_size(m.interacting_orbitals()),
                                                                       _Ns(p["NSITES"].as<int>()), _ms(p["NSPINS"].as<int>()), _up_symmetry(p["NSITES"].as<int>()),
                                                                       _down_symmetry(p["NSITES"].as<int>()) {
         MPI_Comm_size(_comm, &_nprocs);
@@ -83,7 +83,7 @@ namespace EDLib {
         }
 #ifdef USE_MPI
         // Waiting for the data to be received
-        MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOPUT | MPI_MODE_NOSTORE, _win);
+        MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE, _win);
 #endif
         // Process spin-up hopping contribution
         // Iteration over rows.
@@ -185,14 +185,15 @@ namespace EDLib {
         H_up.init(up_size, 100);
         H_down.init(down_size, 100);
 #ifdef USE_MPI
+        if(_comm != _run_comm && _run_comm != MPI_COMM_NULL) {
+          MPI_Comm_free(&_run_comm);
+        };
         // communicator to be used during diagonalization
-        MPI_Comm run_comm;
         // check that there is data for the current CPU
-        int color = _myid < up_size ? 1 : 0;//MPI_UNDEFINED;
+        int color = _myid < up_size ? 1 : _myid;//MPI_UNDEFINED;
         // Create new MPI communicator for the processors with defined color
-        MPI_Comm_split(_comm, color, _myid, &run_comm);
+        MPI_Comm_split(_comm, color, (color == 1 ? _myid : 0), &_run_comm);
         // update working communicator
-        _run_comm = run_comm;
         if(color == 1) {
           // there is data for current CPU
           // get CPU rank and size for recently created working communicator
@@ -302,6 +303,7 @@ namespace EDLib {
         long long k;
         int sign;
 #ifdef USE_MPI
+        MPI_Allreduce(MPI_IN_PLACE, &locsize_max, 1, alps::mpi::detail::mpi_type<size_t>(), MPI_MAX, _comm);
         int ci;
         int cid;
         int myid;
@@ -365,7 +367,7 @@ namespace EDLib {
           }
 #ifdef USE_MPI
           // check buffer boundary
-          if((t+1)==buff.size()){fence=true;t=0;}
+          if((++t)==buff.size()){fence=true;t=0;}
           // synchronize if necessary
           if(fence)
             MPI_Win_fence(MPI_MODE_NOSUCCEED | MPI_MODE_NOSTORE,eigwin);
@@ -423,7 +425,7 @@ namespace EDLib {
         MPI_Info info;
         MPI_Info_create( &info );
         MPI_Info_set( info, (char *) "no_locks", (char *) "true");
-        MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), info, _run_comm, &_win);
+        MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), MPI_INFO_NULL, _run_comm, &_win);
         MPI_Info_free(&info);
         int size;
         MPI_Comm_size(_run_comm, &size);
@@ -449,9 +451,9 @@ namespace EDLib {
         if(ntot() > 1 && n() > 0) {
           MPI_Win_free(&_win);
         }
-        MPI_Comm run_comm = _run_comm;
-        if(run_comm != MPI_COMM_WORLD && run_comm != MPI_COMM_NULL)
-        MPI_Comm_free(&run_comm);
+        if(_run_comm != MPI_COMM_WORLD && _run_comm != MPI_COMM_NULL) {
+          MPI_Comm_free(&_run_comm);
+        }
       	_run_comm = Storage < prec >::comm();
         return info;
       }
