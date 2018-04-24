@@ -44,8 +44,12 @@ namespace EDLib {
        * @param args - additional parameters for Mesh. For example for Matsubara mesh should it be alps::gf::statistics::statistics_type::FERMIONIC
        */
       GreensFunction(alps::params &p, Hamiltonian &h, Args ... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
-                                                        gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G_g(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G_l(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G_g_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G_l_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
+                                                        _G_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals() * h.model().interacting_orbitals()), alps::gf::index_mesh(p["NSPINS"].as<int>())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]) {
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
           throw std::logic_error("Eigenvectors have not been computed. Green's function can not be evaluated.");
@@ -97,8 +101,8 @@ namespace EDLib {
        */
       void compute() {
         // init Green's function with 0
-        gf *= 0.0;
-        gf_ij *= 0.0;
+        _G_g *= 0.0;
+        _G_l *= 0.0;
         // init Partition function
         _Z = 0.0;
         // Check that there is at least one eigen-value
@@ -135,12 +139,15 @@ namespace EDLib {
         if(rank == 0) {
 #endif
         // normalize Green's function by Z.
-        gf /= _Z;
-        gf_ij /= _Z;
+        _G_g /= _Z;
+        _G_l /= _Z;
+        _G_g_ij /= _Z;
+        _G_l_ij /= _Z;
 #ifdef USE_MPI
         }
 #endif
         non_local_gf();
+        _G = _G_g + _G_l;
         common::statistics.updateEvent("Greens function");
       }
 
@@ -157,11 +164,11 @@ namespace EDLib {
         if(rank == 0) {
 #endif
           if(_diagonal_orbs.size()){
-            gf.save(ar, path + "/G_omega" + suffix());
+            _G.save(ar, path + "/G_omega" + suffix());
             std::ostringstream Gomega_name;
             Gomega_name << "G_omega"<<suffix();
             std::ofstream G_omega_file(Gomega_name.str().c_str());
-            G_omega_file << std::setprecision(14) << gf;
+            G_omega_file << std::setprecision(14) << _G;
             G_omega_file.close();
           }
           std::cout << "Statsum: " << _Z << std::endl;
@@ -170,7 +177,7 @@ namespace EDLib {
             std::ostringstream Gomega_name2;
             Gomega_name2 << "G_ij_omega"<<suffix();
             std::ofstream G_omega_file2(Gomega_name2.str().c_str());
-            G_omega_file2<< std::setprecision(14) << gf_ij;
+            G_omega_file2<< std::setprecision(14) << _G_ij;
             G_omega_file2.close();
           }
 #ifdef USE_MPI
@@ -186,8 +193,8 @@ namespace EDLib {
        */
       void compute_selfenergy(alps::hdf5::archive &ar, const std::string &path){
         // Bare Green's function and Self-energy should be defined on the same grid
-        GF_TYPE bare(gf.mesh1(), gf.mesh2(), gf.mesh3());
-        GF_TYPE sigma(gf.mesh1(), gf.mesh2(), gf.mesh3());
+        GF_TYPE bare(_G.mesh1(), _G.mesh2(), _G.mesh3());
+        GF_TYPE sigma(_G.mesh1(), _G.mesh2(), _G.mesh3());
         // obtain model-specific bare Green's function
         _model.bare_greens_function(bare, beta());
         bare.save(ar, path + "/G0_omega");
@@ -202,7 +209,7 @@ namespace EDLib {
           for (int im: bare.mesh2().points()) {
             for (int is : bare.mesh3().points()) {
               sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) =
-                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
+                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/_G(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
             }
           }
         }
@@ -214,6 +221,18 @@ namespace EDLib {
         G_omega_file << std::setprecision(14) << sigma;
         G_omega_file.close();
       }
+
+      /// Green's function type
+      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
+      typedef typename alps::gf::index_mesh::index_type index_mesh_index;
+      typedef typename Mesh::index_type frequency_mesh_index;
+
+      const GF_TYPE &G_g() const {return _G_g;}
+      const GF_TYPE &G_l() const {return _G_l;}
+      const GF_TYPE &G() const {return _G;}
+      const GF_TYPE &G_g_ij() const {return _G_g_ij;}
+      const GF_TYPE &G_l_ij() const {return _G_l_ij;}
+      const GF_TYPE &G_ij() const {return _G_ij;}
 
     private:
 
@@ -236,7 +255,7 @@ namespace EDLib {
             std::vector < precision > outvec(1, precision(0.0));
             precision expectation_value = 0.0;
             _model.symmetry().set_sector(pair.sector());
-            /// first we are going to create particle and compute contribution to Green's function
+            /// Compute greater Green's function G_g = <cc^+>
             if (create_particles(std::array<size_t, 1>{{size_t(orb)}}, ispin, pair.eigenvector(), outvec, expectation_value)) {
               /// Perform Lanczos factorization for starting vector |outvec>
               int nlanc = lanczos(outvec);
@@ -246,12 +265,12 @@ namespace EDLib {
               {
                 std::cout << "orbital: " << orb << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
                 /// Using computed Lanczos factorization compute approximation for \frac{1}{z - H} by calculation of a continued fraction
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf, index_mesh_index(orb), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, _G_g, index_mesh_index(orb), index_mesh_index(ispin));
               }
             }
             /// restore symmetry sector
             _model.symmetry().set_sector(pair.sector());
-            /// perform the same for destroying of a particle
+            /// Compute lesser Green's function G_g = <c^+c>
             if (annihilate_particles(std::array<size_t, 1>{{size_t(orb)}}, ispin, pair.eigenvector(), outvec, expectation_value)) {
               int nlanc = lanczos(outvec);
 #ifdef USE_MPI
@@ -259,7 +278,7 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbital: " << orb << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf, index_mesh_index(orb), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, _G_l, index_mesh_index(orb), index_mesh_index(ispin));
               }
             }
           }
@@ -283,7 +302,7 @@ namespace EDLib {
             std::vector < precision > outvec(1, precision(0.0));
             bool found[2];
             precision expectation_value = 0.0;
-            /// create particle on two different orbs, sum the resulting vectors and compute contribution to Green's function
+            /// create particle on two different orbs, sum the resulting vectors and compute contribution to greater Green's function
             _model.symmetry().set_sector(pair.sector());
             if(create_particles(orbs, ispin, pair.eigenvector(), outvec, expectation_value)) {
               int nlanc = lanczos(outvec);
@@ -292,10 +311,10 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|aa*|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, gf_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, _G_g_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
               }
             }
-            /// perform the same for destroying of a particle
+            /// perform the same for destroying of a particle, lesser Green's function
             /// restore symmetry sector
             _model.symmetry().set_sector(pair.sector());
             if(annihilate_particles(orbs, ispin, pair.eigenvector(), outvec, expectation_value) ) {
@@ -305,7 +324,7 @@ namespace EDLib {
 #endif
               {
                 std::cout << "orbitals: " << orbs[0] << ", " << orbs[1] << "   spin: " << (ispin == 0 ? "up" : "down") << " <n|a*a|n>=" << expectation_value << " nlanc:" << nlanc << std::endl;
-                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, gf_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
+                compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, -1, _G_l_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
               }
             }
           }
@@ -324,21 +343,24 @@ namespace EDLib {
             for (int ispin = 0; ispin < _model.spins(); ++ispin) {
               auto orbs = _offdiagonal_orbs[iorb];
               for (int j = 0; j < 2; ++j) {
-                gf_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= gf(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
+                _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_g(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
+                _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_l(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
               }
-              gf_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
+              _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
+              _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
             }
           }
         }
+        _G_ij = _G_g_ij + _G_l_ij;
       }
 
-      /// Green's function type
-      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
-      typedef typename alps::gf::index_mesh::index_type index_mesh_index;
-      typedef typename Mesh::index_type frequency_mesh_index;
       /// Green's function container object
-      GF_TYPE gf;
-      GF_TYPE gf_ij;
+      GF_TYPE _G_g;
+      GF_TYPE _G_g_ij;
+      GF_TYPE _G_l;
+      GF_TYPE _G_l_ij;
+      GF_TYPE _G;
+      GF_TYPE _G_ij;
       /// Model we are solving
       typename Hamiltonian::ModelType &_model;
       /// Boltzmann-factor cutoff
