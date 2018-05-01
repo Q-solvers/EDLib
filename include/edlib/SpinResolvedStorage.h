@@ -191,7 +191,7 @@ namespace EDLib {
         };
         // communicator to be used during diagonalization
         // check that there is data for the current CPU
-        int color = _myid < up_size ? 1 : _myid;//MPI_UNDEFINED;
+        int color = _myid < up_size ? 1 : 0;//MPI_UNDEFINED;
         // Create new MPI communicator for the processors with defined color
         MPI_Comm_split(_comm, color, (color == 1 ? _myid : 0), &_run_comm);
         // update working communicator
