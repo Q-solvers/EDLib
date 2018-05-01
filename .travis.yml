@@ -35,6 +35,8 @@ matrix:
           packages:
             - g++-4.9
             - gfortran-4.9
+          config:
+            retries: true
       env: CXX=g++-4.9 FC=gfortran-4.9
       script:
         - mkdir build
@@ -50,6 +52,8 @@ matrix:
           packages:
             - g++-4.9
             - gfortran-4.9
+          config:
+            retries: true
       env: CXX=g++-4.9 FC=gfortran-4.9
       script:
         - mkdir build
@@ -65,6 +69,8 @@ matrix:
           packages:
             - g++-5
             - gfortran-5
+          config:
+            retries: true
       env: CXX=g++-5 FC=gfortran-5
       script:
         - mkdir build
@@ -80,6 +86,8 @@ matrix:
           packages:
             - g++-5
             - gfortran-5
+          config:
+            retries: true
       env: CXX=g++-5 FC=gfortran-5
       script:
         - mkdir build
