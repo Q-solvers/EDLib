@@ -375,7 +375,7 @@ namespace EDLib {
         }
         _model.symmetry().set_sector(next_sec);
         expectation_value = norm;
-        return true;
+        return std::abs(norm) > 1.e-10;
       };
 
       /**
@@ -418,7 +418,7 @@ namespace EDLib {
         _model.symmetry().set_sector(next_sec);
         // <v|a^{\star}a|v>
         expectation_value = norm;
-        return true;
+        return std::abs(norm) > 1.e-10;
       };
     };
   }
