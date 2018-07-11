@@ -343,12 +343,20 @@ namespace EDLib {
           for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
             for (int ispin = 0; ispin < _model.spins(); ++ispin) {
               auto orbs = _g_ij_orb_pairs[iorb];
-              for (int j = 0; j < 2; ++j) {
-                _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_g(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
-                _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_l(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
+              for (int jj = 0; jj < 2; ++jj) {
+                _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_g(frequency_mesh_index(iomega), index_mesh_index(orbs[jj]), index_mesh_index(ispin));
+                _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_l(frequency_mesh_index(iomega), index_mesh_index(orbs[jj]), index_mesh_index(ispin));
               }
               _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
               _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) *= 0.5;
+            }
+          }
+          // and copy diagonal G for completeness
+          for (int iorb = 0; iorb < _g_orbs.size(); ++iorb) {
+            size_t orb = _g_orbs[iorb];
+            for (int ispin = 0; ispin < _model.spins(); ++ispin) {
+             _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orb + orb), index_mesh_index(ispin)) = _G_g(frequency_mesh_index(iomega), index_mesh_index(orb), index_mesh_index(ispin));
+             _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orb + orb), index_mesh_index(ispin)) = _G_l(frequency_mesh_index(iomega), index_mesh_index(orb), index_mesh_index(ispin));
             }
           }
         }
