@@ -33,7 +33,8 @@ namespace EDLib {
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
       /**
-       * Construct Green's function class
+       * Construct Green's function class for calculating
+       * G(t-t') = -<T[c(t')c^{*}(t)]>, where T is time ordering operator
        *
        * By default, all local Green functions are computed. An array of orbital
        * pairs can be supplied in the input file as the GreensFunction_orbitals
@@ -69,20 +70,20 @@ namespace EDLib {
         input_file.close();
         for(size_t ii = 0; ii < gf_orbs.size(); ++ii){
           if(gf_orbs[ii][0] == gf_orbs[ii][1]){
-           _diagonal_orbs.push_back(gf_orbs[ii][0]);
+           _g_orbs.push_back(gf_orbs[ii][0]);
           }else{
-           _offdiagonal_orbs.push_back(std::array<size_t, 2>{size_t(gf_orbs[ii][0]), size_t(gf_orbs[ii][1])});
+           _g_ij_orb_pairs.push_back(std::array<size_t, 2>{size_t(gf_orbs[ii][0]), size_t(gf_orbs[ii][1])});
           }
         }
         // Find all unique indices for the diagonal part.
-        std::sort(_diagonal_orbs.begin(), _diagonal_orbs.end());
-        _diagonal_orbs.erase(std::unique(_diagonal_orbs.begin(), _diagonal_orbs.end()), _diagonal_orbs.end());
-        // Check that we will have the local GFs required by nonlocal GF.
-        for(size_t ii = 0; ii < _offdiagonal_orbs.size(); ++ii){
+        std::sort(_g_orbs.begin(), _g_orbs.end());
+        _g_orbs.erase(std::unique(_g_orbs.begin(), _g_orbs.end()), _g_orbs.end());
+        // Check that we will have the two local GFs required by nonlocal GF.
+        for(size_t ii = 0; ii < _g_ij_orb_pairs.size(); ++ii){
           for(size_t jj = 0; jj < 2; ++jj){
             bool found = false;
-            for(size_t kk = 0; kk < _diagonal_orbs.size(); ++kk){
-              if(_diagonal_orbs[kk] == _offdiagonal_orbs[ii][jj]){
+            for(size_t kk = 0; kk < _g_orbs.size(); ++kk){
+              if(_g_orbs[kk] == _g_ij_orb_pairs[ii][jj]){
                 found = true;
                 break;
               }
@@ -105,7 +106,7 @@ namespace EDLib {
         _G_l *= 0.0;
         // init Partition function
         _Z = 0.0;
-        // Check that there is at least one eigen-value
+        // check that at least one eigen-value have been computed
         if(hamiltonian().eigenpairs().empty())
           return;
 #ifdef USE_MPI
@@ -114,7 +115,7 @@ namespace EDLib {
 #endif
         // get groundstate
         const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &groundstate =  *hamiltonian().eigenpairs().begin();
-        // compute statsum
+        // compute partition function
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector> &eigenpair = *kkk;
           _Z += std::exp(-(eigenpair.eigenvalue() - groundstate.eigenvalue()) * beta());
@@ -129,7 +130,7 @@ namespace EDLib {
             continue;
           }
 #ifdef USE_MPI
-          if(rank==0)
+          if(rank == 0)
 #endif
           std::cout << "Compute Green's function contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << pair.sector() << std::endl;
           local_contribution(pair, groundstate);
@@ -138,7 +139,7 @@ namespace EDLib {
 #ifdef USE_MPI
         if(rank == 0) {
 #endif
-        // normalize Green's function by Z.
+        // normalize Green's function
         _G_g /= _Z;
         _G_l /= _Z;
         _G_g_ij /= _Z;
@@ -163,7 +164,7 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          if(_diagonal_orbs.size()){
+          if(_g_orbs.size()){
             _G.save(ar, path + "/G_omega" + suffix());
             std::ostringstream Gomega_name;
             Gomega_name << "G_omega"<<suffix();
@@ -173,7 +174,7 @@ namespace EDLib {
           }
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
-          if(_offdiagonal_orbs.size()){
+          if(_g_ij_orb_pairs.size()){
             std::ostringstream Gomega_name2;
             Gomega_name2 << "G_ij_omega"<<suffix();
             std::ofstream G_omega_file2(Gomega_name2.str().c_str());
@@ -248,14 +249,14 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
         /// iterate over orbitals for the diagonal Green's function
-        for (int iorb = 0; iorb < _diagonal_orbs.size(); ++iorb) {
+        for (int iorb = 0; iorb < _g_orbs.size(); ++iorb) {
           /// iterate over spins
           for (int ispin = 0; ispin < _model.spins(); ++ispin) {
-            int orb = _diagonal_orbs[iorb];
+            int orb = _g_orbs[iorb];
             std::vector < precision > outvec(1, precision(0.0));
             precision expectation_value = 0.0;
             _model.symmetry().set_sector(pair.sector());
-            /// Compute greater Green's function G_g = <cc^+>
+            /// first we are going to compute G_g = <c(t)c^+(0)>, for this we need to create particle in current eigenstate
             if (create_particles(std::array<size_t, 1>{{size_t(orb)}}, ispin, pair.eigenvector(), outvec, expectation_value)) {
               /// Perform Lanczos factorization for starting vector |outvec>
               int nlanc = lanczos(outvec);
@@ -270,7 +271,7 @@ namespace EDLib {
             }
             /// restore symmetry sector
             _model.symmetry().set_sector(pair.sector());
-            /// Compute lesser Green's function G_g = <c^+c>
+            /// then compute G_l = <c^+(t)c(0)>, for this we need to destroy particle
             if (annihilate_particles(std::array<size_t, 1>{{size_t(orb)}}, ispin, pair.eigenvector(), outvec, expectation_value)) {
               int nlanc = lanczos(outvec);
 #ifdef USE_MPI
@@ -296,13 +297,13 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
+        for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
           for (int ispin = 0; ispin < _model.spins(); ++ispin) {
-            auto orbs = _offdiagonal_orbs[iorb];
+            auto orbs = _g_ij_orb_pairs[iorb];
             std::vector < precision > outvec(1, precision(0.0));
             bool found[2];
             precision expectation_value = 0.0;
-            /// create particle on two different orbs, sum the resulting vectors and compute contribution to greater Green's function
+            /// create particle on two different orbs, sum the resulting vectors and compute contribution to Green's function
             _model.symmetry().set_sector(pair.sector());
             if(create_particles(orbs, ispin, pair.eigenvector(), outvec, expectation_value)) {
               int nlanc = lanczos(outvec);
@@ -314,7 +315,7 @@ namespace EDLib {
                 compute_continued_fraction(expectation_value, pair.eigenvalue(), groundstate.eigenvalue(), nlanc, 1, _G_g_ij, index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin));
               }
             }
-            /// perform the same for destroying of a particle, lesser Green's function
+            /// perform the same for destroying of a particle
             /// restore symmetry sector
             _model.symmetry().set_sector(pair.sector());
             if(annihilate_particles(orbs, ispin, pair.eigenvector(), outvec, expectation_value) ) {
@@ -339,9 +340,9 @@ namespace EDLib {
        */
       void non_local_gf() {
         for (int iomega = 0; iomega < omega().extent(); ++iomega) {
-          for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
+          for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
             for (int ispin = 0; ispin < _model.spins(); ++ispin) {
-              auto orbs = _offdiagonal_orbs[iorb];
+              auto orbs = _g_ij_orb_pairs[iorb];
               for (int j = 0; j < 2; ++j) {
                 _G_g_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_g(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
                 _G_l_ij(frequency_mesh_index(iomega), index_mesh_index(_model.interacting_orbitals() * orbs[0] + orbs[1]), index_mesh_index(ispin)) -= _G_l(frequency_mesh_index(iomega), index_mesh_index(orbs[j]), index_mesh_index(ispin));
@@ -363,14 +364,14 @@ namespace EDLib {
       GF_TYPE _G_ij;
       /// Model we are solving
       typename Hamiltonian::ModelType &_model;
-      /// Boltzmann-factor cutoff
+      /// Boltzmann-factor cut-off
       precision _cutoff;
-      /// Statsum
+      /// Partition function
       precision _Z;
-      /// Orbitals to calculate the diagonal Green's function.
-      std::vector<size_t> _diagonal_orbs;
-      /// Orbital pairs to calculate the offdiagonal Green's function.
-      std::vector<std::array<size_t, 2> > _offdiagonal_orbs;
+      /// Orbitals used for the diagonal Green's function calculation
+      std::vector<size_t> _g_orbs;
+      /// Orbital pairs used for the offdiagonal Green's function calculation
+      std::vector<std::array<size_t, 2> > _g_ij_orb_pairs;
 
       /**
        * @brief Perform the create operator action to the eigenstate
