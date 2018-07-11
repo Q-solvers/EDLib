@@ -142,20 +142,20 @@ namespace EDLib {
         input_file.close();
         for(size_t ii = 0; ii < gf_orbs.size(); ++ii){
           if(gf_orbs[ii][0] == gf_orbs[ii][1]){
-           _diagonal_orbs.push_back(gf_orbs[ii][0]);
+           _g_orbs.push_back(gf_orbs[ii][0]);
           }else{
-           _offdiagonal_orbs.push_back(std::array<size_t, 2>{size_t(gf_orbs[ii][0]), size_t(gf_orbs[ii][1])});
+           _g_ij_orb_pairs.push_back(std::array<size_t, 2>{size_t(gf_orbs[ii][0]), size_t(gf_orbs[ii][1])});
           }
         }
         // Find all unique indices for the diagonal part.
-        std::sort(_diagonal_orbs.begin(), _diagonal_orbs.end());
-        _diagonal_orbs.erase(std::unique(_diagonal_orbs.begin(), _diagonal_orbs.end()), _diagonal_orbs.end());
-        // Check that we will have the local GFs required by nonlocal GF.
-        for(size_t ii = 0; ii < _offdiagonal_orbs.size(); ++ii){
+        std::sort(_g_orbs.begin(), _g_orbs.end());
+        _g_orbs.erase(std::unique(_g_orbs.begin(), _g_orbs.end()), _g_orbs.end());
+        // Check that we will have the two local GFs required by nonlocal GF.
+        for(size_t ii = 0; ii < _g_ij_orb_pairs.size(); ++ii){
           for(size_t jj = 0; jj < 2; ++jj){
             bool found = false;
-            for(size_t kk = 0; kk < _diagonal_orbs.size(); ++kk){
-              if(_diagonal_orbs[kk] == _offdiagonal_orbs[ii][jj]){
+            for(size_t kk = 0; kk < _g_orbs.size(); ++kk){
+              if(_g_orbs[kk] == _g_ij_orb_pairs[ii][jj]){
                 found = true;
                 break;
               }
@@ -181,7 +181,7 @@ namespace EDLib {
         gf *= 0.0;
         gf_ij *= 0.0;
         _Z = 0.0;
-        // check that at least one eigen-value have computed
+        // check that at least one eigen-value have been computed
         if(hamiltonian().eigenpairs().empty())
           return;
 #ifdef USE_MPI
@@ -237,8 +237,8 @@ namespace EDLib {
        */
       template<typename O>
       void local_correction(const O&op) {
-        for (int iorb = 0; iorb < _diagonal_orbs.size(); ++iorb) {
-          zero_freq_contribution(op, gf, _diagonal_orbs[iorb]);
+        for (int iorb = 0; iorb < _g_orbs.size(); ++iorb) {
+          zero_freq_contribution(op, gf, _g_orbs[iorb]);
         }
       }
 
@@ -252,8 +252,8 @@ namespace EDLib {
        */
       template<typename O>
       void non_local_correction(const O& op) {
-        for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
-          auto orbs = _offdiagonal_orbs[iorb];
+        for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
+          auto orbs = _g_ij_orb_pairs[iorb];
           zero_freq_contribution(op, gf_ij, orbs[0] * _model.interacting_orbitals() + orbs[1]);
           for (int iomega = 0; iomega < omega().extent(); ++iomega) {
             gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1])) -=
@@ -278,8 +278,8 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int iorb = 0; iorb < _diagonal_orbs.size(); ++iorb) {
-          int orb = _diagonal_orbs[iorb];
+        for (int iorb = 0; iorb < _g_orbs.size(); ++iorb) {
+          int orb = _g_orbs[iorb];
           std::vector < precision > outvec(1, precision(0.0));
           precision expectation_value = 0;
           _model.symmetry().set_sector(pair.sector());
@@ -313,8 +313,8 @@ namespace EDLib {
         int rank;
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
-        for (int iorb = 0; iorb < _offdiagonal_orbs.size(); ++iorb) {
-          auto orbs = _offdiagonal_orbs[iorb];
+        for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
+          auto orbs = _g_ij_orb_pairs[iorb];
           _model.symmetry().set_sector(pair.sector());
           std::vector < precision > outvec(1, precision(0.0));
           precision expectation_value = 0;
@@ -409,7 +409,7 @@ namespace EDLib {
         MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
         if(rank == 0) {
 #endif
-          if(_diagonal_orbs.size()){
+          if(_g_orbs.size()){
             gf.save(ar, path + "/Chi" + _type +"_omega");
             std::ostringstream Gomega_name;
             Gomega_name << "Chi"<<_type<<"_omega";
@@ -419,7 +419,7 @@ namespace EDLib {
           }
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
-          if(_offdiagonal_orbs.size()){
+          if(_g_ij_orb_pairs.size()){
             std::ostringstream Gomega_name2;
             Gomega_name2 << "Chi_ij_"<<_type<<"_omega";
             std::ofstream G_omega_file2(Gomega_name2.str().c_str());
@@ -444,10 +444,10 @@ namespace EDLib {
       precision _Z;
       /// type of recently computed susceptibility
       std::string _type;
-      /// Orbitals to calculate the diagonal Green's function.
-      std::vector<size_t> _diagonal_orbs;
-      /// Orbital pairs to calculate the offdiagonal Green's function.
-      std::vector<std::array<size_t, 2> > _offdiagonal_orbs;
+      /// Orbitals used for the diagonal Green's function calculation
+      std::vector<size_t> _g_orbs;
+      /// Orbital pairs used for the offdiagonal Green's function calculation
+      std::vector<std::array<size_t, 2> > _g_ij_orb_pairs;
 
       /**
        * @brief Perform the operation to the eigenstate
