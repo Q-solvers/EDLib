@@ -255,12 +255,21 @@ namespace EDLib {
         for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
           auto orbs = _g_ij_orb_pairs[iorb];
           zero_freq_contribution(op, gf_ij, orbs[0] * _model.interacting_orbitals() + orbs[1]);
-          for (int iomega = 0; iomega < omega().extent(); ++iomega) {
-            gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1])) -=
-               gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0])) + gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[1]));
+        }
+        for (int iomega = 0; iomega < omega().extent(); ++iomega) {
+          for (int iorb = 0; iorb < _g_ij_orb_pairs.size(); ++iorb) {
+            auto orbs = _g_ij_orb_pairs[iorb];
+            for (int jj = 0; jj < 2; ++jj) {
+              gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1])) -= gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[jj]));
+            }
+            gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orbs[0] * _model.interacting_orbitals() + orbs[1])) *= 0.5;
+          }
+          // and copy diagonal G for completeness
+          for (int iorb = 0; iorb < _g_orbs.size(); ++iorb) {
+            size_t orb = _g_orbs[iorb];
+            gf_ij(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orb * _model.interacting_orbitals() + orb)) = gf(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(orb));
           }
         }
-        gf_ij *= 0.5;
       };
 
       /**
