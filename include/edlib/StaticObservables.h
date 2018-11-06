@@ -112,6 +112,7 @@ namespace EDLib {
           continue;
         }
         // Sum the contributions.
+        std::cout<<pair.eigenvalue()<<std::endl;
         std::map<std::string, std::vector<precision>> contrib = calculate_static_observables_eigenvector(ham, pair);
         for(auto ivar = contrib.begin(); ivar != contrib.end(); ++ivar){
           for(int i = 0; i < (*ivar).second.size(); ++i){
@@ -356,6 +357,7 @@ namespace EDLib {
         }
         inverse_N_eff += weight * weight;
       }
+
       std::map<std::string, std::vector<precision>> result = {
         {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
@@ -384,7 +386,7 @@ namespace EDLib {
       result[_N_EFF_][0] = inverse_N_eff;
 #endif
       result[_N_EFF_][0] = 1 / result[_N_EFF_][0];
-      return std::move(result);
+      return result;
     }
 
     /// Inverse temperature
@@ -407,7 +409,7 @@ namespace EDLib {
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_N_EFF_ = "N_eff";
   template<class Hamiltonian>
-  const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "D_occ";
+  const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "MI_MJ";
 
 }
 

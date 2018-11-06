@@ -354,7 +354,7 @@ namespace EDLib {
           chiSum = chiSum + G(typename Mesh::index_type(iomega), alps::gf::index_mesh::index_type(i)).real() - c2/(om*om) - c4/(om*om*om*om);
         }
         // computes zero-frequency contribution
-        G(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*beta();
+        G(typename Mesh::index_type(0), alps::gf::index_mesh::index_type(i)) -= 2 * chiSum + 2* tail - op.average()*op.average()*beta();
       };
 
       /**
