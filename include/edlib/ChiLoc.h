@@ -168,6 +168,9 @@ namespace EDLib {
         }
       }
 
+      const GF_TYPE &G() const {return gf;}
+      const GF_TYPE &G_ij() const {return gf_ij;}
+
       /**
        * Compute two-particle Green's function for specific operator Op.
        *
