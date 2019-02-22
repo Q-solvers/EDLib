@@ -14,6 +14,8 @@
 #include "FermionicModel.h"
 #include "CommonUtils.h"
 
+#include <Eigen/Core>
+
 namespace EDLib {
   namespace Model {
     namespace Hubbard {
@@ -179,10 +181,20 @@ namespace EDLib {
       void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
         for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
           typename Mesh::index_type w(iw);
-          for (int im: bare_gf.mesh2().points()) {
-            for (int is : bare_gf.mesh3().points()) {
-              // TODO: this is wrong calculation of Bare GF.
-              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) + _xmu[im] - _Eps[im][is]);
+          for (int is : bare_gf.mesh3().points()) {
+            Eigen::MatrixXcd G_inv(_Ns, _Ns);
+            for(int I = 0; I<_Ns; ++I) {
+              G_inv(I, I) = (common::freq_point(iw, bare_gf.mesh1(), beta) + _xmu[I] - _Eps[I][is]);
+              for(int J = 0; J<_Ns; ++J){
+                 int im = I*_Ns + J;
+                 G_inv(I, J) -= t[I][J];
+              }
+            }
+            G_inv = G_inv.inverse().eval();
+            for (int im: bare_gf.mesh2().points()) {
+              int I = im / _Ns;
+              int J = im % _Ns;
+              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = G_inv(I, J);
             }
           }
         }

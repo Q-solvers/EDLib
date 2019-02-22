@@ -7,6 +7,8 @@
 
 #include <alps/params.hpp>
 
+#include <Eigen/Core>
+
 namespace EDLib {
   namespace Model {
 /**
@@ -76,6 +78,33 @@ namespace EDLib {
 
       int spins() const {
         return _ms;
+      }
+      
+      template<typename Mesh>
+      void solve_dyson(const alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf,
+                       const alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& G_ij,
+                       alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& sigma) {
+        // solve Dyson equation
+        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
+          typename Mesh::index_type w(iw);
+          for (int is : bare_gf.mesh3().points()) {
+            Eigen::MatrixXcd bare(_Ns, _Ns);
+            Eigen::MatrixXcd bold(_Ns, _Ns);
+            Eigen::MatrixXcd sigm(_Ns, _Ns);
+            for (int im: bare_gf.mesh2().points()) {
+              int I = im / _Ns;
+              int J = im % _Ns;
+              bare(I, J) = bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
+              bold(I, J) = G_ij(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
+            }
+            sigm = bare.inverse() - bold.inverse();
+            for (int im: bare_gf.mesh2().points()) {
+              int I = im / _Ns;
+              int J = im % _Ns;
+              sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = sigm(I, J);
+            }
+          }
+        }
       }
 
     protected:

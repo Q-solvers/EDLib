@@ -32,6 +32,12 @@ namespace EDLib {
       using Lanczos < Hamiltonian, Mesh, Args... >::suffix;
       using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
     public:
+
+      /// Green's function type
+      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
+      typedef typename alps::gf::index_mesh::index_type index_mesh_index;
+      typedef typename Mesh::index_type frequency_mesh_index;
+
       /**
        * Construct Green's function class for calculating
        * G(t-t') = -<T[c(t')c^{*}(t)]>, where T is time ordering operator
@@ -192,10 +198,10 @@ namespace EDLib {
        * @param ar -- hdf5 archive to save self-energy
        * @param path -- root path in hdf5 archive
        */
-      void compute_selfenergy(alps::hdf5::archive &ar, const std::string &path){
+      GF_TYPE compute_selfenergy(alps::hdf5::archive &ar, const std::string &path){
         // Bare Green's function and Self-energy should be defined on the same grid
-        GF_TYPE bare(_G.mesh1(), _G.mesh2(), _G.mesh3());
-        GF_TYPE sigma(_G.mesh1(), _G.mesh2(), _G.mesh3());
+        GF_TYPE bare(_G_ij.mesh1(), _G_ij.mesh2(), _G_ij.mesh3());
+        GF_TYPE sigma(_G_ij.mesh1(), _G_ij.mesh2(), _G_ij.mesh3());
         // obtain model-specific bare Green's function
         _model.bare_greens_function(bare, beta());
         bare.save(ar, path + "/G0_omega");
@@ -204,16 +210,7 @@ namespace EDLib {
         std::ofstream G_omega_file(Gomega_name.str().c_str());
         G_omega_file << std::setprecision(14) << bare;
         G_omega_file.close();
-        // solve Dyson equation
-        for(int iw = 0; iw< bare.mesh1().points().size(); ++iw) {
-          typename Mesh::index_type w(iw);
-          for (int im: bare.mesh2().points()) {
-            for (int is : bare.mesh3().points()) {
-              sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) =
-                1.0/bare(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) - 1.0/_G(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
-            }
-          }
-        }
+        _model.solve_dyson(bare, _G_ij, sigma);
         // store to file
         sigma.save(ar, path + "/Sigma_omega");
         Gomega_name.str("");
@@ -221,12 +218,9 @@ namespace EDLib {
         G_omega_file.open(Gomega_name.str().c_str());
         G_omega_file << std::setprecision(14) << sigma;
         G_omega_file.close();
+        return sigma;
       }
 
-      /// Green's function type
-      typedef alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >  GF_TYPE;
-      typedef typename alps::gf::index_mesh::index_type index_mesh_index;
-      typedef typename Mesh::index_type frequency_mesh_index;
 
       const GF_TYPE &G_g() const {return _G_g;}
       const GF_TYPE &G_l() const {return _G_l;}
