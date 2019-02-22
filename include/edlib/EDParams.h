@@ -17,8 +17,8 @@ namespace EDLib {
     // Symmetry parameters
     params.define < bool >("arpack.SECTOR", "Read symmetry sectors from file");
     // Storage parameters
-    params.define < size_t >("storage.MAX_SIZE", 70000, "Number of eigenvalues to find");
-    params.define < size_t >("storage.MAX_DIM", 5000, "Number of eigenvalues to find");
+    params.define < size_t >("storage.MAX_DIM", 5000, "Maximum dimension of the Hamiltonian matrix.");
+    params.define < size_t >("storage.MAX_SIZE", 70000, "Maximum size of the matrix arrays. Must be between MAX_DIM and MAX_DIM^2.");
     params.define < int >("storage.EIGENVALUES_ONLY", 0, "Compute only eigenvalues.");
     params.define < int >("spinstorage.ORBITAL_NUMBER", 1, "Number of orbitals with interaction");
     // ARPACK parameters
@@ -30,9 +30,7 @@ namespace EDLib {
     params.define < double >("lanc.EMAX", 3, "Largest real frequency value");
     params.define < int >("lanc.NLANC", 100, "Number of Lanczos iterations");
     params.define < double >("lanc.BETA", 10.0, "Inverse temperature");
-    params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltsman factor");
-    // Density matrix parameters
-    params.define < bool >("densitymatrix.SECTOR", "Read density matrix sectors from file");
+    params.define < double >("lanc.BOLTZMANN_CUTOFF", 1e-12, "Cutoff for Boltzmann factor");
 
     // Anderson model
     params.define < int >("siam.NORBITALS", 1, "Number of orbitals in single impurity Anderson Model.");

@@ -6,5 +6,4 @@ add_custom_target(extlib SOURCES
  SzSymmetryWithBoson.h
  FermiBosonStorage.h
  HolsteinAndersonParameter.h
- DensityMatrix.h
 )

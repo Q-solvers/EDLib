@@ -11,6 +11,13 @@
 #include <cmath>
 
 namespace EDLib {
+  /**
+   * Class for calculation of the static observables.
+   *
+   *
+   *
+   * @tparam Hamiltonian - type of Hamiltonian object
+   */
   template<class Hamiltonian>
   class StaticObservables {
   protected:
@@ -27,6 +34,11 @@ namespace EDLib {
     const static std::string _N_EFF_;
     const static std::string _MI_MJ_;
 
+    /**
+     * Construct an object of the static observables class
+     *
+     * @param p - AlpsCore parameter object
+     */
     StaticObservables(alps::params &p) :
       _beta(p["lanc.BETA"].as<precision>()),
       _cutoff(p["lanc.BOLTZMANN_CUTOFF"])
@@ -89,6 +101,10 @@ namespace EDLib {
      *  N_eff: average effective dimension of Hilbert space;
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
+#ifdef USE_MPI
+      int myid;
+      MPI_Comm_rank(ham.storage().comm(), &myid);
+#endif
       std::map<std::string, std::vector<precision>> avg = {
         {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
@@ -112,7 +128,11 @@ namespace EDLib {
           continue;
         }
         // Sum the contributions.
-        std::cout<<pair.eigenvalue()<<std::endl;
+#ifdef USE_MPI
+        if(!myid)
+#endif
+        std::cout << "Compute static observables contribution for eigenvalue E=" << pair.eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << pair.sector() << std::endl;
+
         std::map<std::string, std::vector<precision>> contrib = calculate_static_observables_eigenvector(ham, pair);
         for(auto ivar = contrib.begin(); ivar != contrib.end(); ++ivar){
           for(int i = 0; i < (*ivar).second.size(); ++i){
@@ -121,6 +141,10 @@ namespace EDLib {
         }
         sum += boltzmann_f;
       }
+#ifdef USE_MPI
+      if(!myid)
+#endif
+      std::cout << "Statsum: " << sum << std::endl;
       for(auto ob = avg.begin(); ob != avg.end(); ++ob){
         for(int i = 0; i < (*ob).second.size(); ++i){
           (*ob).second[i] /= sum;
@@ -409,7 +433,7 @@ namespace EDLib {
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_N_EFF_ = "N_eff";
   template<class Hamiltonian>
-  const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "MI_MJ";
+  const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "M_i M_j";
 
 }
 
