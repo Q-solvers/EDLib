@@ -42,7 +42,7 @@ int main(int argc, const char ** argv) {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(!rank)
 #endif
-  ar.open(params["OUTPUT_FILE"].as<std::string>().c_str(), "w");
+    ar.open(params["OUTPUT_FILE"].as<std::string>().c_str(), "w");
   try {
 #ifdef USE_MPI
     HamType ham(params, MPI_COMM_WORLD);
@@ -69,7 +69,7 @@ int main(int argc, const char ** argv) {
     susc.save(ar, "results");
     susc.compute<EDLib::gf::NOperator<double> >();
     susc.save(ar, "results");
-    
+
     auto & G_ij = greensFunction.G_ij();
     auto sigma= greensFunction.compute_selfenergy(ar, "results");
     alps::gf::real_space_index_mesh r_mesh(ham.model().interacting_orbitals(), 2);
@@ -80,26 +80,22 @@ int main(int argc, const char ** argv) {
         for(int i = 0; i < G_ij.mesh2().extent(); ++i) {
           int I = i / r_mesh.extent();
           int J = i % r_mesh.extent();
-          cluster_gf(mat_mesh_t::index_type(iw), r_mesh_t::index_type(I), r_mesh_t::index_type(J), s_mesh_t::index_type(is)) = 
+          cluster_gf(mat_mesh_t::index_type(iw), r_mesh_t::index_type(I), r_mesh_t::index_type(J), s_mesh_t::index_type(is)) =
               G_ij(mat_mesh_t::index_type(iw), s_mesh_t::index_type(i), s_mesh_t::index_type(is));
-          cluster_sigma(mat_mesh_t::index_type(iw), r_mesh_t::index_type(I), r_mesh_t::index_type(J), s_mesh_t::index_type(is)) = 
+          cluster_sigma(mat_mesh_t::index_type(iw), r_mesh_t::index_type(I), r_mesh_t::index_type(J), s_mesh_t::index_type(is)) =
               sigma(mat_mesh_t::index_type(iw), s_mesh_t::index_type(i), s_mesh_t::index_type(is));
         }
       }
     }
 #ifdef USE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(!rank) 
+    if(!rank)
 #endif
-    ar.close();
-#ifdef USE_MPI
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  if(!rank) 
-#endif
-    ar.open(params["CLUSTER_DATA"].as<std::string>().c_str(), "w");
-    ar["G_ij"]<<cluster_gf;
-    ar["Sigma_ij"]<<cluster_sigma;
-//    EDLib::CSRSIAMHamiltonian ham2(params);
+    {
+      ar.close();
+      ar.open(params["CLUSTER_DATA"].as<std::string>().c_str(), "w");
+      ar["G_ij"]<<cluster_gf;
+      ar["Sigma_ij"]<<cluster_sigma;
+    }
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(!rank) std::cerr<<e.what()<<std::endl;
@@ -110,7 +106,7 @@ int main(int argc, const char ** argv) {
 #ifdef USE_MPI
   if(!rank)
 #endif
-  ar.close();
+    ar.close();
 #ifdef USE_MPI
   MPI_Finalize();
 #endif
