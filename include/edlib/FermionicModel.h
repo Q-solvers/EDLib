@@ -8,6 +8,7 @@
 #include <alps/params.hpp>
 
 #include <Eigen/Core>
+#include <Eigen/Dense>
 
 namespace EDLib {
   namespace Model {

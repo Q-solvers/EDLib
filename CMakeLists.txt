@@ -13,8 +13,10 @@ find_package(ALPSCore COMPONENTS params hdf5 gf REQUIRED)
 find_package(ARPACK REQUIRED)
 find_package(BLAS)
 find_package(LAPACK)
+find_package(Eigen3 REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 include_directories(${ALPSCore_INCLUDES})
+include_directories(${EIGEN3_INCLUDE_DIR})
 
 
 if(NOT CMAKE_BUILD_TYPE)
