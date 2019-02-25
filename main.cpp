@@ -97,8 +97,8 @@ int main(int argc, const char ** argv) {
   if(!rank) 
 #endif
     ar.open(params["CLUSTER_DATA"].as<std::string>().c_str(), "w");
-    ar["G_ij"]<<G_ij;
-    ar["Sigma_ij"]<<sigma;
+    ar["G_ij"]<<cluster_gf;
+    ar["Sigma_ij"]<<cluster_sigma;
 //    EDLib::CSRSIAMHamiltonian ham2(params);
   } catch (std::exception & e) {
 #ifdef USE_MPI
