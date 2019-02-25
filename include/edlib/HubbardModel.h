@@ -182,12 +182,12 @@ namespace EDLib {
         for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
           typename Mesh::index_type w(iw);
           for (int is : bare_gf.mesh3().points()) {
-            Eigen::MatrixXcd G_inv(_Ns, _Ns);
+            Eigen::MatrixXcd G_inv = Eigen::MatrixXcd::Zero(_Ns, _Ns);
             for(int I = 0; I<_Ns; ++I) {
               G_inv(I, I) = (common::freq_point(iw, bare_gf.mesh1(), beta) + _xmu[I] - _Eps[I][is]);
               for(int J = 0; J<_Ns; ++J){
                  int im = I*_Ns + J;
-                 G_inv(I, J) -= t[I][J];
+                 G_inv(I, J) += t[I][J];
               }
             }
             G_inv = G_inv.inverse().eval();
