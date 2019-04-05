@@ -86,13 +86,11 @@ int main(int argc, const char ** argv) {
       }
     }
 #ifdef USE_MPI
-  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(!rank) 
 #endif
     ar.close();
 #ifdef USE_MPI
-  int rank;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   if(!rank) 
 #endif
