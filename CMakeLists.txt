@@ -64,6 +64,7 @@ if(Testing)
     add_test(NSymmetryTest test/NSymmetryTest)
     add_test(HubbardModelTest test/HubbardModelTest)
     add_test(LanczosTest test/LanczosTest)
+    add_test(StaticObservablesTest test/LanczosStaticObservablesTest)
 
 endif (Testing)
 
