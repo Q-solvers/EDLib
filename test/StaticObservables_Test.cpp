@@ -38,7 +38,7 @@ TEST(HubbardModelTest, ReferenceTest) {
   p["arpack.SECTOR"]=false;
   p["storage.MAX_SIZE"]=576;
   p["storage.MAX_DIM"]=36;
-  p["storage.EIGENVALUES_ONLY"]=false;
+  p["storage.EIGENVALUES_ONLY"]=0;
   p["storage.ORBITAL_NUMBER"]=1;
   p["arpack.NEV"]=1;
 
@@ -57,6 +57,8 @@ TEST(HubbardModelTest, ReferenceTest) {
 
   EDLib::StaticObservables<HamType> so(p);
   std::map<std::string, std::vector<double>> result = so.calculate_static_observables(ham);
+
+  std::cout << "Energy expectation value: " << result["E"][0] << std::endl;
 
   ASSERT_EQ(result["N"].size(), 4);
   ASSERT_EQ(result["N_up"].size(), 4);

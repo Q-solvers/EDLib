@@ -33,6 +33,7 @@ namespace EDLib {
     const static std::string _D_OCC_;
     const static std::string _N_EFF_;
     const static std::string _MI_MJ_;
+    const static std::string _E_;
 
     /**
      * Construct an object of the static observables class
@@ -112,7 +113,8 @@ namespace EDLib {
         {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
-        {_N_EFF_, std::vector<precision>(1, 0.0)}
+        {_N_EFF_, std::vector<precision>(1, 0.0)},
+        {_E_, std::vector<precision>(1, 0.0)}
       };
       precision sum = 0.0;
       const EigenPair<precision, sector> &groundstate =  *ham.eigenpairs().begin();
@@ -357,6 +359,8 @@ namespace EDLib {
       std::vector<precision> mimj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
       precision inverse_N_eff = 0.0;
+      precision energy = pair.eigenvalue();
+
       ham.model().symmetry().set_sector(pair.sector());
       ham.storage().reset();
       // Loop over basis vectors.
@@ -389,7 +393,8 @@ namespace EDLib {
         {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
-        {_N_EFF_, std::vector<precision>(1, 0.0)}
+        {_N_EFF_, std::vector<precision>(1, 0.0)},
+        {_E_, std::vector<precision>(1, 0.0)}
       };
 #ifdef USE_MPI
       // Add the sums from all processes.
@@ -400,6 +405,7 @@ namespace EDLib {
       MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(mimj.data(), result[_MI_MJ_].data(), mimj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(&inverse_N_eff, &result[_N_EFF_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(&energy, &result[_E_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result[_N_] = n;
       result[_N_UP_] = n_up;
@@ -408,6 +414,7 @@ namespace EDLib {
       result[_D_OCC_] = d_occ;
       result[_MI_MJ_] = mimj;
       result[_N_EFF_][0] = inverse_N_eff;
+      result[_E_][0] = energy;
 #endif
       result[_N_EFF_][0] = 1 / result[_N_EFF_][0];
       return result;
@@ -434,6 +441,8 @@ namespace EDLib {
   const std::string StaticObservables<Hamiltonian>::_N_EFF_ = "N_eff";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "M_i M_j";
+  template<class Hamiltonian>
+  const std::string StaticObservables<Hamiltonian>::_E_ = "E";
 
 }
 
