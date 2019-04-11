@@ -100,6 +100,7 @@ namespace EDLib {
      *  m_i m_j: product of magnetic moments on the i-th and j-th sites;
      *  d_occ: average double occupancy;
      *  N_eff: average effective dimension of Hilbert space;
+     *  E: total grand-canonical energy
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
 #ifdef USE_MPI
