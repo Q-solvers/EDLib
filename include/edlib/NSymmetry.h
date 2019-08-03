@@ -30,9 +30,11 @@ namespace EDLib {
 
         size_t size() const { return _size; }
 
-        void print() const {
-          std::cout << _n;
+        void print(std::ostream & out) const {
+          out << _n;
         }
+        
+        void print() const {print(std::cout);}
 
       private:
         int _n;

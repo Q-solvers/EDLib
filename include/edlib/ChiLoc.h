@@ -5,7 +5,7 @@
 #ifndef HUBBARD_CHILOC_H
 #define HUBBARD_CHILOC_H
 
-
+#include <limits>
 #include <iostream>
 #include <iomanip>
 #include "Lanczos.h"
@@ -205,7 +205,7 @@ namespace EDLib {
         for (auto kkk = hamiltonian().eigenpairs().begin(); kkk != hamiltonian().eigenpairs().end(); kkk++) {
           const EigenPair<precision, typename Hamiltonian::ModelType::Sector>& pair = *kkk;
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
-          if (boltzmann_f < _cutoff) {
+          if (std::abs(_cutoff - boltzmann_f) > std::numeric_limits<precision>::epsilon() && boltzmann_f < _cutoff ) {
             // Skipped by Boltzmann factor.
             continue;
           }

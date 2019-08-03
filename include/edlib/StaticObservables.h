@@ -5,6 +5,7 @@
 
 #include <alps/params.hpp>
 
+#include <limits>
 #include <vector>
 #include <bitset>
 #include <string>
@@ -66,7 +67,7 @@ namespace EDLib {
      *
      * Prints all the parameters returned by calculate_static_observables().
      */
-    void print_static_observables(Hamiltonian& ham){
+    void print_static_observables(Hamiltonian& ham, std::ostream & out){
       std::map<std::string, std::vector<double>> obs = calculate_static_observables(ham);
 #ifdef USE_MPI
       int myid;
@@ -75,14 +76,14 @@ namespace EDLib {
 #endif
       {
         for(auto ivar = obs.begin(); ivar != obs.end(); ++ivar){
-          std::cout << "<" << (*ivar).first << "> = {";
+          out << "<" << (*ivar).first << "> = {";
           for(int i = 0; i < (*ivar).second.size(); ++i){
             if(i){
-              std::cout << ", ";
+              out << ", ";
             }
-            std::cout << (*ivar).second[i];
+            out << (*ivar).second[i];
           }
-          std::cout << "}" << std::endl;
+          out << "}" << std::endl;
         }
       }
     }
@@ -125,7 +126,7 @@ namespace EDLib {
         precision boltzmann_f = std::exp(
          -(pair.eigenvalue() - groundstate.eigenvalue()) * _beta
         );
-        if(boltzmann_f < _cutoff){
+        if (std::abs(_cutoff - boltzmann_f) > std::numeric_limits<precision>::epsilon() && boltzmann_f < _cutoff ) {
 //          std::cout<<"Skipped by Boltzmann factor."<<std::endl;
           continue;
         }
@@ -273,7 +274,7 @@ namespace EDLib {
      * @param nmax - maximum number of coefficients to be processed;
      * @param trivial - skip the coefficients smaller than this number.
      */
-    void print_major_electronic_configuration(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial){
+    void print_major_electronic_configuration(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, std::ostream & out){
       std::vector<std::pair<long long, precision>> coeffs = find_largest_coefficients(ham, pair, nmax, trivial);
 #ifdef USE_MPI
       int myid;
@@ -281,15 +282,15 @@ namespace EDLib {
       if(!myid)
 #endif
       {
-        std::cout << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
-        pair.sector().print();
-        std::cout << std::endl;
+        out << "Eigenvector components for eigenvalue " << pair.eigenvalue() << " ";
+        pair.sector().print(out);
+        out << std::endl;
         for(size_t i = 0; i < coeffs.size(); ++i){
-          std::cout << coeffs[i].second << " * |";
+          out << coeffs[i].second << " * |";
           std::string spin_down = std::bitset< 64 >( coeffs[i].first ).to_string().substr(64-  ham.model().orbitals(), ham.model().orbitals());
           std::string spin_up   = std::bitset< 64 >( coeffs[i].first ).to_string().substr(64-2*ham.model().orbitals(), ham.model().orbitals());
-          std::cout<<spin_up<< "|"<<spin_down;
-          std::cout << ">" << std::endl;
+          out<<spin_up<< "|"<<spin_down;
+          out << ">" << std::endl;
         }
       }
     }
@@ -303,7 +304,7 @@ namespace EDLib {
      * @param trivial - skip the coefficients smaller than this number.
      * @param cumulative - calculate cumulative contribution: this class and all previous classes.
      */
-    void print_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative){
+    void print_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative, std::ostream & out){
       std::vector<std::pair<size_t, precision>> contribs = calculate_class_contrib(ham, pair, nmax, trivial, cumulative);
 #ifdef USE_MPI
       int myid;
@@ -311,11 +312,11 @@ namespace EDLib {
       if(!myid)
 #endif
       {
-        std::cout << "Contributions of eigenvector component classes for eigenvalue " << pair.eigenvalue() << " ";
-        pair.sector().print();
-        std::cout << std::endl;
+        out << "Contributions of eigenvector component classes for eigenvalue " << pair.eigenvalue() << " ";
+        pair.sector().print(out);
+        out << std::endl;
         for(size_t i = 0; i < contribs.size(); ++i){
-          std::cout << contribs[i].first << "\t" << contribs[i].second << std::endl;
+          out << contribs[i].first << "\t" << contribs[i].second << std::endl;
         }
       }
     }

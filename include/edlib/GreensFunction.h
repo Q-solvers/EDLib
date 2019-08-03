@@ -5,7 +5,7 @@
 #ifndef HUBBARD_GREENSFUNCTION_H
 #define HUBBARD_GREENSFUNCTION_H
 
-
+#include <limits>
 #include <iomanip>
 #include "Lanczos.h"
 #include "EigenPair.h"
@@ -132,7 +132,7 @@ namespace EDLib {
           // compute Boltzmann-factor
           precision boltzmann_f = std::exp(-(pair.eigenvalue() - groundstate.eigenvalue()) * beta());
           // Skip all eigenvalues with Boltzmann-factor smaller than cutoff
-          if (boltzmann_f < _cutoff) {
+          if (std::abs(_cutoff - boltzmann_f) > std::numeric_limits<precision>::epsilon() && boltzmann_f < _cutoff ) {
             continue;
           }
 #ifdef USE_MPI

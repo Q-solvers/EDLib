@@ -41,7 +41,11 @@ namespace EDLib {
         size_t size() const { return _size; }
 
         void print() const {
-          std::cout << _nup << " " << _ndown;
+          print(std::cout);
+        }
+        
+        void print(std::ostream & out) const {
+          out << _nup << " " << _ndown;
         }
       protected:
         bool operator<(Sector s) {
