@@ -95,8 +95,7 @@ namespace EDLib {
               }
             }
             if(!found){
-              std::ostringstream msg;
-              throw std::logic_error("Nonlocal GF requires local GFs for both orbitals.");
+              _g_orbs.push_back(_g_ij_orb_pairs[ii][jj]);
             }
           }
         }
