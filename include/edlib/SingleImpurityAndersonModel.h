@@ -220,7 +220,7 @@ namespace EDLib {
         input_data >> alps::make_pvp("mu", _xmu);
         input_data >> alps::make_pvp("interaction/values", _U);
         input_data.close();
-        if(_U.size() != _ml) {
+        if(_U.shape()[2] != _ml) {
           throw std::invalid_argument("Incorrect number of orbitals. Please check input file.");
         }
         for(int im = 0; im< _ml; ++im ){
@@ -263,8 +263,8 @@ namespace EDLib {
                     if ( ( (i == l) && (j == k) && (is1==is2) ) || ( (i == k) && (j == l) ) ) {
                       continue;
                     }
-                    if(std::abs(_U[i][j][k][l]) != 0.0) {
-                      _V_states.push_back(USt(i, j, k, l, is1, is2, _U[i][j][k][l]));
+                    if(std::abs(_U(is1,is2,i,j,k,l)) != 0.0) {
+                      _V_states.push_back(USt(i, j, k, l, is1, is2, _U(is1,is2,i,j,k,l)));
                     }
                   }
                 }
@@ -291,12 +291,14 @@ namespace EDLib {
           for (int is = 0; is < _ms; ++is) {
             xtemp += (_H0[im][im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
           }
-          xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
+          for (int is = 0; is < _ms; ++is) {
+            xtemp += 0.5*_U(is,is,im,im,im,im) * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
+          }
           for(int jm = 0; jm < _ml; ++jm) {
             for(int is = 0; is< _ms; ++is)
             if(im!=jm) {
-              xtemp += 0.5 * (_U[im][jm][im][jm] - _U[im][jm][jm][im]) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + is*_Ns, _Ip);
-              xtemp += 0.5 * (_U[im][jm][im][jm]) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + (1-is)*_Ns, _Ip);
+              xtemp += 0.5 * (_U(is,is,im,jm,im,jm) - _U(is,is,im,jm,jm,im)) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + is*_Ns, _Ip);
+              xtemp += 0.5 * (_U(is,1-is,im,jm,im,jm)) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + (1-is)*_Ns, _Ip);
             }
           }
         }
@@ -394,7 +396,7 @@ namespace EDLib {
       /// number of impurity orbitals
       int _ml;
       /// Coulomb interaction matrix
-      std::vector < std::vector < std::vector < std::vector < precision > > > > _U;
+      alps::numerics::tensor<precision, 6> _U;
       /// chemical potential
       precision _xmu;
       /// number of bath states

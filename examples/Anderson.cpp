@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <edlib/EDParams.h>
+#include <cstdlib>
 #include "edlib/Hamiltonian.h"
 #include "edlib/SzSymmetry.h"
 #include "edlib/SOCRSStorage.h"
@@ -26,7 +27,7 @@ int main(int argc, const char ** argv) {
   alps::params params(argc, argv);
   EDLib::define_parameters(params);
   if(params.help_requested(std::cout)) {
-    exit(0);
+    std::exit(0);
   }
   // open output file
   alps::hdf5::archive ar;

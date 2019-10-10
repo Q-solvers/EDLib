@@ -60,8 +60,14 @@ for i in range(ml):
     t0_g = data.create_group("H0_" + str(i))
     t0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float)
 
+UU = np.zeros((2,2) + U.shape)
+UU[0,0] = U
+UU[0,1] = U
+UU[1,0] = U
+UU[1,1] = U
+
 int_g = data.create_group("interaction")
-int_ds = int_g.create_dataset("values", shape=(ml,ml,ml,ml,), data=U)
+int_ds = int_g.create_dataset("values", shape=(2,2,ml,ml,ml,ml,), data=UU)
 
 #int_g = data.create_group("chemical_potential")
 int_ds = data.create_dataset("mu", shape=(), data=xmu)
