@@ -51,11 +51,10 @@ hop_g.create_dataset("values", data=sectors)
 
 bath = data.create_group("Bath")
 
+bath["Epsk/values"] = Epsk
 for i in range(ml):
-    if(Epsk[i].shape != Vk[i].shape):
+    if(Epsk.shape != Vk[i].shape):
         raise "Incorrect shape for Hybridisation and Epsk"
-    Epsk_g = bath.create_group("Epsk_" + str(i))
-    Epsk_g.create_dataset("values", shape=(len(Epsk[i]),2,), data=Epsk[i], dtype=np.float)
     Vk_g = bath.create_group("Vk_" + str(i))
     Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float)
     t0_g = data.create_group("H0_" + str(i))
