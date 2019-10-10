@@ -64,9 +64,6 @@ for i in range(ml):
     H0_g = data.create_group("H0_" + str(i))
     H0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float)
 
-hop_g = data.create_group("Eps0")
-hop_g.create_dataset("values", data=Eps0)
-
 int_g = data.create_group("interaction")
 int_ds = int_g.create_dataset("values", shape=(ml,ml,ml,ml,), data=U)
 
