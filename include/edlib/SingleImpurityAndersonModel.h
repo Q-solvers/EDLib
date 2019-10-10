@@ -194,7 +194,7 @@ namespace EDLib {
 
       SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
                                                     _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
-                                                    _t0(p["siam.NORBITALS"], std::vector<std::vector<double> >(p["siam.NORBITALS"], std::vector<double>(_ms, 0.0))),
+                                                    _H0(p["siam.NORBITALS"], std::vector<std::vector<double> >(p["siam.NORBITALS"], std::vector<double>(_ms, 0.0))),
                                                     _bath_ind(p["siam.NORBITALS"], 0) {
         std::string input = p["INPUT_FILE"];
         alps::hdf5::archive input_data(input.c_str(), "r");
@@ -214,10 +214,9 @@ namespace EDLib {
           s<<"Bath/Vk_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _Vk[im]);
           s.str("");
-          s<<"t0_"<<im<<"/values";
-          input_data >> alps::make_pvp(s.str().c_str(), _t0[im]);
+          s<<"H0_"<<im<<"/values";
+          input_data >> alps::make_pvp(s.str().c_str(), _H0[im]);
         }
-        input_data >> alps::make_pvp("Eps0/values", _Eps0);
         input_data >> alps::make_pvp("mu", _xmu);
         input_data >> alps::make_pvp("interaction/values", _U);
         input_data.close();
@@ -225,17 +224,18 @@ namespace EDLib {
           throw std::invalid_argument("Incorrect number of orbitals. Please check input file.");
         }
         for(int im = 0; im< _ml; ++im ){
-          if(_t0[im].size()>_ml) {
+          if(_H0[im].size()>_ml) {
             throw std::invalid_argument("Inter orbital hoppings array dimension are bigger than number of impurity orbitals");
           }
         }
         // interorbital hoppings
         for (int im = 0; im < _ml; ++im) {
           for (int jm = 0; jm < im; ++jm) {
+            if(im == jm) {continue;}
             for (int is = 0; is < _ms; ++is) {
-              if (std::abs(_t0[im][jm][is]) > 1e-10) {
-                _T_states.push_back(HSt(im, jm, is, _t0[im][jm][is]));
-                _T_states.push_back(HSt(jm, im, is, _t0[im][jm][is]));
+              if (std::abs(_H0[im][jm][is]) > 1e-10) {
+                _T_states.push_back(HSt(im, jm, is, _H0[im][jm][is]));
+                _T_states.push_back(HSt(jm, im, is, _H0[im][jm][is]));
               }
             }
           }
@@ -289,7 +289,7 @@ namespace EDLib {
         }
         for (int im = 0; im < _ml; ++im) {
           for (int is = 0; is < _ms; ++is) {
-            xtemp += (_Eps0[im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
+            xtemp += (_H0[im][im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
           for(int jm = 0; jm < _ml; ++jm) {
@@ -382,7 +382,7 @@ namespace EDLib {
               for(int ik = 0; ik< _Epsk.size(); ++ik) {
                 delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[ik][is]);
               }
-              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Eps0[im][is] - delta);
+              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _H0[im][im][is] - delta);
             }
           }
         }
@@ -397,12 +397,10 @@ namespace EDLib {
       std::vector < std::vector < std::vector < std::vector < precision > > > > _U;
       /// chemical potential
       precision _xmu;
-      /// impurity orbitals energy
-      std::vector < std::vector < precision > > _Eps0;
       /// number of bath states
       int _Nk;
-      /// Hoppings between orbitals
-      std::vector < std::vector < std::vector < precision > > > _t0;
+      /// Non-interacting impurity Hamiltonian
+      std::vector < std::vector < std::vector < precision > > > _H0;
       /// Hybridization with bath
       std::vector < std::vector < std::vector < precision > > > _Vk;
       /// Bath energy levels

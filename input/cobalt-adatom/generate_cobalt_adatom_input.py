@@ -38,7 +38,9 @@ Ns = 17
 ml = 5
 
 # Interorbital hoppings
-t0 = [np.array([[0] * 2 ] * ml )]* ml
+H0 = np.zeros((ml,ml,2))
+for i in range(ml):
+    H0[i, i,:] = Eps0[i,:]
 
 # (n_up, n_down) symmerty sectors
 sectors = np.array([[12,15],[15,12],[14,13],[13,14],[13,15],[14,14],[15,13],])
@@ -60,8 +62,8 @@ for i in range(ml):
   Epsk_g.create_dataset("values", shape=(len(Epsk[i]),2,), data=Epsk[i], dtype=np.float)
   Vk_g = bath.create_group("Vk_" + str(i))
   Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float)
-  t0_g = data.create_group("t0_" + str(i))
-  t0_g.create_dataset("values", data=np.array(t0[i]), dtype=np.float)
+  H0_g = data.create_group("H0_" + str(i))
+  H0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float)
 
 hop_g = data.create_group("Eps0")
 hop_g.create_dataset("values", data=Eps0)

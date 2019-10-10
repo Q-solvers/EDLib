@@ -33,7 +33,9 @@ Epsk = np.array([ [-1.0,-1.0],
                   [-1.0,-1.0] ])
 
 ml = 2*l + 1
-t0 = [np.array([[0] * 2 ] * ml )]* ml
+H0 = np.zeros((ml,ml,2))
+for i in range(ml):
+    H0[i, i,:] = Eps0[i,:]
 
 Nk = 1
 Ns = Eps0.shape[0] + Epsk.shape[0]
@@ -56,8 +58,8 @@ for i in range(ml):
     Epsk_g.create_dataset("values", shape=(len(Epsk[i]),2,), data=Epsk[i], dtype=np.float)
     Vk_g = bath.create_group("Vk_" + str(i))
     Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float)
-    t0_g = data.create_group("t0_" + str(i))
-    t0_g.create_dataset("values", data=np.array(t0[i]), dtype=np.float)
+    t0_g = data.create_group("H0_" + str(i))
+    t0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float)
 
 hop_g = data.create_group("Eps0")
 hop_g.create_dataset("values", data=Eps0)
