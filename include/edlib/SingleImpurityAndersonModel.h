@@ -193,7 +193,6 @@ namespace EDLib {
       typedef typename Symmetry::SzSymmetry::Sector Sector;
 
       SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
-                                                    _Epsk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
                                                     _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
                                                     _t0(p["siam.NORBITALS"], std::vector<std::vector<double> >(p["siam.NORBITALS"], std::vector<double>(_ms, 0.0))),
                                                     _bath_ind(p["siam.NORBITALS"], 0) {
@@ -206,13 +205,14 @@ namespace EDLib {
           throw std::invalid_argument("Incorrect values for the number of spins. Please check input file.");
         }
         _Ip = _ms * _Ns;
+        input_data >> alps::make_pvp("Bath/Epsk/values", _Epsk);
+        if(_Epsk.size() != _Ns - _ml) {
+          throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
+        }
         for (int im = 0; im < _ml; ++im) {
           std::stringstream s;
           s<<"Bath/Vk_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _Vk[im]);
-          s.str("");
-          s<<"Bath/Epsk_"<<im<<"/values";
-          input_data >> alps::make_pvp(s.str().c_str(), _Epsk[im]);
           s.str("");
           s<<"t0_"<<im<<"/values";
           input_data >> alps::make_pvp(s.str().c_str(), _t0[im]);
@@ -224,18 +224,10 @@ namespace EDLib {
         if(_U.size() != _ml) {
           throw std::invalid_argument("Incorrect number of orbitals. Please check input file.");
         }
-        int b_ind = 0;
-        for(int im = 0; im< _ml; ++im ){
-          _bath_ind[im] = b_ind;
-          b_ind += _Vk[im].size();
-        }
         for(int im = 0; im< _ml; ++im ){
           if(_t0[im].size()>_ml) {
             throw std::invalid_argument("Inter orbital hoppings array dimension are bigger than number of impurity orbitals");
           }
-        }
-        if(b_ind != _Ns - _ml) {
-          throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
         }
         // interorbital hoppings
         for (int im = 0; im < _ml; ++im) {
@@ -253,7 +245,7 @@ namespace EDLib {
           for (int ik = 0; ik < _Vk[im].size(); ++ik) {
             for (int is = 0; is < _ms; ++is) {
               if (std::abs(_Vk[im][ik][is]) > 1e-10) {
-                int imk = ik + _bath_ind[im] + _ml;
+                int imk = ik + _ml;
                 _T_states.push_back(HSt(im, imk, is, _Vk[im][ik][is]));
                 _T_states.push_back(HSt(imk, im, is, _Vk[im][ik][is]));
               }
@@ -289,12 +281,14 @@ namespace EDLib {
        */
       inline const precision diagonal(long long state) const {
         precision xtemp = 0.0;
+        for (int is = 0; is < _ms; ++is) {
+          for (int ik = 0; ik < _Epsk.size(); ++ik) {
+            int ikm = ik + _ml;
+            xtemp+=(_Epsk[ik][is] * checkState(state, ikm + is * _Ns, _Ip));
+          }
+        }
         for (int im = 0; im < _ml; ++im) {
           for (int is = 0; is < _ms; ++is) {
-            for (int ik = 0; ik < _Epsk[im].size(); ++ik) {
-              int ikm = ik + _bath_ind[im] + _ml;
-              xtemp+=(_Epsk[im][ik][is] * checkState(state, ikm + is * _Ns, _Ip));
-            }
             xtemp += (_Eps0[im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
           }
           xtemp += _U[im][im][im][im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
@@ -385,8 +379,8 @@ namespace EDLib {
           for (int im: bare_gf.mesh2().points()) {
             for (int is : bare_gf.mesh3().points()) {
               std::complex<double> delta = 0;
-              for(int ik = 0; ik< _Epsk[im].size(); ++ik) {
-                delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[im][ik][is]);
+              for(int ik = 0; ik< _Epsk.size(); ++ik) {
+                delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[ik][is]);
               }
               bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Eps0[im][is] - delta);
             }
@@ -412,7 +406,7 @@ namespace EDLib {
       /// Hybridization with bath
       std::vector < std::vector < std::vector < precision > > > _Vk;
       /// Bath energy levels
-      std::vector < std::vector < std::vector < precision > > > _Epsk;
+      std::vector < std::vector < precision > > _Epsk;
       /// indices for bath
       std::vector<int> _bath_ind;
 

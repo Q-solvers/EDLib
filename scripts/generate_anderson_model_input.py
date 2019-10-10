@@ -21,26 +21,22 @@ l = 2
 U = np.real(Kanamori_interaction(l, U_int=2.0, J_hund=0.3))
 xmu = 4.5
 Eps0 = np.array([[0.,0.], [0.,0.], [0.,0.], [0.,0.], [0.,0.] ])
-Vk =   [ np.array([ [0.5,  0.5] ]),
+Vk_ =   [ np.array([ [0.5,  0.5] ]),
          np.array([ [0.5,  0.5] ]),
          np.array([ [0.5,  0.5] ]),
          np.array([ [0.5,  0.5] ]),
          np.array([ [0.5,  0.5] ]) ]
-Epsk = [ np.array([ [-1.0,-1.0] ]),
-         np.array([ [-1.0,-1.0] ]),
-         np.array([ [-1.0,-1.0] ]),
-         np.array([ [-1.0,-1.0] ]),
-         np.array([ [-1.0,-1.0] ]) ]
-
-tk = [ np.array([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]),
-       np.array([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]),
-       np.array([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]),
-       np.array([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]),
-       np.array([[0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]) ]
+Epsk = np.array([ [-1.0,-1.0],
+                  [-1.0,-1.0],
+                  [-1.0,-1.0],
+                  [-1.0,-1.0],
+                  [-1.0,-1.0] ])
 
 ml = 2*l + 1
+t0 = [np.array([[0] * 2 ] * ml )]* ml
+
 Nk = 1
-Ns = len(Eps0) + len(Epsk)
+Ns = Eps0.shape[0] + Epsk.shape[0]
 
 sectors = np.array([[3,3],])
 
@@ -61,7 +57,7 @@ for i in range(ml):
     Vk_g = bath.create_group("Vk_" + str(i))
     Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float)
     t0_g = data.create_group("t0_" + str(i))
-    t0_g.create_dataset("values", data=np.array(tk[i]), dtype=np.float)
+    t0_g.create_dataset("values", data=np.array(t0[i]), dtype=np.float)
 
 hop_g = data.create_group("Eps0")
 hop_g.create_dataset("values", data=Eps0)
