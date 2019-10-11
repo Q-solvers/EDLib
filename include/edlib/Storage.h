@@ -50,7 +50,6 @@ namespace EDLib {
           zero_eigenapair();
           return finalize(0);
         }
-        std::cout << "diag matrix:" << n << std::endl;
         int ncv = std::min(_ncv, _ntot);
         int nev = std::min(_nev, ncv - 1);
         char which[3] = "SA";
