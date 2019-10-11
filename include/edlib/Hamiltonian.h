@@ -58,13 +58,20 @@ namespace EDLib {
 #endif
       int k =0;
       while (_model.symmetry().next_sector()) {
+#ifdef USE_MPI
+        if (rank == 0){
+#endif
+        std::cout<<"Diagonalize sector "<<_model.symmetry().sector()<<std::endl;
+#ifdef USE_MPI
+        }
+#endif
         fill();
         /**
          * perform ARPACK call
          */
         int info = _storage.diag();
         if (info != 0) {
-          /// abnormal return from ARPACK. Eigen-pair have not been computed
+          /// abnormal return from ARPACK. Eigen-pair has not been computed
 #ifdef USE_MPI
           if (rank == 0) std::cerr<<"Eigenvalue have not been computed."<<std::endl;
 #endif
