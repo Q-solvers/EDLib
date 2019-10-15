@@ -1,5 +1,6 @@
-cmake_minimum_required(VERSION 3.0)
-project(Hubbard C CXX Fortran)
+cmake_minimum_required(VERSION 3.10)
+project(EDLib LANGUAGES C CXX Fortran
+        VERSION 2.0)
 
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -50,6 +51,54 @@ if(USE_MPI)
     message(INFO " Using parallel libraries: ${parlibs}")
 endif(USE_MPI)
 
+#include_directories(${Hubbard_SOURCE_DIR}/include)
+add_subdirectory(lib)
+add_subdirectory(include/edlib)
+add_subdirectory(include/ext)
+
+include(GNUInstallDirs)
+
+add_library(${PROJECT_NAME} INTERFACE)
+
+target_include_directories(
+  ${PROJECT_NAME}
+  INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>)
+
+install(TARGETS ${PROJECT_NAME} common-lib
+        EXPORT ${PROJECT_NAME}_targets
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("${PROJECT_NAME}ConfigVersion.cmake"
+                                 VERSION ${PROJECT_VERSION}
+                                 COMPATIBILITY SameMajorVersion)
+
+configure_package_config_file(
+  "${PROJECT_SOURCE_DIR}/cmake/${PROJECT_NAME}Config.cmake.in"
+  "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+  INSTALL_DESTINATION
+  ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+install(EXPORT ${PROJECT_NAME}_targets
+        FILE ${PROJECT_NAME}Targets.cmake
+        NAMESPACE ${PROJECT_NAME}::
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+install(FILES "${PROJECT_BINARY_DIR}/${PROJECT_NAME}Config.cmake"
+              "${PROJECT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake"
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/${PROJECT_NAME}/cmake)
+
+file (GLOB_RECURSE TARGET_INSTALL_LIB_HEADERS "${PROJECT_SOURCE_DIR}/include/edlib/*.h")
+file (GLOB_RECURSE TARGET_INSTALL_EXT_HEADERS "${PROJECT_SOURCE_DIR}/include/ext/*.h")
+install(FILES include/edlib.h
+        DESTINATION include)
+install(FILES ${TARGET_INSTALL_LIB_HEADERS}
+        DESTINATION include/edlib)
+install(FILES ${TARGET_INSTALL_EXT_HEADERS}
+        DESTINATION include/ext)
 
 option(Testing "Enable testing" OFF)
 if(Testing)
@@ -69,17 +118,10 @@ if(Testing)
 endif (Testing)
 
 
-include_directories(${Hubbard_SOURCE_DIR}/include)
-include_directories(${Hubbard_SOURCE_DIR}/lib)
-
-add_subdirectory(lib)
-add_subdirectory(include/edlib)
-add_subdirectory(include/ext)
-
 option(Examples "Enable examples" ON)
 if(Examples)
     add_subdirectory(examples)
     set(SOURCE_FILES main.cpp)
     add_executable(Hubbard ${SOURCE_FILES})
-    target_link_libraries(Hubbard common-lib ${extlibs} ${parlibs})
+    target_link_libraries(Hubbard common-lib ${PROJECT_NAME} ${extlibs} ${parlibs})
 endif(Examples)
