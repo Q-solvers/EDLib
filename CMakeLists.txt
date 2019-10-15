@@ -51,21 +51,21 @@ if(USE_MPI)
     message(INFO " Using parallel libraries: ${parlibs}")
 endif(USE_MPI)
 
-#include_directories(${Hubbard_SOURCE_DIR}/include)
-add_subdirectory(lib)
+# Commented due to the bug in CMake (fixed in 3.13)
+#add_subdirectory(lib)
 add_subdirectory(include/edlib)
 add_subdirectory(include/ext)
 
 include(GNUInstallDirs)
 
 add_library(${PROJECT_NAME} INTERFACE)
-
+add_library(common-lib lib/dummy.f90)
 target_include_directories(
   ${PROJECT_NAME}
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:include>)
 
-install(TARGETS ${PROJECT_NAME}
+install(TARGETS ${PROJECT_NAME} common-lib
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
