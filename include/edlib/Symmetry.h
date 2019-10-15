@@ -5,6 +5,7 @@
 #ifndef HUBBARD_SYMMETRY_H
 #define HUBBARD_SYMMETRY_H
 
+#include <alps/hdf5.hpp>
 #include <alps/params.hpp>
 
 namespace EDLib {
