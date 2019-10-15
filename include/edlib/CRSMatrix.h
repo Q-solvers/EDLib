@@ -2,8 +2,8 @@
 // Created by iskakoff on 20/04/17.
 //
 
-#ifndef HUBBARD_CSRMATRIX_H
-#define HUBBARD_CSRMATRIX_H
+#ifndef EDLIB_CSRMATRIX_H
+#define EDLIB_CSRMATRIX_H
 
 namespace EDLib {
   namespace Storage {
@@ -124,4 +124,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_CSRMATRIX_H
+#endif //EDLIB_CSRMATRIX_H

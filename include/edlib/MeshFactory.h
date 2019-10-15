@@ -2,8 +2,8 @@
 // Created by iskakoff on 17/01/17.
 //
 
-#ifndef HUBBARD_MESHFACTORY_HPP
-#define HUBBARD_MESHFACTORY_HPP
+#ifndef EDLIB_MESHFACTORY_HPP
+#define EDLIB_MESHFACTORY_HPP
 
 
 #include <alps/params.hpp>
@@ -37,4 +37,4 @@ namespace EDLib {
 
 }
 
-#endif //HUBBARD_MESHFACTORY_HPP
+#endif //EDLIB_MESHFACTORY_HPP

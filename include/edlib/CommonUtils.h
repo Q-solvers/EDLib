@@ -2,8 +2,8 @@
 // Created by iskakoff on 01/02/17.
 //
 
-#ifndef HUBBARD_COMMONUTILS_H
-#define HUBBARD_COMMONUTILS_H
+#ifndef EDLIB_COMMONUTILS_H
+#define EDLIB_COMMONUTILS_H
 
 #include <complex>
 #include <alps/gf/mesh.hpp>
@@ -21,4 +21,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_COMMONUTILS_H
+#endif //EDLIB_COMMONUTILS_H

@@ -2,8 +2,8 @@
 // Created by iskakoff on 03/01/17.
 //
 
-#ifndef HUBBARD_CHILOC_H
-#define HUBBARD_CHILOC_H
+#ifndef EDLIB_CHILOC_H
+#define EDLIB_CHILOC_H
 
 #include <limits>
 #include <iostream>
@@ -531,4 +531,4 @@ namespace EDLib {
 }
 
 
-#endif //HUBBARD_CHILOC_H
+#endif //EDLIB_CHILOC_H

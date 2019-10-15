@@ -2,8 +2,8 @@
 // Created by iskakoff on 28/08/16.
 //
 
-#ifndef HUBBARD_FERMIONICMODEL_H
-#define HUBBARD_FERMIONICMODEL_H
+#ifndef EDLIB_FERMIONICMODEL_H
+#define EDLIB_FERMIONICMODEL_H
 
 #include <alps/params.hpp>
 
@@ -120,4 +120,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_FERMIONICMODEL_H
+#endif //EDLIB_FERMIONICMODEL_H

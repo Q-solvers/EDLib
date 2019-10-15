@@ -2,8 +2,8 @@
 // Created by iskakoff on 01/08/16.
 //
 
-#ifndef HUBBARD_GREENSFUNCTION_H
-#define HUBBARD_GREENSFUNCTION_H
+#ifndef EDLIB_GREENSFUNCTION_H
+#define EDLIB_GREENSFUNCTION_H
 
 #include <limits>
 #include <iomanip>
@@ -462,4 +462,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_GREENSFUNCTION_H
+#endif //EDLIB_GREENSFUNCTION_H

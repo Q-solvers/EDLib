@@ -2,8 +2,8 @@
 // Created by iskakoff on 21/08/16.
 //
 
-#ifndef HUBBARD_NSYMMETRY_H
-#define HUBBARD_NSYMMETRY_H
+#ifndef EDLIB_NSYMMETRY_H
+#define EDLIB_NSYMMETRY_H
 
 
 #include <queue>
@@ -159,4 +159,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_NSYMMETRY_H
+#endif //EDLIB_NSYMMETRY_H

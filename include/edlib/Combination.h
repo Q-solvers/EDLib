@@ -2,8 +2,8 @@
 // Created by iskakoff on 21/08/16.
 //
 
-#ifndef HUBBARD_COMBINATION_H
-#define HUBBARD_COMBINATION_H
+#ifndef EDLIB_COMBINATION_H
+#define EDLIB_COMBINATION_H
 
 
 #include <vector>
@@ -76,4 +76,4 @@ namespace EDLib {
     }
   };
 }
-#endif //HUBBARD_COMBINATION_H
+#endif //EDLIB_COMBINATION_H

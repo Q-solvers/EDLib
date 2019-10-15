@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.8.2)
 project(EDLib LANGUAGES C CXX Fortran
         VERSION 2.0)
 
@@ -65,7 +65,7 @@ target_include_directories(
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>
             $<INSTALL_INTERFACE:include>)
 
-install(TARGETS ${PROJECT_NAME} common-lib
+install(TARGETS ${PROJECT_NAME}
         EXPORT ${PROJECT_NAME}_targets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

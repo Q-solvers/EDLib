@@ -2,8 +2,8 @@
 // Created by iskakoff on 27/07/16.
 //
 
-#ifndef HUBBARD_EIGENPAIR_H
-#define HUBBARD_EIGENPAIR_H
+#ifndef EDLIB_EIGENPAIR_H
+#define EDLIB_EIGENPAIR_H
 
 #include <vector>
 
@@ -48,4 +48,4 @@ namespace EDLib {
 
 }
 
-#endif //HUBBARD_EIGENPAIR_H
+#endif //EDLIB_EIGENPAIR_H

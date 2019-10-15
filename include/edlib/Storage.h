@@ -2,8 +2,8 @@
 // Created by iskakoff on 21/07/16.
 //
 
-#ifndef HUBBARD_STORAGE_H
-#define HUBBARD_STORAGE_H
+#ifndef EDLIB_STORAGE_H
+#define EDLIB_STORAGE_H
 
 #include "fortranbinding.h"
 #include <iostream>
@@ -325,4 +325,4 @@ namespace EDLib {
 //    }
   }
 }
-#endif //HUBBARD_STORAGE_H
+#endif //EDLIB_STORAGE_H

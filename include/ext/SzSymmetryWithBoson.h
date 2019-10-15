@@ -2,8 +2,8 @@
 // Created by iskakoff on 20/04/17.
 //
 
-#ifndef HUBBARD_NSYMMETRYWITHBOSON_H
-#define HUBBARD_NSYMMETRYWITHBOSON_H
+#ifndef EDLIB_NSYMMETRYWITHBOSON_H
+#define EDLIB_NSYMMETRYWITHBOSON_H
 
 #include <edlib/Symmetry.h>
 #include <edlib/Combination.h>
@@ -232,4 +232,4 @@ namespace EDLib {
 }
 
 
-#endif //HUBBARD_NSYMMETRYWITHBOSON_H
+#endif //EDLIB_NSYMMETRYWITHBOSON_H

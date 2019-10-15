@@ -2,8 +2,8 @@
 // Created by iskakoff on 28/07/16.
 //
 
-#ifndef HUBBARD_SOCRSSTORAGE_H
-#define HUBBARD_SOCRSSTORAGE_H
+#ifndef EDLIB_SOCRSSTORAGE_H
+#define EDLIB_SOCRSSTORAGE_H
 
 #include <vector>
 #include <iomanip>
@@ -324,4 +324,4 @@ namespace EDLib {
     };
   }
 }
-#endif //HUBBARD_SOCRSSTORAGE_H
+#endif //EDLIB_SOCRSSTORAGE_H

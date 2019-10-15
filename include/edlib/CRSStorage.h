@@ -2,8 +2,8 @@
 // Created by iskakoff on 20/07/16.
 //
 
-#ifndef HUBBARD_CRSSTORAGE_H
-#define HUBBARD_CRSSTORAGE_H
+#ifndef EDLIB_CRSSTORAGE_H
+#define EDLIB_CRSSTORAGE_H
 
 
 #include <vector>
@@ -217,4 +217,4 @@ namespace EDLib {
 
   }
 }
-#endif //HUBBARD_CRSSTORAGE_H
+#endif //EDLIB_CRSSTORAGE_H

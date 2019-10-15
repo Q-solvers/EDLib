@@ -2,8 +2,8 @@
 // Created by iskakoff on 11/01/17.
 //
 
-#ifndef HUBBARD_HDF5UTILS_HPP
-#define HUBBARD_HDF5UTILS_HPP
+#ifndef EDLIB_HDF5UTILS_HPP
+#define EDLIB_HDF5UTILS_HPP
 
 
 /**
@@ -91,4 +91,4 @@ namespace EDLib {
 }
 
 
-#endif //HUBBARD_HDF5UTILS_HPP
+#endif //EDLIB_HDF5UTILS_HPP

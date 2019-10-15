@@ -2,8 +2,8 @@
 // Created by iskakoff on 23/08/16.
 //
 
-#ifndef HUBBARD_SPINRESOLVEDSTORAGE_H
-#define HUBBARD_SPINRESOLVEDSTORAGE_H
+#ifndef EDLIB_SPINRESOLVEDSTORAGE_H
+#define EDLIB_SPINRESOLVEDSTORAGE_H
 
 #include <bitset>
 #include <iomanip>
@@ -635,4 +635,4 @@ namespace EDLib {
     };
   }
 }
-#endif //HUBBARD_SPINRESOLVEDSTORAGE_H
+#endif //EDLIB_SPINRESOLVEDSTORAGE_H

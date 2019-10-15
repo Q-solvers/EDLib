@@ -2,8 +2,8 @@
 // Created by iskakoff on 20/07/16.
 //
 
-#ifndef HUBBARD_FORTRANBINDING_H
-#define HUBBARD_FORTRANBINDING_H
+#ifndef EDLIB_FORTRANBINDING_H
+#define EDLIB_FORTRANBINDING_H
 
 
 #include <vector>
@@ -41,4 +41,4 @@ void psmout(int* comm, int* lout, int *m, int*n, float*A, int*lda, int* idigit,c
 };
 #endif
 
-#endif //HUBBARD_FORTRANBINDING_H
+#endif //EDLIB_FORTRANBINDING_H

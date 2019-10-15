@@ -2,8 +2,8 @@
 // Created by iskakoff on 19/07/16.
 //
 
-#ifndef HUBBARD_HAMILTONIAN_H
-#define HUBBARD_HAMILTONIAN_H
+#ifndef EDLIB_HAMILTONIAN_H
+#define EDLIB_HAMILTONIAN_H
 
 #include <set>
 #include <type_traits>
@@ -150,4 +150,4 @@ namespace EDLib {
   typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < double > > > SRSSIAMHamiltonian;
   typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < float > > > SRSSIAMHamiltonian_float;
 }
-#endif //HUBBARD_HAMILTONIAN_H
+#endif //EDLIB_HAMILTONIAN_H

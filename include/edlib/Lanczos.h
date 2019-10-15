@@ -2,8 +2,8 @@
 // Created by iskakoff on 01/08/16.
 //
 
-#ifndef HUBBARD_LANCZOS_H
-#define HUBBARD_LANCZOS_H
+#ifndef EDLIB_LANCZOS_H
+#define EDLIB_LANCZOS_H
 
 #include <alps/gf/mesh.hpp>
 #include <alps/gf/gf.hpp>
@@ -226,4 +226,4 @@ namespace EDLib {
     };
   }
 }
-#endif //HUBBARD_LANCZOS_H
+#endif //EDLIB_LANCZOS_H

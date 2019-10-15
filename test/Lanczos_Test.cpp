@@ -44,7 +44,7 @@ TEST(HubbardModelTest, ReferenceTest) {
   p["arpack.SECTOR"]=false;
   p["storage.MAX_SIZE"]=864;
   p["storage.MAX_DIM"]=36;
-  p["storage.EIGENVALUES_ONLY"]=false;
+  p["storage.EIGENVALUES_ONLY"]=0;
   p["storage.ORBITAL_NUMBER"]=1;
   p["arpack.NEV"]=100;
   p["lanc.BETA"]=20;

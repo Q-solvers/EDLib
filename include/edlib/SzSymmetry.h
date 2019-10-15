@@ -2,8 +2,8 @@
 // Created by iskakoff on 19/07/16.
 //
 
-#ifndef HUBBARD_SZCOMBINATION_H
-#define HUBBARD_SZCOMBINATION_H
+#ifndef EDLIB_SZCOMBINATION_H
+#define EDLIB_SZCOMBINATION_H
 
 #include <queue>
 
@@ -235,4 +235,4 @@ namespace EDLib {
   }
 }
 
-#endif //HUBBARD_SZCOMBINATION_H
+#endif //EDLIB_SZCOMBINATION_H
