@@ -181,6 +181,7 @@ namespace EDLib {
           std::cout << "Statsum: " << _Z << std::endl;
           ar[path + "/@Statsum"] << _Z;
           if(_g_ij_orb_pairs.size()){
+            _G_ij.save(ar, path + "/G_ij_omega" + suffix());
             std::ostringstream Gomega_name2;
             Gomega_name2 << "G_ij_omega"<<suffix();
             std::ofstream G_omega_file2(Gomega_name2.str().c_str());
