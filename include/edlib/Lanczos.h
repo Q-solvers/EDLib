@@ -11,18 +11,17 @@
 
 #include <cmath>
 
-#include "MeshFactory.h"
-
 namespace EDLib {
   namespace gf {
-    template<class Hamiltonian, class Mesh=alps::gf::matsubara_positive_mesh, typename ... Args>
+    template<class Hamiltonian, class MeshFactory, typename ... Args>
     class Lanczos {
     protected:
-      typedef typename Hamiltonian::ModelType::precision precision;
-      typedef typename Mesh::index_type mesh_index;
+      using precision=typename Hamiltonian::ModelType::precision;
+      using Mesh=typename MeshFactory::MeshType;
+      using mesh_index=typename Mesh::index_type;
     public:
       Lanczos(alps::params &p, Hamiltonian &h, Args...args) :
-        ham(h), _omega(MeshFactory<Mesh, Args...>::createMesh(p, args...)),_Nl(p["lanc.NLANC"]),
+        ham(h), _omega(MeshFactory::createMesh(p, args...)),_Nl(p["lanc.NLANC"]),
         alfalanc(p["lanc.NLANC"], 0.0), betalanc(int(p["lanc.NLANC"]) + 1, 0.0), det(p["lanc.NLANC"], 0), dl(p["lanc.NLANC"], 0.0), _beta(p["lanc.BETA"].as<precision>()) {}
 
       const Mesh &omega() const {

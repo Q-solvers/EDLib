@@ -100,15 +100,16 @@ namespace EDLib {
      * @tparam Mesh - type of frequency mesh. can be either alps::gf::real_frequency_mesh or alps::gf::matsubara_positive_only
      * @tparam Args - additional parameters for Mesh. For matsubara mesh should be alps::gf::statistics::statistics_type
      */
-    template<class Hamiltonian, class Mesh, typename ... Args>
-    class ChiLoc : public Lanczos < Hamiltonian, Mesh, Args... > {
-      using Lanczos < Hamiltonian, Mesh, Args... >::zero_freq;
-      using Lanczos < Hamiltonian, Mesh, Args... >::omega;
-      using Lanczos < Hamiltonian, Mesh, Args... >::lanczos;
-      using Lanczos < Hamiltonian, Mesh, Args... >::hamiltonian;
-      using Lanczos < Hamiltonian, Mesh, Args... >::beta;
-      using Lanczos < Hamiltonian, Mesh, Args... >::compute_sym_continued_fraction;
-      using typename Lanczos < Hamiltonian, Mesh, Args... >::precision;
+    template<class Hamiltonian, class MeshFactory, typename ... Args>
+    class ChiLoc : public Lanczos < Hamiltonian, MeshFactory, Args... > {
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::zero_freq;
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::omega;
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::lanczos;
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::hamiltonian;
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::beta;
+      using Lanczos < Hamiltonian, MeshFactory, Args... >::compute_sym_continued_fraction;
+      using typename Lanczos < Hamiltonian, MeshFactory, Args... >::Mesh;
+      using typename Lanczos < Hamiltonian, MeshFactory, Args... >::precision;
       using Sector = typename Hamiltonian::ModelType::Sector;
       /// Green's function conatainer type
       typedef alps::gf::two_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh>  GF_TYPE;
@@ -119,9 +120,9 @@ namespace EDLib {
        * @param h - Hamiltonian instance
        * @param args - additional parameters for mesh. For example for matsubara mesh should it be alps::gf::statistics::statistics_type::BOSONIC
        */
-      ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, Mesh, Args... >(p, h, args...), _model(h.model()),
-                                                        gf(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
-                                                        gf_ij(Lanczos < Hamiltonian, Mesh, Args... >::omega(), alps::gf::index_mesh(h.model().interacting_orbitals()*h.model().interacting_orbitals())),
+      ChiLoc(alps::params &p, Hamiltonian &h, Args... args) : Lanczos < Hamiltonian, MeshFactory, Args... >(p, h, args...), _model(h.model()),
+                                                        gf(omega(), alps::gf::index_mesh(h.model().interacting_orbitals())),
+                                                        gf_ij(omega(), alps::gf::index_mesh(h.model().interacting_orbitals()*h.model().interacting_orbitals())),
                                                         _cutoff(p["lanc.BOLTZMANN_CUTOFF"]), _type("Sz") {
         // we can not evaluate Green's function if eigenvectors have not been computed.
         if(p["storage.EIGENVALUES_ONLY"] == 1) {
