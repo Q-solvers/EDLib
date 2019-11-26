@@ -112,6 +112,10 @@ namespace EDLib {
       return _model;
     }
 
+    void constant_shift(prec shift) {
+      _storage.constant_shift(shift);
+    }
+
 #ifdef USE_MPI
     const MPI_Comm& comm() const {
       return _comm;

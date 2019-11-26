@@ -461,6 +461,10 @@ namespace EDLib {
       }
 #endif
 
+      void constant_shift(prec shift) {
+        std::transform( _diagonal.begin(), _diagonal.end(), _diagonal.begin(), std::bind2nd(std::plus<prec>(), shift));
+      }
+
     private:
       /// Current model
       Model &_model;

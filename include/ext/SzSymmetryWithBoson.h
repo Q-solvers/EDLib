@@ -159,12 +159,12 @@ namespace EDLib {
         return spin == 0 ? _current_sector.nup() > 0 : _current_sector.ndown() > 0;
       }
 
-      SzSymmetryWithBoson::Sector destroy_partice(int spin) {
+      SzSymmetryWithBoson::Sector destroy_particle(int spin) {
         return Sector(_current_sector.nup() - (1 - spin), _current_sector.ndown() - spin, _boson_bits_count,
                       _comb.c_n_k(_Ns, _current_sector.nup() - (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() - spin) * (_maximum_bosons  + 1));
       }
 
-      SzSymmetryWithBoson::Sector create_partice(int spin) {
+      SzSymmetryWithBoson::Sector create_particle(int spin) {
         return Sector(_current_sector.nup() + (1 - spin), _current_sector.ndown() + spin, _boson_bits_count,
                       _comb.c_n_k(_Ns, _current_sector.nup() + (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() + spin)* (_maximum_bosons  + 1));
       }

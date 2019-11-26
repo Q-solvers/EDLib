@@ -395,7 +395,7 @@ namespace EDLib {
         hamiltonian().storage().reset();
         int nup_new = _model.symmetry().sector().nup() + (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() + spin;
-        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().create_partice(spin);
+        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().create_particle(spin);
         outvec.assign(hamiltonian().storage().vector_size(next_sec), 0.0);
         common::statistics.registerEvent("adag");
         for(auto orb : orbitals) {
@@ -437,7 +437,7 @@ namespace EDLib {
         hamiltonian().storage().reset();
         int nup_new = _model.symmetry().sector().nup() - (1 - spin);
         int ndn_new = _model.symmetry().sector().ndown() - spin;
-        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().destroy_partice(spin);
+        typename Hamiltonian::ModelType::Sector next_sec = _model.symmetry().destroy_particle(spin);
         outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0.0));
         common::statistics.registerEvent("a");
         for(auto orb : orbitals) {

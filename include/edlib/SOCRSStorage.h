@@ -245,6 +245,10 @@ namespace EDLib {
       int &nprocs() { return _nthreads; }
 #endif
 
+      void constant_shift(prec shift) {
+        std::transform( dvalues.begin(), dvalues.end(), dvalues.begin(), std::bind2nd(std::plus<prec>(), shift));
+      }
+
     private:
       // Internal storage structure
       std::vector < prec > dvalues;

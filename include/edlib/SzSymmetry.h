@@ -174,12 +174,12 @@ namespace EDLib {
         return spin == 0 ? _current_sector.nup() > 0 : _current_sector.ndown() > 0;
       }
 
-      SzSymmetry::Sector destroy_partice(int spin) {
+      SzSymmetry::Sector destroy_particle(int spin) {
         return Sector(_current_sector.nup() - (1 - spin), _current_sector.ndown() - spin,
                       _comb.c_n_k(_Ns, _current_sector.nup() - (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() - spin));
       }
 
-      SzSymmetry::Sector create_partice(int spin) {
+      SzSymmetry::Sector create_particle(int spin) {
         return Sector(_current_sector.nup() + (1 - spin), _current_sector.ndown() + spin,
                       _comb.c_n_k(_Ns, _current_sector.nup() + (1 - spin)) * _comb.c_n_k(_Ns, _current_sector.ndown() + spin));
       }

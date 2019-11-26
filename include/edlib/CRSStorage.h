@@ -144,6 +144,16 @@ namespace EDLib {
         };
       }
 
+      void constant_shift(prec shift) {
+        for (int i = 0; i < n; ++i) {
+          for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
+            if(col_ind[j] == i) {
+              values[j] += shift;
+            }
+          }
+        }
+      }
+
     private:
       std::vector < prec > values;
       std::vector < int > row_ptr;
