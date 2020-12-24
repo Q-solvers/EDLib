@@ -101,6 +101,7 @@ namespace EDLib {
      *  m_i m_j: product of magnetic moments on the i-th and j-th sites;
      *  d_occ: average double occupancy;
      *  N_eff: average effective dimension of Hilbert space;
+     *  E: total grand-canonical energy
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables(Hamiltonian& ham){
 #ifdef USE_MPI
@@ -360,7 +361,6 @@ namespace EDLib {
       std::vector<precision> mimj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
       precision inverse_N_eff = 0.0;
-      precision energy = pair.eigenvalue();
 
       ham.model().symmetry().set_sector(pair.sector());
       ham.storage().reset();
@@ -406,7 +406,6 @@ namespace EDLib {
       MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(mimj.data(), result[_MI_MJ_].data(), mimj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(&inverse_N_eff, &result[_N_EFF_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
-      MPI_Reduce(&energy, &result[_E_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result[_N_] = n;
       result[_N_UP_] = n_up;
@@ -415,8 +414,8 @@ namespace EDLib {
       result[_D_OCC_] = d_occ;
       result[_MI_MJ_] = mimj;
       result[_N_EFF_][0] = inverse_N_eff;
-      result[_E_][0] = energy;
 #endif
+      result[_E_][0] = pair.eigenvalue();
       result[_N_EFF_][0] = 1 / result[_N_EFF_][0];
       return result;
     }

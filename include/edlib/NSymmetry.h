@@ -7,6 +7,7 @@
 
 
 #include <queue>
+#include <alps/hdf5.hpp>
 #include "Symmetry.h"
 #include "Combination.h"
 namespace EDLib {
