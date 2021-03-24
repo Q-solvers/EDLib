@@ -35,6 +35,7 @@ namespace EDLib {
     const static std::string _N_EFF_;
     const static std::string _MI_MJ_;
     const static std::string _NI_NJ_;
+    const static std::string _NIU_NJD_;
     const static std::string _E_;
 
     /**
@@ -117,6 +118,7 @@ namespace EDLib {
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NI_NJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
+        {_NIU_NJD_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_N_EFF_, std::vector<precision>(1, 0.0)},
         {_E_, std::vector<precision>(1, 0.0)}
       };
@@ -362,6 +364,7 @@ namespace EDLib {
       std::vector<precision> m(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> mimj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> ninj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> niunjd(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
       precision inverse_N_eff = 0.0;
 
@@ -386,6 +389,7 @@ namespace EDLib {
             mimj[ham.model().interacting_orbitals() * orb + orb2] += (el_up - el_down) * (el_up2 - el_down2) * weight;
             if(orb != orb2){
               ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * (el_up2 + el_down2) * weight;
+              niunjd[ham.model().interacting_orbitals() * orb + orb2] += el_up * el_down2 * weight;
             }
           }
           d_occ[orb] += el_up * el_down * weight;
@@ -401,6 +405,7 @@ namespace EDLib {
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NI_NJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
+        {_NIU_NJD_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_N_EFF_, std::vector<precision>(1, 0.0)},
         {_E_, std::vector<precision>(1, 0.0)}
       };
@@ -413,6 +418,7 @@ namespace EDLib {
       MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(mimj.data(), result[_MI_MJ_].data(), mimj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(ninj.data(), result[_NI_NJ_].data(), ninj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(niunjd.data(), result[_NIU_NJD_].data(), niunjd.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(&inverse_N_eff, &result[_N_EFF_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result[_N_] = n;
@@ -422,6 +428,7 @@ namespace EDLib {
       result[_D_OCC_] = d_occ;
       result[_MI_MJ_] = mimj;
       result[_NI_NJ_] = ninj;
+      result[_NIU_NJD_] = niunjd;
       result[_N_EFF_][0] = inverse_N_eff;
 #endif
       result[_E_][0] = pair.eigenvalue();
@@ -452,6 +459,8 @@ namespace EDLib {
   const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "M_i M_j";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_NI_NJ_ = "N_i N_j";
+  template<class Hamiltonian>
+  const std::string StaticObservables<Hamiltonian>::_NIU_NJD_ = "N_i_up N_j_down";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_E_ = "E";
 
