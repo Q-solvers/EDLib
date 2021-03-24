@@ -384,7 +384,9 @@ namespace EDLib {
             int el_up2 = ham.model().checkState(nst, orb2, ham.model().max_total_electrons());
             int el_down2 = ham.model().checkState(nst, orb2 + ham.model().orbitals(), ham.model().max_total_electrons());
             mimj[ham.model().interacting_orbitals() * orb + orb2] += (el_up - el_down) * (el_up2 - el_down2) * weight;
-            ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * (el_up2 + el_down2) * weight;
+            if(orb != orb2){
+              ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * (el_up2 + el_down2) * weight;
+            }
           }
           d_occ[orb] += el_up * el_down * weight;
         }
