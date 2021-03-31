@@ -376,6 +376,7 @@ namespace EDLib {
       /// Orbital pairs used for the offdiagonal Green's function calculation
       std::vector<std::array<size_t, 2> > _g_ij_orb_pairs;
 
+    public:
       /**
        * @brief Perform the create operator action to the eigenstate
        *
