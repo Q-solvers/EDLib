@@ -53,51 +53,35 @@ int main(int argc, const char ** argv) {
     ham.diag();
     EDLib::gf::GreensFunction < HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
     size_t count = 0;
-    std::vector<size_t> N(2, 0);
-    size_t Nmax = 0;
-    auto pair1i = ham.eigenpairs().begin();
-    auto pair2i = ham.eigenpairs().begin();
+    std::vector<decltype(ham.eigenpairs().begin())> pairs(ham.eigenpairs().size());
     for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
-      const auto& pair = *ipair;
-      if(count){
-        pair2i = ipair;
-      }
-      N[count] = pair.sector().nup() + pair.sector().ndown();
-      if(N[count] > Nmax){
-       Nmax = N[count];
-      }
+      pairs[count] = ipair;
       ++count;
     }
-    const auto& pair1 = *pair1i;
-    const auto& pair2 = *pair2i;
+    if((pairs[0]->sector().nup() != 7) || (pairs[0]->sector().ndown() != 7)){
+     std::cout << "Wrong sector 0 " << pairs[0]->sector().nup() << " " << pairs[0]->sector().ndown() << std::endl;
+    }
+    if((pairs[1]->sector().nup() != 7) || (pairs[1]->sector().ndown() != 7)){
+     std::cout << "Wrong sector 1 " << pairs[1]->sector().nup() << " " << pairs[1]->sector().ndown() << std::endl;
+    }
+    if((pairs[2]->sector().nup() != 8) || (pairs[2]->sector().ndown() != 8)){
+     std::cout << "Wrong sector 2 " << pairs[2]->sector().nup() << " " << pairs[2]->sector().ndown() << std::endl;
+    }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
-    for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
-      std::ostringstream cc_name;
-      cc_name << "cc_" << ispin << ".txt";
-      std::ofstream cc_out(cc_name.str().c_str());
-      for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
-        for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-          if(N[1] > N[0]){
+    for(size_t ipair = 0; ipair < 2; ++ipair){
+      for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
+        std::ostringstream cc_name;
+        cc_name << "cc_" << ispin << "_pair" << ipair << ".txt";
+        std::ofstream cc_out(cc_name.str().c_str());
+        for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
+          for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
             double product = 0.0;
-            ham.model().symmetry().set_sector(pair2.sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pair2.eigenvector(), outvec2, expectation_value)) {
+            ham.model().symmetry().set_sector(pairs[2]->sector());
+            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[2]->eigenvector(), outvec2, expectation_value)) {
               if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
-                product = ham.storage().vv(pair1.eigenvector(), outvec
-#ifdef USE_MPI
-                  , ham.comm()
-#endif
-                );
-              }
-            }
-            cc_out << product << "\t";
-          }else{
-            double product = 0.0;
-            ham.model().symmetry().set_sector(pair1.sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pair1.eigenvector(), outvec2, expectation_value)) {
-              if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
-                product = ham.storage().vv(pair2.eigenvector(), outvec
+                product = ham.storage().vv(pairs[ipair]->eigenvector(), outvec
 #ifdef USE_MPI
                   , ham.comm()
 #endif
@@ -106,10 +90,10 @@ int main(int argc, const char ** argv) {
             }
             cc_out << product << "\t";
           }
+          cc_out << std::endl;
         }
-        cc_out << std::endl;
+        cc_out.close();
       }
-      cc_out.close();
     }
   } catch (std::exception & e) {
 #ifdef USE_MPI

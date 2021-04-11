@@ -8,9 +8,9 @@ H = 0
 checkerboard_afm = 0
 
 U = 6.00
-xmu = 0.0
+xmu = -3.0
 t = -1.0
-tp = 0.3
+tp = 0.0
 
 nonperiodic = 0
 
@@ -20,8 +20,8 @@ at = alpha * t
 atp = alpha * tp
 
 sectors = np.array([
+ [1,1],
  [2,2],
- [3,3],
 ])
 
 gforb = np.array([
