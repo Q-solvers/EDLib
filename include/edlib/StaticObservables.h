@@ -237,7 +237,7 @@ namespace EDLib {
      * @param ham - the Hamiltonian
      * @param pair - the eigenpair
      * @param nmax - maximum number of coefficients to be processed;
-     * @param trivial - skip the coefficients smaller than this number;
+     * @param trivial - components with difference of absolute values smaller than this are considered as one class
      * @param cumulative - calculate cumulative contribution: this class and all previous classes.
      *
      * Returns a vector of pairs:
@@ -256,7 +256,7 @@ namespace EDLib {
       {
         for(size_t i = 0; i < coeffs.size(); ++i){
           // Add up squares of coefficients within each class.
-          if(!i || std::abs(coeffs[i - 1].second - coeffs[i].second) > trivial){
+          if(!i || std::abs(std::abs(coeffs[i - 1].second) - std::abs(coeffs[i].second)) > trivial){
             contribs.push_back(std::pair<size_t, precision>(i, coeffs[i].second * coeffs[i].second));
             if(i){
              contribs.back().second += (cumulative ? contribs[contribs.size() - 2].second : 0.0);
@@ -306,7 +306,7 @@ namespace EDLib {
      * @param ham - the Hamiltonian
      * @param pair - the eigenpair
      * @param nmax - maximum number of coefficients to be processed;
-     * @param trivial - skip the coefficients smaller than this number.
+     * @param trivial - components with difference of absolute values smaller than this are considered as one class
      * @param cumulative - calculate cumulative contribution: this class and all previous classes.
      */
     void print_class_contrib(Hamiltonian& ham, const EigenPair<precision, sector>& pair, size_t nmax, precision trivial, bool cumulative, std::ostream & out){
