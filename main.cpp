@@ -61,19 +61,13 @@ int main(int argc, const char ** argv) {
     if((pairs[0]->sector().nup() != 7) || (pairs[0]->sector().ndown() != 7)){
      std::cout << "Wrong sector 0 " << pairs[0]->sector().nup() << " " << pairs[0]->sector().ndown() << std::endl;
     }
-    if((pairs[1]->sector().nup() != 7) || (pairs[1]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 1 " << pairs[1]->sector().nup() << " " << pairs[1]->sector().ndown() << std::endl;
-    }
-    if((pairs[2]->sector().nup() != 7) || (pairs[2]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 1 " << pairs[2]->sector().nup() << " " << pairs[2]->sector().ndown() << std::endl;
-    }
     if((pairs[6]->sector().nup() != 8) || (pairs[6]->sector().ndown() != 8)){
      std::cout << "Wrong sector 2 " << pairs[6]->sector().nup() << " " << pairs[6]->sector().ndown() << std::endl;
     }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
-    for(size_t ipair = 0; ipair < 3; ++ipair){
+    for(size_t ipair = 0; ipair < 1; ++ipair){
       for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
         std::ostringstream cc_name;
         cc_name << "cc_" << ispin << "_pair" << ipair << ".txt";
