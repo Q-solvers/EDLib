@@ -54,43 +54,49 @@ int main(int argc, const char ** argv) {
     EDLib::gf::GreensFunction < HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> greensFunction(params, ham,alps::gf::statistics::statistics_type::FERMIONIC);
     size_t count = 0;
     std::vector<decltype(ham.eigenpairs().begin())> pairs(ham.eigenpairs().size());
-    for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
-      pairs[count] = ipair;
-      ++count;
-    }
-    if((pairs[0]->sector().nup() != 7) || (pairs[0]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 0 " << pairs[0]->sector().nup() << " " << pairs[0]->sector().ndown() << std::endl;
-    }
-    if((pairs[6]->sector().nup() != 8) || (pairs[6]->sector().ndown() != 8)){
-     std::cout << "Wrong sector 2 " << pairs[6]->sector().nup() << " " << pairs[6]->sector().ndown() << std::endl;
-    }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
-    for(size_t ipair = 0; ipair < 1; ++ipair){
+    std::vector<std::vector<std::vector<double>>> cc(ham.model().spins(), std::vector<std::vector<double>>(ham.model().interacting_orbitals(), std::vector<double>(ham.model().interacting_orbitals(), double(0.0))));
+    double Z = 0.0;
+    double cutoff = params["lanc.BOLTZMANN_CUTOFF"];
+    double beta = params["lanc.BETA"].as<double>();
+    for(auto ipair = ham.eigenpairs().begin(); ipair != ham.eigenpairs().end(); ++ipair){
+      double boltzmann_f = std::exp(-(ipair->eigenvalue() - ham.eigenpairs().begin()->eigenvalue()) * beta);
+      if (std::abs(cutoff - boltzmann_f) > std::numeric_limits<double>::epsilon() && boltzmann_f < cutoff ) {
+        continue;
+      }
+      std::cout << "Compute c+c contribution for eigenvalue E=" << ipair->eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sector" << ipair->sector() << std::endl;
+      Z += boltzmann_f;
       for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
-        std::ostringstream cc_name;
-        cc_name << "cc_" << ispin << "_pair" << ipair << ".txt";
-        std::ofstream cc_out(cc_name.str().c_str());
         for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
           for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-            double product = 0.0;
-            ham.model().symmetry().set_sector(pairs[6]->sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[6]->eigenvector(), outvec2, expectation_value)) {
-              if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
-                product = ham.storage().vv(pairs[ipair]->eigenvector(), outvec
+            ham.model().symmetry().set_sector(ipair->sector());
+            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, ipair->eigenvector(), outvec, expectation_value)) {
+              ham.model().symmetry().set_sector(ipair->sector());
+              if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, ispin, ipair->eigenvector(), outvec2, expectation_value)) {
+                cc[ispin][orb1][orb2] += boltzmann_f * ham.storage().vv(outvec, outvec2
 #ifdef USE_MPI
                   , ham.comm()
 #endif
                 );
               }
             }
-            cc_out << product << "\t";
           }
-          cc_out << std::endl;
         }
-        cc_out.close();
       }
+    }
+    for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
+      std::ostringstream cc_name;
+      cc_name << "cdc_" << ispin << ".txt";
+      std::ofstream cc_out(cc_name.str().c_str());
+      for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
+        for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
+          cc_out << cc[0][orb1][orb2] / Z << "\t";
+        }
+        cc_out << std::endl;
+      }
+      cc_out.close();
     }
   } catch (std::exception & e) {
 #ifdef USE_MPI
