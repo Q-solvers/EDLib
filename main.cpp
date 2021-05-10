@@ -98,6 +98,8 @@ int main(int argc, const char ** argv) {
       }
       cc_out.close();
     }
+    greensFunction.compute();
+    greensFunction.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
     if(!rank) std::cerr<<e.what()<<std::endl;
