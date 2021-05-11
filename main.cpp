@@ -99,6 +99,7 @@ int main(int argc, const char ** argv) {
       cc_out.close();
     }
     greensFunction.compute();
+    EDLib::hdf5::save_eigen_pairs(ham, ar, "results");
     greensFunction.save(ar, "results");
   } catch (std::exception & e) {
 #ifdef USE_MPI
