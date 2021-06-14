@@ -28,6 +28,7 @@ namespace EDLib {
   public:
 
     const static std::string _N_;
+    const static std::string _NH_;
     const static std::string _N_UP_;
     const static std::string _N_DN_;
     const static std::string _M_;
@@ -35,6 +36,7 @@ namespace EDLib {
     const static std::string _N_EFF_;
     const static std::string _MI_MJ_;
     const static std::string _NI_NJ_;
+    const static std::string _NHI_NHJ_;
     const static std::string _NIU_NJD_;
     const static std::string _E_;
 
@@ -112,12 +114,14 @@ namespace EDLib {
 #endif
       std::map<std::string, std::vector<precision>> avg = {
         {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_NH_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_DN_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NI_NJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
+        {_NHI_NHJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NIU_NJD_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_N_EFF_, std::vector<precision>(1, 0.0)},
         {_E_, std::vector<precision>(1, 0.0)}
@@ -359,11 +363,13 @@ namespace EDLib {
      */
     std::map<std::string, std::vector<precision>> calculate_static_observables_eigenvector(Hamiltonian& ham, const EigenPair<precision, sector>& pair){
       std::vector<precision> n(ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> nh(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> n_up(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> n_down(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> m(ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> mimj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> ninj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
+      std::vector<precision> nhinhj(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> niunjd(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0);
       std::vector<precision> d_occ(ham.model().interacting_orbitals(), 0.0);
       precision inverse_N_eff = 0.0;
@@ -380,6 +386,7 @@ namespace EDLib {
           int el_up = ham.model().checkState(nst, orb, ham.model().max_total_electrons());
           int el_down = ham.model().checkState(nst, orb + ham.model().orbitals(), ham.model().max_total_electrons());
           n[orb] += (el_up + el_down) * weight;
+          nh[orb] += (1 - el_up) * (1 - el_down) * weight;
           n_up[orb] += el_up * weight;
           n_down[orb] += el_down * weight;
           m[orb] += (el_up - el_down) * weight;
@@ -389,8 +396,10 @@ namespace EDLib {
             mimj[ham.model().interacting_orbitals() * orb + orb2] += (el_up - el_down) * (el_up2 - el_down2) * weight;
             if(orb != orb2){
               ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * (el_up2 + el_down2) * weight;
+              nhinhj[ham.model().interacting_orbitals() * orb + orb2] += (1 - el_up) * (1 - el_down) * (1 - el_up2) * (1 - el_down2) * weight;
             } else {
               ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * weight;
+              nhinhj[ham.model().interacting_orbitals() * orb + orb2] += (1 - el_up - el_down + el_up * el_down) * weight;
             }
             niunjd[ham.model().interacting_orbitals() * orb + orb2] += el_up * el_down2 * weight;
           }
@@ -401,12 +410,14 @@ namespace EDLib {
 
       std::map<std::string, std::vector<precision>> result = {
         {_N_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
+        {_NH_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_UP_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_N_DN_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_M_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_D_OCC_, std::vector<precision>(ham.model().interacting_orbitals(), 0.0)},
         {_MI_MJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NI_NJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
+        {_NHI_NHJ_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_NIU_NJD_, std::vector<precision>(ham.model().interacting_orbitals() * ham.model().interacting_orbitals(), 0.0)},
         {_N_EFF_, std::vector<precision>(1, 0.0)},
         {_E_, std::vector<precision>(1, 0.0)}
@@ -414,22 +425,26 @@ namespace EDLib {
 #ifdef USE_MPI
       // Add the sums from all processes.
       MPI_Reduce(n.data(), result[_N_].data(), n.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(nh.data(), result[_NH_].data(), nh.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(n_up.data(), result[_N_UP_].data(), n_up.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(n_down.data(), result[_N_DN_].data(), n_down.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(m.data(), result[_M_].data(), m.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(d_occ.data(), result[_D_OCC_].data(), d_occ.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(mimj.data(), result[_MI_MJ_].data(), mimj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(ninj.data(), result[_NI_NJ_].data(), ninj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
+      MPI_Reduce(nhinhj.data(), result[_NHI_NHJ_].data(), nhinhj.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(niunjd.data(), result[_NIU_NJD_].data(), niunjd.size(), alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
       MPI_Reduce(&inverse_N_eff, &result[_N_EFF_][0], 1, alps::mpi::detail::mpi_type<precision>(), MPI_SUM, 0, ham.comm());
 #else
       result[_N_] = n;
+      result[_NH_] = nh;
       result[_N_UP_] = n_up;
       result[_N_DN_] = n_down;
       result[_M_] = m;
       result[_D_OCC_] = d_occ;
       result[_MI_MJ_] = mimj;
       result[_NI_NJ_] = ninj;
+      result[_NHI_NHJ_] = nhinhj;
       result[_NIU_NJD_] = niunjd;
       result[_N_EFF_][0] = inverse_N_eff;
 #endif
@@ -448,6 +463,8 @@ namespace EDLib {
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_N_ = "N";
   template<class Hamiltonian>
+  const std::string StaticObservables<Hamiltonian>::_NH_ = "N_hole";
+  template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_N_UP_ = "N_up";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_N_DN_ = "N_dn";
@@ -461,6 +478,8 @@ namespace EDLib {
   const std::string StaticObservables<Hamiltonian>::_MI_MJ_ = "M_i M_j";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_NI_NJ_ = "N_i N_j";
+  template<class Hamiltonian>
+  const std::string StaticObservables<Hamiltonian>::_NHI_NHJ_ = "N_i_hole N_j_hole";
   template<class Hamiltonian>
   const std::string StaticObservables<Hamiltonian>::_NIU_NJD_ = "N_i_up N_j_down";
   template<class Hamiltonian>
