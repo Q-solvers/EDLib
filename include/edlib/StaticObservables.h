@@ -389,6 +389,8 @@ namespace EDLib {
             mimj[ham.model().interacting_orbitals() * orb + orb2] += (el_up - el_down) * (el_up2 - el_down2) * weight;
             if(orb != orb2){
               ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * (el_up2 + el_down2) * weight;
+            } else {
+              ninj[ham.model().interacting_orbitals() * orb + orb2] += (el_up + el_down) * weight;
             }
             niunjd[ham.model().interacting_orbitals() * orb + orb2] += el_up * el_down2 * weight;
           }
