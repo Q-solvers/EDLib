@@ -14,14 +14,6 @@
 #include "edlib/MeshFactory.h"
 #include "edlib/EigenPair.h"
 
-// freq, I, J, spin
-template<typename freq_grid>
-using gf_type = alps::gf::four_index_gf<std::complex<double>, freq_grid, alps::gf::real_space_index_mesh, alps::gf::real_space_index_mesh, alps::gf::index_mesh >;
-
-using r_mesh_t = alps::gf::real_space_index_mesh;
-using s_mesh_t = alps::gf::index_mesh;
-using mat_mesh_t = alps::gf::matsubara_positive_mesh;
-
 int main(int argc, const char ** argv) {
 #ifdef USE_MPI
   typedef EDLib::SRSHubbardHamiltonian HamType;
@@ -36,7 +28,6 @@ int main(int argc, const char ** argv) {
     exit(0);
   }
   EDLib::define_parameters(params);
-  params.define<std::string>("CLUSTER_DATA", "Cluster_results.h5", "Greens Function and Self-energy of cluster");
   alps::hdf5::archive ar;
 #ifdef USE_MPI
   int rank;
@@ -58,31 +49,33 @@ int main(int argc, const char ** argv) {
       pairs[count] = ipair;
       ++count;
     }
-    if((pairs[0]->sector().nup() != 7) || (pairs[0]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 0 " << pairs[0]->sector().nup() << " " << pairs[0]->sector().ndown() << std::endl;
-    }
-    if((pairs[1]->sector().nup() != 7) || (pairs[1]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 1 " << pairs[1]->sector().nup() << " " << pairs[1]->sector().ndown() << std::endl;
-    }
-    if((pairs[2]->sector().nup() != 7) || (pairs[2]->sector().ndown() != 7)){
-     std::cout << "Wrong sector 1 " << pairs[2]->sector().nup() << " " << pairs[2]->sector().ndown() << std::endl;
-    }
-    if((pairs[32]->sector().nup() != 8) || (pairs[32]->sector().ndown() != 8)){
-     std::cout << "Wrong sector 2 " << pairs[32]->sector().nup() << " " << pairs[32]->sector().ndown() << std::endl;
-    }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
-    for(size_t ipair = 0; ipair < 3; ++ipair){
+    std::vector<std::vector<std::vector<double>>> cc(ham.model().spins(), std::vector<std::vector<double>>(ham.model().interacting_orbitals(), std::vector<double>(ham.model().interacting_orbitals(), double(0.0))));
+    double Z = 0.0;
+    double cutoff = params["lanc.BOLTZMANN_CUTOFF"];
+    double beta = params["lanc.BETA"].as<double>();
+    int nev = params["arpack.NEV"].as<int>();
+    for(size_t ipair = 0; ipair < nev; ++ipair){
+      double boltzmann_f = std::exp(-(pairs[ipair]->eigenvalue() - pairs[0]->eigenvalue()) * beta);
+      if (std::abs(cutoff - boltzmann_f) > std::numeric_limits<double>::epsilon() && boltzmann_f < cutoff ) {
+        continue;
+      }
+#ifdef USE_MPI
+      if(!rank)
+#endif
+      std::cout << "Compute cc contribution for eigenvalue E=" << pairs[ipair]->eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sectors" << pairs[ipair]->sector() << " and" << pairs[nev]->sector() << std::endl;
+      Z += boltzmann_f;
       for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
-        std::ostringstream cc_name;
-        cc_name << "cc_" << ispin << "_pair" << ipair << ".txt";
-        std::ofstream cc_out(cc_name.str().c_str());
+        std::ostringstream pair_name;
+        pair_name << "cc_" << ispin << "_pair" << ipair << ".txt";
+        std::ofstream pair_out(pair_name.str().c_str());
         for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
           for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
             double product = 0.0;
-            ham.model().symmetry().set_sector(pairs[32]->sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[32]->eigenvector(), outvec2, expectation_value)) {
+            ham.model().symmetry().set_sector(pairs[nev]->sector());
+            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[nev]->eigenvector(), outvec2, expectation_value)) {
               if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
                 product = ham.storage().vv(pairs[ipair]->eigenvector(), outvec
 #ifdef USE_MPI
@@ -91,12 +84,25 @@ int main(int argc, const char ** argv) {
                 );
               }
             }
-            cc_out << product << "\t";
+            cc[ispin][orb1][orb2] += boltzmann_f * product;
+            pair_out << product << "\t";
           }
-          cc_out << std::endl;
+          pair_out << std::endl;
         }
-        cc_out.close();
+        pair_out.close();
       }
+    }
+    for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
+      std::ostringstream cc_name;
+      cc_name << "cc_" << ispin << ".txt";
+      std::ofstream cc_out(cc_name.str().c_str());
+      for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
+        for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
+          cc_out << cc[ispin][orb1][orb2] / Z << "\t";
+        }
+        cc_out << std::endl;
+      }
+      cc_out.close();
     }
   } catch (std::exception & e) {
 #ifdef USE_MPI
