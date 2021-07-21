@@ -67,8 +67,8 @@ int main(int argc, const char ** argv) {
     if((pairs[2]->sector().nup() != 7) || (pairs[2]->sector().ndown() != 7)){
      std::cout << "Wrong sector 1 " << pairs[2]->sector().nup() << " " << pairs[2]->sector().ndown() << std::endl;
     }
-    if((pairs[6]->sector().nup() != 8) || (pairs[6]->sector().ndown() != 8)){
-     std::cout << "Wrong sector 2 " << pairs[6]->sector().nup() << " " << pairs[6]->sector().ndown() << std::endl;
+    if((pairs[32]->sector().nup() != 8) || (pairs[32]->sector().ndown() != 8)){
+     std::cout << "Wrong sector 2 " << pairs[32]->sector().nup() << " " << pairs[32]->sector().ndown() << std::endl;
     }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
@@ -81,8 +81,8 @@ int main(int argc, const char ** argv) {
         for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
           for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
             double product = 0.0;
-            ham.model().symmetry().set_sector(pairs[6]->sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[6]->eigenvector(), outvec2, expectation_value)) {
+            ham.model().symmetry().set_sector(pairs[32]->sector());
+            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[32]->eigenvector(), outvec2, expectation_value)) {
               if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
                 product = ham.storage().vv(pairs[ipair]->eigenvector(), outvec
 #ifdef USE_MPI
