@@ -49,6 +49,17 @@ int main(int argc, const char ** argv) {
       pairs[count] = ipair;
       ++count;
     }
+    int nev = params["arpack.NEV"].as<int>();
+    if(
+      ((pairs[0]->sector().nup() + 1) != pairs[nev]->sector().nup()) ||
+      ((pairs[0]->sector().ndown() + 1) != pairs[nev]->sector().ndown())
+    ){
+      std::stringstream s;
+      s << "Wrong sectors " << pairs[0]->sector().nup()   << " " << pairs[0]->sector().ndown()
+        <<          " and " << pairs[nev]->sector().nup() << " " << pairs[nev]->sector().ndown()
+        << ". Both number of electrons up and down must differ by 1." << std::endl;
+      throw std::invalid_argument(s.str().c_str());
+    }
     std::vector<double> outvec(1, double(0.0));
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
@@ -56,40 +67,45 @@ int main(int argc, const char ** argv) {
     double Z = 0.0;
     double cutoff = params["lanc.BOLTZMANN_CUTOFF"];
     double beta = params["lanc.BETA"].as<double>();
-    int nev = params["arpack.NEV"].as<int>();
-    for(size_t ipair = 0; ipair < nev; ++ipair){
-      double boltzmann_f = std::exp(-(pairs[ipair]->eigenvalue() - pairs[0]->eigenvalue()) * beta);
-      if (std::abs(cutoff - boltzmann_f) > std::numeric_limits<double>::epsilon() && boltzmann_f < cutoff ) {
-        continue;
-      }
-#ifdef USE_MPI
-      if(!rank)
-#endif
-      std::cout << "Compute cc contribution for eigenvalue E=" << pairs[ipair]->eigenvalue() << " with Boltzmann factor = " << boltzmann_f << "; for sectors" << pairs[ipair]->sector() << " and" << pairs[nev]->sector() << std::endl;
-      Z += boltzmann_f;
-      for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
-        std::ostringstream pair_name;
-        pair_name << "cc_" << ispin << "_pair" << ipair << ".txt";
-        std::ofstream pair_out(pair_name.str().c_str());
-        for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
-          for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-            double product = 0.0;
-            ham.model().symmetry().set_sector(pairs[nev]->sector());
-            if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[nev]->eigenvector(), outvec2, expectation_value)) {
-              if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
-                product = ham.storage().vv(pairs[ipair]->eigenvector(), outvec
-#ifdef USE_MPI
-                  , ham.comm()
-#endif
-                );
-              }
-            }
-            cc[ispin][orb1][orb2] += boltzmann_f * product;
-            pair_out << product << "\t";
-          }
-          pair_out << std::endl;
+    for(size_t ipair1 = 0; ipair1 < nev; ++ipair1){
+      double boltzmann_f_1 = std::sqrt(std::exp(-(pairs[ipair1]->eigenvalue() - pairs[0]->eigenvalue()) * beta));
+      for(size_t ipair2 = nev; ipair2 < 2 * nev; ++ipair2){
+        double boltzmann_f_2 = std::sqrt(std::exp(-(pairs[ipair2]->eigenvalue() - pairs[nev]->eigenvalue()) * beta));
+        double boltzmann_f = boltzmann_f_1 * boltzmann_f_2;
+        if (std::abs(cutoff - boltzmann_f) > std::numeric_limits<double>::epsilon() && boltzmann_f < cutoff ) {
+          continue;
         }
-        pair_out.close();
+#ifdef USE_MPI
+        if(!rank)
+#endif
+        std::cout << "Compute cc contribution for eigenvalues E=" << pairs[ipair1]->eigenvalue() << ", " << pairs[ipair2]->eigenvalue()
+                  << " with Boltzmann factor = " << boltzmann_f
+                  << " for sectors" << pairs[ipair1]->sector() << " and" << pairs[ipair2]->sector() << std::endl;
+        Z += boltzmann_f;
+        for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
+          std::ostringstream pair_name;
+          pair_name << "cc_" << ispin << "_pairs_" << ipair1 << "_" << ipair2 - nev << ".txt";
+          std::ofstream pair_out(pair_name.str().c_str());
+          for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
+            for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
+              double product = 0.0;
+              ham.model().symmetry().set_sector(pairs[ipair2]->sector());
+              if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb1)}}, ispin, pairs[ipair2]->eigenvector(), outvec2, expectation_value)) {
+                if(greensFunction.annihilate_particles(std::array<size_t, 1>{{size_t(orb2)}}, (1 - ispin), outvec2, outvec, expectation_value)) {
+                  product = ham.storage().vv(pairs[ipair1]->eigenvector(), outvec
+#ifdef USE_MPI
+                    , ham.comm()
+#endif
+                  );
+                }
+              }
+              cc[ispin][orb1][orb2] += boltzmann_f * product;
+              pair_out << product << "\t";
+            }
+            pair_out << std::endl;
+          }
+          pair_out.close();
+        }
       }
     }
     for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
