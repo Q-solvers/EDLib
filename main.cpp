@@ -64,24 +64,30 @@ int main(int argc, const char ** argv) {
     std::vector<double> outvec2(1, double(0.0));
     double expectation_value = 0.0;
     std::vector<std::vector<std::vector<double>>> cc(ham.model().spins(), std::vector<std::vector<double>>(ham.model().interacting_orbitals(), std::vector<double>(ham.model().interacting_orbitals(), double(0.0))));
-    double Z = 0.0;
+    double Z1 = 0.0;
     double cutoff = params["lanc.BOLTZMANN_CUTOFF"];
     double beta = params["lanc.BETA"].as<double>();
     for(size_t ipair1 = 0; ipair1 < nev; ++ipair1){
-      double boltzmann_f_1 = std::sqrt(std::exp(-(pairs[ipair1]->eigenvalue() - pairs[0]->eigenvalue()) * beta));
+      double boltzmann_f_1 = std::exp(-(pairs[ipair1]->eigenvalue() - pairs[0]->eigenvalue()) * beta);
+      if (std::abs(cutoff - boltzmann_f_1) > std::numeric_limits<double>::epsilon() && boltzmann_f_1 < cutoff ) {
+        continue;
+      }
+      Z1 += boltzmann_f_1;
+      std::vector<std::vector<std::vector<double>>> cctemp(ham.model().spins(), std::vector<std::vector<double>>(ham.model().interacting_orbitals(), std::vector<double>(ham.model().interacting_orbitals(), double(0.0))));
+      double Z2 = 0.0;
       for(size_t ipair2 = nev; ipair2 < 2 * nev; ++ipair2){
-        double boltzmann_f_2 = std::sqrt(std::exp(-(pairs[ipair2]->eigenvalue() - pairs[nev]->eigenvalue()) * beta));
-        double boltzmann_f = boltzmann_f_1 * boltzmann_f_2;
-        if (std::abs(cutoff - boltzmann_f) > std::numeric_limits<double>::epsilon() && boltzmann_f < cutoff ) {
+        double boltzmann_f_2 = std::exp(-(pairs[ipair2]->eigenvalue() - pairs[nev]->eigenvalue()) * beta);
+        if (std::abs(cutoff - boltzmann_f_2) > std::numeric_limits<double>::epsilon() && boltzmann_f_2 < cutoff ) {
           continue;
         }
+        Z2 += boltzmann_f_2;
+        double boltzmann_f = boltzmann_f_1 * boltzmann_f_2;
 #ifdef USE_MPI
         if(!rank)
 #endif
         std::cout << "Compute cc contribution for eigenvalues E=" << pairs[ipair1]->eigenvalue() << ", " << pairs[ipair2]->eigenvalue()
                   << " with Boltzmann factor = " << boltzmann_f
                   << " for sectors" << pairs[ipair1]->sector() << " and" << pairs[ipair2]->sector() << std::endl;
-        Z += boltzmann_f;
         for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
           std::ostringstream pair_name;
           pair_name << "cc_" << ispin << "_pairs_" << ipair1 << "_" << ipair2 - nev << ".txt";
@@ -99,12 +105,19 @@ int main(int argc, const char ** argv) {
                   );
                 }
               }
-              cc[ispin][orb1][orb2] += boltzmann_f * product;
+              cctemp[ispin][orb1][orb2] += boltzmann_f_2 * product;
               pair_out << product << "\t";
             }
             pair_out << std::endl;
           }
           pair_out.close();
+        }
+      }
+      for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
+        for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
+          for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
+            cc[ispin][orb1][orb2] += cctemp[ispin][orb1][orb2] / Z2;
+          }
         }
       }
     }
@@ -114,7 +127,7 @@ int main(int argc, const char ** argv) {
       std::ofstream cc_out(cc_name.str().c_str());
       for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
         for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-          cc_out << cc[ispin][orb1][orb2] / Z << "\t";
+          cc_out << cc[ispin][orb1][orb2] / Z1 << "\t";
         }
         cc_out << std::endl;
       }
