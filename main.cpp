@@ -116,7 +116,7 @@ int main(int argc, const char ** argv) {
       for(size_t ispin = 0; ispin < ham.model().spins(); ++ispin){
         for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
           for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-            cc[ispin][orb1][orb2] += cctemp[ispin][orb1][orb2] / Z2;
+            cc[ispin][orb1][orb2] += cctemp[ispin][orb1][orb2] / std::sqrt(Z2);
           }
         }
       }
@@ -127,7 +127,7 @@ int main(int argc, const char ** argv) {
       std::ofstream cc_out(cc_name.str().c_str());
       for(size_t orb1 = 0; orb1 < ham.model().interacting_orbitals(); ++orb1){
         for(size_t orb2 = 0; orb2 < ham.model().interacting_orbitals(); ++orb2){
-          cc_out << cc[ispin][orb1][orb2] / Z1 << "\t";
+          cc_out << cc[ispin][orb1][orb2] / std::sqrt(Z1) << "\t";
         }
         cc_out << std::endl;
       }
