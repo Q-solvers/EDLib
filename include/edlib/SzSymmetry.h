@@ -167,7 +167,7 @@ namespace EDLib {
       }
 
       bool can_create_particle(int spin) override {
-        return spin == 0 ? _current_sector.nup() < _Ns : _current_sector.ndown() < _Ns;
+        return spin == 0 ? (_current_sector.nup() - 1) < _Ns : (_current_sector.ndown() - 1) < _Ns;
       }
 
       bool can_destroy_particle(int spin) override {
