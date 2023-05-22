@@ -34,8 +34,10 @@ Epsk = np.array([ [-1.0,-1.0],
 
 ml = 2*l + 1
 H0 = np.zeros((ml,ml,2))
+Vk = np.zeros((ml,) + Epsk.shape)
 for i in range(ml):
     H0[i, i,:] = Eps0[i,:]
+    Vk[i, i, :] = Vk_[i]
 
 Nk = 1
 Ns = Eps0.shape[0] + Epsk.shape[0]
@@ -56,9 +58,9 @@ for i in range(ml):
     if(Epsk.shape != Vk[i].shape):
         raise "Incorrect shape for Hybridisation and Epsk"
     Vk_g = bath.create_group("Vk_" + str(i))
-    Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float)
+    Vk_g.create_dataset("values", data=np.array(Vk[i]), dtype=np.float64)
     t0_g = data.create_group("H0_" + str(i))
-    t0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float)
+    t0_g.create_dataset("values", data=np.array(H0[i]), dtype=np.float64)
 
 UU = np.zeros((2,2) + U.shape)
 UU[0,0] = U
