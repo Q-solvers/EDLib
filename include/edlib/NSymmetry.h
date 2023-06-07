@@ -21,9 +21,13 @@ namespace EDLib {
         friend std::ostream &operator<<(std::ostream &o, const NSymmetry::Sector &c) { return o << " (nup+ndown: " << c._n << ") size: " << c._size; }
 
         Sector(int n, size_t size) : _n(n), _size(size) {};
-      protected:
-        bool operator<(Sector s) {
-          return _size < s._size;
+
+        bool operator<(const Sector & s) const{
+          return _size < s._size || (_size == s._size && _n < s._n);
+        }
+
+        bool operator>(const Sector & s) const{
+          return s < *this;
         }
 
       public:
@@ -46,19 +50,24 @@ namespace EDLib {
 
       NSymmetry(alps::params &p) : Symmetry(), _N(2 * int(p["NSITES"])), _totstate(2 * p["NSITES"].as<int>(), 0.0), _current_sector(-1, 0),
                                _comb(2 * p["NSITES"].as<int>()) {
+        std::vector<Sector> sectors;
         if (p.exists("arpack.SECTOR") && bool(p["arpack.SECTOR"])) {
-          std::vector < std::vector < int > > sectors;
+          std::vector < std::vector < int > > sectors_list;
           std::string input = p["INPUT_FILE"];
           alps::hdf5::archive input_file(input, "r");
-          input_file >> alps::make_pvp("sectors/values", sectors);
+          input_file >> alps::make_pvp("sectors/values", sectors_list);
           input_file.close();
-          for (int kkk = 0; kkk < sectors.size(); ++kkk) {
-            _sectors.push(NSymmetry::Sector(sectors[kkk][0], (size_t) (_comb.c_n_k(_N, sectors[kkk][0]))));
+          for (int kkk = 0; kkk < sectors_list.size(); ++kkk) {
+            sectors.push_back(NSymmetry::Sector(sectors_list[kkk][0], (size_t) (_comb.c_n_k(_N, sectors_list[kkk][0]))));
           }
         } else {
           for (int i = 0; i <= _N; ++i) {
-            _sectors.push(NSymmetry::Sector(i, (size_t) (_comb.c_n_k(_N, i))));
+            sectors.push_back(NSymmetry::Sector(i, (size_t) (_comb.c_n_k(_N, i))));
           }
+        }
+        std::sort(sectors.begin(), sectors.end(), std::less<Sector>());
+        for(auto const& e : sectors) {
+          _sectors.push(e);
         }
       }
 
@@ -102,7 +111,6 @@ namespace EDLib {
           return false;
         _current_sector = _sectors.front();
         _sectors.pop();
-        std::cout << "Diagonalizating N-symmetry sector with total number of particles: " << _current_sector.n() << " size: " << _current_sector.size() << std::endl;
         return true;
       }
 

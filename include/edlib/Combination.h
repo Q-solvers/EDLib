@@ -57,7 +57,7 @@ namespace EDLib {
      * Calculate number of combinations:
      * C_k^n = n!/(k!*(n-k)!)
      */
-    int C_n_k_i(int n, int k) {
+    int64_t C_n_k_i(int n, int k) {
       if ((n - k) > k) {
         return variation(n - k + 1, n) / variation(1, k);
       }
@@ -67,10 +67,12 @@ namespace EDLib {
     /**
      * Calculate n2!/n1!
      */
-    int variation(int n1, int n2) {
-      int result = 1;
-      for (int i = n1; i <= n2; i++) {
+    int64_t variation(int64_t n1, int64_t n2) {
+      int64_t result = 1;
+      std::cout<<"ratio "<<n1<<" "<<n2<<std::endl;
+      for (int64_t i = n1; i <= n2; i++) {
         result *= i;
+         std::cout<<result<<std::endl;
       }
       return result;
     }
