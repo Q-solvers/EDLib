@@ -10,7 +10,7 @@
 #include "edlib/StaticObservables.h"
 #include "edlib/GreensFunction.h"
 #include "edlib/ChiLoc.h"
-
+#include "edlib/MeshFactory.h"
 
 #ifdef USE_MPI
 
@@ -55,7 +55,7 @@ TEST(HubbardModelTest, ReferenceTest) {
 #ifdef USE_MPI
   typedef EDLib::SRSHubbardHamiltonian HamType;
 #else
-  typedef EDLib::SOCSRHubbardHamiltonian HamType;
+  typedef EDLib::CSRHubbardHamiltonian HamType;
 #endif
   HamType ham(p
 #ifdef USE_MPI
@@ -66,12 +66,12 @@ TEST(HubbardModelTest, ReferenceTest) {
   ham.diag();
 
   // Compute our GFs for the reference model.
-  EDLib::gf::GreensFunction < HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> greensFunction(p, ham,alps::gf::statistics::statistics_type::FERMIONIC);
+  EDLib::gf::GreensFunction < HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> greensFunction(p, ham,alps::gf::statistics::statistics_type::FERMIONIC);
   greensFunction.compute();
   auto G = greensFunction.G();
   EDLib::StaticObservables<HamType> so(p);
   std::map<std::string, std::vector<double>> observables = so.calculate_static_observables(ham);
-  EDLib::gf::ChiLoc<HamType, alps::gf::matsubara_positive_mesh, alps::gf::statistics::statistics_type> susc(p, ham, alps::gf::statistics::statistics_type::BOSONIC);
+  EDLib::gf::ChiLoc<HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> susc(p, ham, alps::gf::statistics::statistics_type::BOSONIC);
   // compute average magnetic moment
   double avg = 0.0;
   for(auto x : observables[so._M_]) {
