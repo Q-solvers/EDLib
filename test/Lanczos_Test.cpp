@@ -16,15 +16,6 @@
 
 class HubbardModelTestEnv : public ::testing::Environment {
   protected:
-  virtual void SetUp() {
-    char** argv;
-    int argc = 0;
-    int mpiError = MPI_Init(&argc, &argv);
-  }
-
-  virtual void TearDown() {
-    MPI_Finalize();
-  }
 
   ~HubbardModelTestEnv(){};
 
@@ -127,4 +118,16 @@ TEST(HubbardModelTest, ReferenceTest) {
   ChiN -= ChiN_file;
   ASSERT_NEAR(ChiN.norm(), 0.0, 1e-9);
 
+}
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+#ifdef USE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+  int res = RUN_ALL_TESTS();
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
+  return res;
 }

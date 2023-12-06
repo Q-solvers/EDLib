@@ -14,17 +14,8 @@
 
 class HubbardModelTestEnv : public ::testing::Environment {
   protected:
-  virtual void SetUp() {
-    char** argv;
-    int argc = 0;
-    int mpiError = MPI_Init(&argc, &argv);
-  }
 
-  virtual void TearDown() {
-    MPI_Finalize();
-  }
-
-  ~HubbardModelTestEnv(){};
+  ~HubbardModelTestEnv() override = default;
 
 };
 
@@ -77,4 +68,16 @@ TEST(HubbardModelTest, ReferenceTest) {
    ASSERT_GT(obs["M"][orb], 0.0);
   }
 
+}
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+#ifdef USE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+  int res = RUN_ALL_TESTS();
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
+  return res;
 }

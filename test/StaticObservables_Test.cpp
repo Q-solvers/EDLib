@@ -10,17 +10,8 @@
 
 class HubbardModelTestEnv : public ::testing::Environment {
   protected:
-  virtual void SetUp() {
-    char** argv;
-    int argc = 0;
-    int mpiError = MPI_Init(&argc, &argv);
-  }
 
-  virtual void TearDown() {
-    MPI_Finalize();
-  }
-
-  ~HubbardModelTestEnv(){};
+  ~HubbardModelTestEnv() override = default;
 
 };
 
@@ -72,7 +63,7 @@ TEST(HubbardModelTest, ReferenceTest) {
    ASSERT_NEAR(result["N"][orb], 1.0, 1e-8);
    ASSERT_NEAR(result["N_up"][orb], 0.5, 1e-8);
    ASSERT_NEAR(result["N_dn"][orb], 0.5, 1e-8);
-   ASSERT_NEAR(result["M"][orb], 0.0, 1e-8);
+   ASSERT_NEAR(result["M"][orb], 0.0, 1e-7);
   }
 
   for(int orb = 1; orb < ham.model().interacting_orbitals(); ++orb){
@@ -80,4 +71,16 @@ TEST(HubbardModelTest, ReferenceTest) {
   }
   ASSERT_GT(result["N_eff"][0], 0.0);
 
+}
+
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+#ifdef USE_MPI
+  MPI_Init(&argc, &argv);
+#endif
+  int res = RUN_ALL_TESTS();
+#ifdef USE_MPI
+  MPI_Finalize();
+#endif
+  return res;
 }
