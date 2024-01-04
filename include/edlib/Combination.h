@@ -69,10 +69,8 @@ namespace EDLib {
      */
     int64_t variation(int64_t n1, int64_t n2) {
       int64_t result = 1;
-      std::cout<<"ratio "<<n1<<" "<<n2<<std::endl;
       for (int64_t i = n1; i <= n2; i++) {
         result *= i;
-         std::cout<<result<<std::endl;
       }
       return result;
     }
