@@ -5,7 +5,7 @@ project(EDLib LANGUAGES C CXX Fortran
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 include(CXXStandard)
 use_cxx11()
@@ -62,6 +62,8 @@ include(GNUInstallDirs)
 
 add_library(${PROJECT_NAME} INTERFACE)
 add_library(common-lib lib/dummy.f90)
+add_library(EDLib::EDLib ALIAS ${PROJECT_NAME})  # Define namespaced alias target
+add_library(EDLib::common-lib ALIAS common-lib)  # Define namespaced alias target
 target_include_directories(
   ${PROJECT_NAME}
   INTERFACE $<BUILD_INTERFACE:${${PROJECT_NAME}_SOURCE_DIR}/include>

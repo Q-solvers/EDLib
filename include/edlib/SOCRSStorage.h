@@ -246,7 +246,7 @@ namespace EDLib {
 #endif
 
       void constant_shift(prec shift) {
-        std::transform( dvalues.begin(), dvalues.end(), dvalues.begin(), std::bind2nd(std::plus<prec>(), shift));
+        std::transform( dvalues.begin(), dvalues.end(), dvalues.begin(), [shift](prec x) { return x + shift; });
       }
 
     private:
