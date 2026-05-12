@@ -117,14 +117,23 @@ TEST(HubbardModelTest, ReferenceTest) {
   }
   infile.close();
 
-  // Subtract the reference GF from our result, the norm() is then the largest diff.
-  G -= G_file;
-  ASSERT_NEAR(G.norm(), 0.0, 1e-10);
-  ChiSz -= ChiSz_file;
-  ASSERT_NEAR(ChiSz.norm(), 0.0, 1e-9);
-  ChiN -= ChiN_file;
-  ASSERT_NEAR(ChiN.norm(), 0.0, 1e-9);
-
+#ifdef USE_MPI
+  // GreensFunction / ChiLoc accumulate into _G only on rank 0
+  // (see GreensFunction.h::local_contribution etc.). Compare against the
+  // reference only there; other ranks would see zero-filled buffers.
+  int _rk = 0;
+  MPI_Comm_rank(ham.comm(), &_rk);
+  if(_rk == 0)
+#endif
+  {
+    // Subtract the reference GF from our result, the norm() is then the largest diff.
+    G -= G_file;
+    ASSERT_NEAR(G.norm(), 0.0, 1e-10);
+    ChiSz -= ChiSz_file;
+    ASSERT_NEAR(ChiSz.norm(), 0.0, 1e-9);
+    ChiN -= ChiN_file;
+    ASSERT_NEAR(ChiN.norm(), 0.0, 1e-9);
+  }
 }
 
 int main(int argc, char **argv) {
