@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /opt/alpscore
-          key: alpscore-v2.3.2-${{ matrix.cxx }}-${{ runner.os }}
+          key: alpscore-v2.3.3-${{ matrix.cxx }}-${{ runner.os }}
 
       - name: Build and install ALPSCore
         if: steps.cache-alpscore.outputs.cache-hit != 'true'
@@ -104,6 +104,8 @@ jobs:
 
       - name: Run tests (MPI, 2 ranks)
         if: matrix.mpi == 'ON'
+        env: 
+          OMPI_mca_osc: "^sm"
         run: |
           ctest --test-dir build -V --output-on-failure \
-            --test-command-env MPIRUN="mpirun --mca btl ^sm --oversubscribe -np 2"
+            --test-command-env MPIRUN="mpirun --oversubscribe -np 2"
