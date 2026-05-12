@@ -65,15 +65,16 @@ jobs:
       - name: Build and install ALPSCore
         if: steps.cache-alpscore.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 --branch v2.3.2 \
+          git clone --depth 1 --branch v2.3.3 \
             https://github.com/ALPSCore/ALPSCore.git /tmp/alpscore-src
           cmake -S /tmp/alpscore-src -B /tmp/alpscore-build \
             -G Ninja \
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_INSTALL_PREFIX=/opt/alpscore \
-            -DALPS_BUILD_TESTS=OFF \
-            -DALPS_ENABLE_MPI=${{ matrix.mpi }}
+            -DTesting=OFF \
+            -DENABLE_MPI=${{ matrix.mpi }} \
+            -DALPS_HAVE_MPI=$${{ matrix.mpi }}
           cmake --build /tmp/alpscore-build -j$(nproc)
           cmake --install /tmp/alpscore-build
 
@@ -105,4 +106,4 @@ jobs:
         if: matrix.mpi == 'ON'
         run: |
           ctest --test-dir build -V --output-on-failure \
-            --test-command-env MPIRUN="mpirun --oversubscribe -np 2"
+            --test-command-env MPIRUN="mpirun --mca btl ^sm --oversubscribe -np 2"
