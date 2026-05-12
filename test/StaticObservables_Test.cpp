@@ -49,6 +49,13 @@ TEST(HubbardModelTest, ReferenceTest) {
   EDLib::StaticObservables<HamType> so(p);
   std::map<std::string, std::vector<double>> result = so.calculate_static_observables(ham);
 
+#ifdef USE_MPI
+  // StaticObservables reduces to rank 0; broadcast so every rank can assert.
+  for(auto& kv : result){
+    MPI_Bcast(kv.second.data(), kv.second.size(), MPI_DOUBLE, 0, ham.comm());
+  }
+#endif
+
   std::cout << "Energy expectation value: " << result["E"][0] << std::endl;
 
   ASSERT_EQ(result["N"].size(), 4);

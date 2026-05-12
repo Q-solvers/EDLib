@@ -62,6 +62,13 @@ TEST(HubbardModelTest, ReferenceTest) {
   auto G = greensFunction.G();
   EDLib::StaticObservables<HamType> so(p);
   std::map<std::string, std::vector<double>> observables = so.calculate_static_observables(ham);
+#ifdef USE_MPI
+  // StaticObservables reduces to rank 0; broadcast so the averages below
+  // are identical on every rank before being fed into susc.compute().
+  for(auto& kv : observables){
+    MPI_Bcast(kv.second.data(), kv.second.size(), MPI_DOUBLE, 0, ham.comm());
+  }
+#endif
   EDLib::gf::ChiLoc<HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> susc(p, ham, alps::gf::statistics::statistics_type::BOSONIC);
   // compute average magnetic moment
   double avg = 0.0;

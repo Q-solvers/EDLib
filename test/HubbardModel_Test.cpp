@@ -62,6 +62,13 @@ TEST(HubbardModelTest, ReferenceTest) {
   EDLib::StaticObservables<HamType> so(p);
   std::map<std::string, std::vector<double>> obs = so.calculate_static_observables(ham);
 
+#ifdef USE_MPI
+  // StaticObservables reduces to rank 0; broadcast so every rank can assert.
+  for(auto& kv : obs){
+    MPI_Bcast(kv.second.data(), kv.second.size(), MPI_DOUBLE, 0, ham.comm());
+  }
+#endif
+
   for(int orb = 0; orb < ham.model().interacting_orbitals(); ++orb){
    ASSERT_NEAR(obs["N"][orb], 1.0, 1e-8);
    ASSERT_GT(obs["N_up"][orb], obs["N_dn"][orb]);
