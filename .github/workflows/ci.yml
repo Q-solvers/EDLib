@@ -106,11 +106,10 @@ jobs:
         if: matrix.mpi == 'ON'
         env:
           OMPI_mca_osc: "^sm"
-        working-directory: build/test
         run: |
           set -e
-          ./SzSymmetryTest
-          ./NSymmetryTest
-          mpirun --oversubscribe -np 2 ./HubbardModelTest
-          mpirun --oversubscribe -np 2 ./LanczosTest
-          mpirun --oversubscribe -np 2 ./StaticObservablesTest
+          ./build/test/SzSymmetryTest
+          ./build/test/NSymmetryTest
+          mpirun --oversubscribe -np 2 ./build/test/HubbardModelTest
+          mpirun --oversubscribe -np 2 ./build/test/LanczosTest
+          mpirun --oversubscribe -np 2 ./build/test/StaticObservablesTest
