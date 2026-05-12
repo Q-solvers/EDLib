@@ -74,7 +74,7 @@ jobs:
             -DCMAKE_INSTALL_PREFIX=/opt/alpscore \
             -DTesting=OFF \
             -DENABLE_MPI=${{ matrix.mpi }} \
-            -DALPS_HAVE_MPI=$${{ matrix.mpi }}
+            -DALPS_HAVE_MPI=${{ matrix.mpi }}
           cmake --build /tmp/alpscore-build -j$(nproc)
           cmake --install /tmp/alpscore-build
 
@@ -104,8 +104,13 @@ jobs:
 
       - name: Run tests (MPI, 2 ranks)
         if: matrix.mpi == 'ON'
-        env: 
+        env:
           OMPI_mca_osc: "^sm"
+        working-directory: build/test
         run: |
-          ctest --test-dir build -V --output-on-failure \
-            --test-command-env MPIRUN="mpirun --oversubscribe -np 2"
+          set -e
+          ./SzSymmetryTest
+          ./NSymmetryTest
+          mpirun --oversubscribe -np 2 ./HubbardModelTest
+          mpirun --oversubscribe -np 2 ./LanczosTest
+          mpirun --oversubscribe -np 2 ./StaticObservablesTest
