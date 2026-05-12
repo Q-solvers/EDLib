@@ -60,7 +60,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /opt/alpscore
-          key: alpscore-v2.3.3-${{ matrix.cxx }}-${{ runner.os }}
+          key: alpscore-v2.3.3-${{ matrix.cxx }}-MPI${{matrix.mpi}}-${{ runner.os }}
 
       - name: Build and install ALPSCore
         if: steps.cache-alpscore.outputs.cache-hit != 'true'
