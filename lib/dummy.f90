@@ -1,3 +1,0 @@
-subroutine dummy
-
-end subroutine

@@ -30,26 +30,33 @@ Look for examples in the "examples/" directory for a detailed information.
 ##### Installation ###
 The code is is provided as a header-only library with a set of examples and tests.
 At least the `edlib/Hamiltonian.h` should be included in any derivative projects.
+
+The eigensolver uses [cpp-arnoldi](https://github.com/Q-solvers/cpp-arnoldi), a header-only C++17 port
+of the ARPACK symmetric driver. Clone it alongside EDLib or point CMake at its location:
+
+```
+git clone https://github.com/Q-solvers/cpp-arnoldi ../cpp-arnoldi-main
+```
+
 To compile examples and tests create a build directory and run 
 
-1. `cmake -DARPACK_DIR=<path to ARPACK-ng library dir> -DExamples=ON -DTesting=ON {path_to_edlib}`
+1. `cmake -DExamples=ON -DTesting=ON {path_to_edlib}`
 2. `make`
 3. `make test` (for running tests)
 4. example will be build in examples subdirectory
 
 To build with MPI support add `-DUSE_MPI=ON` *CMake* flag. *MPI* library should be installed and *ALPSCore* 
 library should be compiled with *MPI* support. To build with a specific *ALPSCore* library 
-`-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag. Since the critical for current library implementation 
-MPI-related *ARPACK-ng* bug was recenlty fixed it is stricly recommended to use the latest version 
-of *ARPACK-ng* from github repository.
+`-DALPSCore_DIR=<path to ALPSCore>` *CMake* flag.
 
 ##### Dependencies 
-- c++11-compatible compiler (tested with clang >= 3.1, gcc >= 4.8.2, icpc >= 14.0.2)  
+- c++17-compatible compiler (gcc >= 7, clang >= 5, icpc >= 19)  
 - *ALPSCore* library >= 0.5.6-alpha3
-- *arpack-ng* >= 3.5.0
+- *cpp-arnoldi* (header-only, bundled or cloned alongside EDLib)
+- *BLAS* and *LAPACK*
 - *MPI* standard >= 2.1 (optional)
 - *git* to fetch the code 
-- *cmake* to build tests and examples (optional)
+- *cmake* >= 3.8.2 to build tests and examples (optional)
 
 ##### Authors
 - Sergei Iskakov, *iskakoff[at]q-solvers.ru*, 2016-now

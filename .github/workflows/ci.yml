@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc / serial / Release
+            cxx: g++
+            mpi: OFF
+            build_type: Release
+
+          - name: gcc / MPI / Release
+            cxx: g++
+            mpi: ON
+            build_type: Release
+
+          - name: clang / serial / Release
+            cxx: clang++
+            mpi: OFF
+            build_type: Release
+
+          - name: gcc / serial / Debug
+            cxx: g++
+            mpi: OFF
+            build_type: Debug
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # -----------------------------------------------------------------------
+      # System dependencies
+      # -----------------------------------------------------------------------
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build \
+            libboost-all-dev \
+            libhdf5-dev \
+            libeigen3-dev \
+            libblas-dev liblapack-dev \
+            libopenmpi-dev openmpi-bin \
+            clang
+
+      # -----------------------------------------------------------------------
+      # ALPSCore (built from source, cached by commit hash)
+      # -----------------------------------------------------------------------
+      - name: Cache ALPSCore
+        id: cache-alpscore
+        uses: actions/cache@v4
+        with:
+          path: /opt/alpscore
+          key: alpscore-v2.3.2-${{ matrix.cxx }}-${{ runner.os }}
+
+      - name: Build and install ALPSCore
+        if: steps.cache-alpscore.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 --branch v2.3.2 \
+            https://github.com/ALPSCore/ALPSCore.git /tmp/alpscore-src
+          cmake -S /tmp/alpscore-src -B /tmp/alpscore-build \
+            -G Ninja \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/opt/alpscore \
+            -DALPS_BUILD_TESTS=OFF \
+            -DALPS_ENABLE_MPI=${{ matrix.mpi }}
+          cmake --build /tmp/alpscore-build -j$(nproc)
+          cmake --install /tmp/alpscore-build
+
+      # -----------------------------------------------------------------------
+      # EDLib
+      # cpp-arnoldi is fetched automatically via FetchContent when the sibling
+      # directory ../cpp-arnoldi-main is absent.
+      # -----------------------------------------------------------------------
+      - name: Configure EDLib
+        run: |
+          cmake -S . -B build \
+            -G Ninja \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DALPSCore_DIR=/opt/alpscore/share/ALPSCore \
+            -DTesting=ON \
+            -DExamples=OFF \
+            -DUSE_MPI=${{ matrix.mpi }} \
+            -DCMAKE_CXX_FLAGS="-DBOOST_NO_CXX11_SCOPED_ENUMS"
+
+      - name: Build EDLib
+        run: cmake --build build -j$(nproc)
+
+      - name: Run tests (serial)
+        if: matrix.mpi == 'OFF'
+        run: ctest --test-dir build -V --output-on-failure
+
+      - name: Run tests (MPI, 2 ranks)
+        if: matrix.mpi == 'ON'
+        run: |
+          ctest --test-dir build -V --output-on-failure \
+            --test-command-env MPIRUN="mpirun --oversubscribe -np 2"

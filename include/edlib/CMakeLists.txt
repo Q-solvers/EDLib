@@ -6,7 +6,6 @@ add_custom_target(edlib SOURCES Combination.h
     EDParams.h
     EigenPair.h
     FermionicModel.h
-    fortranbinding.h
     GreensFunction.h
     ChiLoc.h
     Hamiltonian.h

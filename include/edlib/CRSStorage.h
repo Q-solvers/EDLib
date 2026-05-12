@@ -8,7 +8,6 @@
 
 #include <vector>
 #include <iomanip>
-#include "fortranbinding.h"
 #include "Storage.h"
 
 namespace EDLib {

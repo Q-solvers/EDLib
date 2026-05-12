@@ -67,11 +67,11 @@ namespace EDLib {
 #endif
         fill();
         /**
-         * perform ARPACK call
+         * perform diagonalization via arnoldi::Arnoldi
          */
         int info = _storage.diag();
         if (info != 0) {
-          /// abnormal return from ARPACK. Eigen-pair has not been computed
+          /// abnormal return from eigensolver. Eigen-pair has not been computed
 #ifdef USE_MPI
           if (rank == 0) std::cerr<<"Eigenvalue have not been computed."<<std::endl;
 #endif

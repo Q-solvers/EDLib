@@ -38,7 +38,7 @@ namespace EDLib {
       typedef CRSMatrix < prec > Matrix;
 
 #ifdef USE_MPI
-      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _run_comm(MPI_COMM_NULL), _model(m),_interaction_size(m.interacting_orbitals()),
+      SpinResolvedStorage(alps::params &p, Model &m, MPI_Comm comm) : Storage < prec >(p, comm), _comm(comm), _run_comm(MPI_COMM_NULL), _win(MPI_WIN_NULL), _model(m),_interaction_size(m.interacting_orbitals()),
                                                                       _Ns(p["NSITES"].as<int>()), _ms(p["NSPINS"].as<int>()), _up_symmetry(p["NSITES"].as<int>()),
                                                                       _down_symmetry(p["NSITES"].as<int>()) {
         MPI_Comm_size(_comm, &_nprocs);
@@ -416,14 +416,8 @@ namespace EDLib {
        * @param shift -- offset in the input array
        */
       virtual void prepare_work_arrays(prec * data, size_t shift = 0) {
-//        if(MPI_WIN_NULL != _win){
-//          // TODO: handle already allocated window
-//        }
-        MPI_Info info;
-        MPI_Info_create( &info );
-        MPI_Info_set( info, (char *) "no_locks", (char *) "true");
-        MPI_Win_create(&data[shift], n() * sizeof(prec), sizeof(prec), MPI_INFO_NULL, _run_comm, &_win);
-        MPI_Info_free(&info);
+        MPI_Win_create(&data[shift], (MPI_Aint)(n() * sizeof(prec)),
+                       (int)sizeof(prec), MPI_INFO_NULL, _run_comm, &_win);
       }
 
       /**
