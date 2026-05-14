@@ -3,19 +3,19 @@
 //
 #include <iostream>
 
-#include <edlib/EDParams.h>
-#include "edlib/Hamiltonian.h"
-#include "edlib/SzSymmetry.h"
-#include "edlib/SOCRSStorage.h"
-#include "edlib/CRSStorage.h"
-#include "edlib/HubbardModel.h"
-#include "edlib/GreensFunction.h"
-#include "edlib/ChiLoc.h"
-#include "edlib/HDF5Utils.h"
-#include "edlib/SpinResolvedStorage.h"
-#include "edlib/StaticObservables.h"
-#include "edlib/MeshFactory.h"
-#include "edlib/ExecutionStatistic.h"
+#include <edlib/alpscore/EDParams.h>
+#include "edlib/alpscore/Hamiltonian.h"
+#include "edlib/alpscore/SzSymmetry.h"
+#include "edlib/alpscore/SOCRSStorage.h"
+#include "edlib/alpscore/CRSStorage.h"
+#include "edlib/alpscore/HubbardModel.h"
+#include "edlib/alpscore/GreensFunction.h"
+#include "edlib/alpscore/ChiLoc.h"
+#include "edlib/alpscore/HDF5Utils.h"
+#include "edlib/alpscore/SpinResolvedStorage.h"
+#include "edlib/alpscore/StaticObservables.h"
+#include "edlib/alpscore/MeshFactory.h"
+#include "edlib/alpscore/ExecutionStatistic.h"
 
 
 

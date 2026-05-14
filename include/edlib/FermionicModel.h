@@ -1,123 +1,55 @@
-//
-// Created by iskakoff on 28/08/16.
-//
-
 #ifndef EDLIB_FERMIONICMODEL_H
 #define EDLIB_FERMIONICMODEL_H
 
-#include <alps/params.hpp>
+#include "edlib/Parameters.h"
 
-#include <Eigen/Core>
+namespace edlib {
 
-namespace EDLib {
-  namespace Model {
-/**
- * @brief FermionicModel base class
- *
- * Define common fermionic routines for binary represented state
- *
- * @author iskakoff
- */
-    class FermionicModel {
-    public:
-      FermionicModel(alps::params &p) : _Ns(p["NSITES"]), _ms(p["NSPINS"]), _Ip(int(p["NSPINS"]) * int(p["NSITES"])) {
+  /**
+   * Base class for fermionic models with binary-state representation.
+   *
+   * solve_dyson and bare_greens_function (present in the legacy
+   * EDLib::Model::FermionicModel) are deliberately not here — they belong to
+   * derived models that know about Green's-function machinery (HubbardModel
+   * etc.) and are ported in Phase 3 alongside Eigen-based linear algebra.
+   */
+  class FermionicModel {
+  public:
+    explicit FermionicModel(const Parameters& p)
+        : _Ns(p.nsites), _ms(p.nspins), _Ip(p.nspins * p.nsites) {}
+
+    int orbitals()             const { return _Ns; }
+    int spins()                const { return _ms; }
+    int max_total_electrons()  const { return _Ip; }
+
+    inline int checkState(long long nst, int im, int Ip) const {
+      return static_cast<int>((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
+    }
+
+    inline void a(int i, long long jold, long long& k, int& isign) const {
+      long long sign = 0;
+      for (int ll = 0; ll < i; ++ll) {
+        sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
       }
+      isign = (sign % 2) == 0 ? 1 : -1;
+      k = jold - (1ll << (_Ip - i - 1));
+    }
 
-      /**
-       * @brief Check that im state is occupated
-       *
-       * @param nst - current state
-       * @param im - state to check
-       * @param Ip - total number of fermionic spins for all sites
-       *
-       * @return 0 if state is empty, 1 - otherwise
-       */
-      int inline checkState(long long nst, const int im, int Ip) const {
-        return (int) ((nst & (1ll << (Ip - 1 - im))) >> (Ip - 1 - im));
+    inline void adag(int i, long long jold, long long& k, int& isign) const {
+      long long sign = 0;
+      for (int ll = 0; ll < i; ++ll) {
+        sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
       }
-      /**
-       * @brief Anihilate particle
-       * @param i [in] - site to anihilate particle
-       * @param jold [in] - current state
-       * @param k [out] - resulting state
-       * @param isign [out] - fermionic sign
-       */
-      void inline a(int i, long long jold, long long &k, int &isign) {
-        long long sign = 0;
-        for (int ll = 0; ll < i; ++ll) {
-          sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
-        }
-        isign = (sign % 2) == 0 ? 1 : -1;
-        k = jold - (1ll << (_Ip - i - 1));
-      }
+      isign = (sign % 2) == 0 ? 1 : -1;
+      k = jold + (1ll << (_Ip - i - 1));
+    }
 
-      /**
-       * @brief Create particle
-       * \param i [in] - site to create particle
-       * \param jold [in] - current state
-       * \param k [out] - resulting state
-       * \param isign [out] - fermionic sign
-       */
-      void inline adag(int i, long long jold, long long &k, int &isign) {
-        long long sign = 0;
-        for (int ll = 0; ll < i; ++ll) {
-          sign += ((jold & (1ll << (_Ip - ll - 1))) != 0) ? 1 : 0;
-        }
-        isign = (sign % 2) == 0 ? 1 : -1;
-        k = jold + (1ll << (_Ip - i - 1));
-      }
+  protected:
+    int _Ns;   ///< number of lattice sites
+    int _ms;   ///< number of electron spins
+    int _Ip;   ///< maximum number of electrons (= _Ns * _ms)
+  };
 
-
-      int orbitals() const {
-        return _Ns;
-      }
-
-      int max_total_electrons() const {
-        return _Ip;
-      }
-
-      int spins() const {
-        return _ms;
-      }
-      
-      template<typename Mesh>
-      void solve_dyson(const alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf,
-                       const alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& G_ij,
-                       alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& sigma) {
-        // solve Dyson equation
-        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
-          typename Mesh::index_type w(iw);
-          for (int is : bare_gf.mesh3().points()) {
-            Eigen::MatrixXcd bare(_Ns, _Ns);
-            Eigen::MatrixXcd bold(_Ns, _Ns);
-            Eigen::MatrixXcd sigm(_Ns, _Ns);
-            for (int im: bare_gf.mesh2().points()) {
-              int I = im / _Ns;
-              int J = im % _Ns;
-              bare(I, J) = bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
-              bold(I, J) = G_ij(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is));
-            }
-            sigm = bare.inverse() - bold.inverse();
-            for (int im: bare_gf.mesh2().points()) {
-              int I = im / _Ns;
-              int J = im % _Ns;
-              sigma(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = sigm(I, J);
-            }
-          }
-        }
-      }
-
-    protected:
-      /**
-       * _Ns - number of lattice sites
-       * _ms - number of electron spins
-       * _Ip - maximum number of electrons
-       */
-      int _Ns;
-      int _ms;
-      int _Ip;
-    };
-  }
 }
 
-#endif //EDLIB_FERMIONICMODEL_H
+#endif

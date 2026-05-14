@@ -4,8 +4,8 @@
 
 #include "gtest/gtest.h"
 
-#include "edlib/NSymmetry.h"
-#include "edlib/EDParams.h"
+#include "edlib/alpscore/NSymmetry.h"
+#include "edlib/alpscore/EDParams.h"
 
 TEST(NSymmetryTest, Initialization) {
   alps::params p;

@@ -3,7 +3,7 @@
 //
 
 #include <gtest/gtest.h>
-#include <edlib/ExecutionStatistic.h>
+#include <edlib/alpscore/ExecutionStatistic.h>
 
 TEST(Statistics, UpdateEventTest) {
   EDLib::common::statistics.registerEvent("test");

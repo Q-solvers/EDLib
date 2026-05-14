@@ -1,157 +1,125 @@
-//
-// Created by iskakoff on 19/07/16.
-//
-
 #ifndef EDLIB_HAMILTONIAN_H
 #define EDLIB_HAMILTONIAN_H
 
-#include <set>
-#include <type_traits>
-
 #include <iomanip>
-#include <fstream>
-#include "SpinResolvedStorage.h"
-#include "Symmetry.h"
-#include "EigenPair.h"
-#include "HubbardModel.h"
-#include "CRSStorage.h"
-#include "SOCRSStorage.h"
-#include "SingleImpurityAndersonModel.h"
+#include <iostream>
+#include <set>
 
-namespace EDLib {
-  template<class Storage>
+#include "edlib/CRSStorage.h"
+#include "edlib/EigenPair.h"
+#include "edlib/HubbardModel.h"
+#include "edlib/Parameters.h"
+#include "edlib/SOCRSStorage.h"
+#include "edlib/SingleImpurityAndersonModel.h"
+#include "edlib/SpinResolvedStorage.h"
+
+namespace edlib {
+
+  /**
+   * Hamiltonian == Model + Storage. Diagonalisation iterates over the model's
+   * symmetry sectors, lets the storage build the per-sector matrix, and
+   * collects EigenPairs across sectors.
+   */
+  template <class Storage>
   class Hamiltonian {
   public:
-    typedef typename Storage::Model Model;
-    typedef typename Storage::Model ModelType;
-    typedef Storage StorageType;
-    typedef typename Model::precision prec;
+    using Model      = typename Storage::Model;
+    using ModelType  = typename Storage::Model;
+    using StorageType = Storage;
+    using prec       = typename Model::precision;
 
-    /*
-     * Initialize Hamiltonian for specific model and allocate storage
-     * \param [in] p - alps::parameters
-     */
 #ifdef USE_MPI
-    Hamiltonian(alps::params &p, MPI_Comm comm) :
-      _comm(comm),
-      _model(p),
-      _storage(p, _model, comm) {};
+    Hamiltonian(const Parameters& p, const typename Model::ModelData& bath, MPI_Comm comm)
+        : _comm(comm),
+          _model(p, bath),
+          _storage(p, _model, comm) {}
 #endif
-    Hamiltonian(alps::params &p) :
-      _model(p),
-      _storage(p, _model) {};
-    /**
-     * fill current sector
-     */
-    void fill() {
-      _storage.fill();
-    }
+    Hamiltonian(const Parameters& p, const typename Model::ModelData& bath)
+        : _model(p, bath),
+          _storage(p, _model) {}
 
-    /**
-     * perform Hamiltonian diagonalization
-     * result will be stored in evals and evecs
-     */
+    void fill() { _storage.fill(); }
+
     void diag() {
 #ifdef USE_MPI
-      int rank;
-      MPI_Comm_rank(_comm, &rank);
+      int rank; MPI_Comm_rank(_comm, &rank);
 #endif
-      int k =0;
+      int k = 0;
       while (_model.symmetry().next_sector()) {
 #ifdef USE_MPI
-        if (rank == 0){
+        if (rank == 0)
 #endif
-        std::cout<<"Diagonalize sector "<<_model.symmetry().sector()<<std::endl;
-#ifdef USE_MPI
-        }
-#endif
+          std::cout << "Diagonalize sector " << _model.symmetry().sector() << std::endl;
         fill();
-        /**
-         * perform diagonalization via arnoldi::Arnoldi
-         */
         int info = _storage.diag();
         if (info != 0) {
-          /// abnormal return from eigensolver. Eigen-pair has not been computed
 #ifdef USE_MPI
-          if (rank == 0) std::cerr<<"Eigenvalue have not been computed."<<std::endl;
+          if (rank == 0)
 #endif
+            std::cerr << "Eigenvalue have not been computed." << std::endl;
         } else {
-          const std::vector < prec > &evals = _storage.eigenvalues();
-          const std::vector < std::vector < prec > > &evecs = _storage.eigenvectors();
-          for (int i = 0; i < evals.size(); ++i, ++k) {
-            _eigenpairs.insert(EigenPair < prec, typename Model::Sector >(evals[i], evecs[i], k, _model.symmetry().sector()));
+          const auto& evals = _storage.eigenvalues();
+          const auto& evecs = _storage.eigenvectors();
+          for (std::size_t i = 0; i < evals.size(); ++i, ++k) {
+            _eigenpairs.insert(EigenPair<prec, typename Model::Sector>(
+                evals[i], evecs[i], k, _model.symmetry().sector()));
           }
         }
       }
 #ifdef USE_MPI
-      if (rank == 0){
+      if (rank == 0) {
 #endif
         std::cout << "Here is the list of eigenvalues:" << std::endl;
-        std::streamsize precision = std::cout.precision();
-        std::cout<<std::setprecision(14);
-        for (typename std::set<EigenPair<prec, typename Model::Sector> >::iterator kkk = _eigenpairs.begin(); kkk != _eigenpairs.end(); kkk++) {
-          std::cout << kkk->eigenvalue() << " ";
-          kkk->sector().print();
+        std::streamsize old_p = std::cout.precision();
+        std::cout << std::setprecision(14);
+        for (auto it = _eigenpairs.begin(); it != _eigenpairs.end(); ++it) {
+          std::cout << it->eigenvalue() << " ";
+          it->sector().print();
           std::cout << std::endl;
         }
-        std::cout<<std::setprecision(precision);
+        std::cout << std::setprecision(old_p);
 #ifdef USE_MPI
       }
 #endif
     }
 
-    Storage &storage() {
-      return _storage;
-    }
+    Storage&       storage()       { return _storage; }
+    Model&         model()         { return _model;   }
 
-    const std::set < EigenPair < prec, typename Model::Sector > > &eigenpairs() const {
+    const std::set<EigenPair<prec, typename Model::Sector>>& eigenpairs() const {
       return _eigenpairs;
-    };
-
-    Model &model() {
-      return _model;
     }
 
-    void constant_shift(prec shift) {
-      _storage.constant_shift(shift);
-    }
+    void constant_shift(prec shift) { _storage.constant_shift(shift); }
 
 #ifdef USE_MPI
-    const MPI_Comm& comm() const {
-      return _comm;
-    }
+    const MPI_Comm& comm() const { return _comm; }
 #endif
 
   private:
-    // CSR format Hamiltonian matrix storage
-    Storage _storage;
-
-    // Eigen-pairs
-    std::set < EigenPair < prec, typename Model::Sector > > _eigenpairs;
-
-    /**
-     * Model to diagonalize
-     */
-    Model _model;
-
+    // _model must be declared (and constructed) before _storage since the
+    // storage ctor takes a Model& reference.
 #ifdef USE_MPI
     MPI_Comm _comm;
 #endif
-
+    Model   _model;
+    Storage _storage;
+    std::set<EigenPair<prec, typename Model::Sector>> _eigenpairs;
   };
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < double > > > CSRHubbardHamiltonian;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < double > > > SRSHubbardHamiltonian;
-  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < double > > > SOCSRHubbardHamiltonian;
+  using CSRHubbardHamiltonian          = Hamiltonian<CRSStorage<HubbardModel<double>>>;
+  using SRSHubbardHamiltonian          = Hamiltonian<SpinResolvedStorage<HubbardModel<double>>>;
+  using SOCSRHubbardHamiltonian        = Hamiltonian<SOCRSStorage<HubbardModel<double>>>;
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::HubbardModel < float > > > CSRHubbardHamiltonian_float;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::HubbardModel < float > > > SRSHubbardHamiltonian_float;
-  typedef Hamiltonian < Storage::SOCRSStorage < Model::HubbardModel < float > > > SOCSRHubbardHamiltonian_float;
+  using CSRHubbardHamiltonian_float    = Hamiltonian<CRSStorage<HubbardModel<float>>>;
+  using SRSHubbardHamiltonian_float    = Hamiltonian<SpinResolvedStorage<HubbardModel<float>>>;
+  using SOCSRHubbardHamiltonian_float  = Hamiltonian<SOCRSStorage<HubbardModel<float>>>;
 
-  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < double > > > CSRSIAMHamiltonian;
-  typedef Hamiltonian < Storage::CRSStorage < Model::SingleImpurityAndersonModel < float > > > CSRSIAMHamiltonian_float;
+  using CSRSIAMHamiltonian             = Hamiltonian<CRSStorage<SingleImpurityAndersonModel<double>>>;
+  using CSRSIAMHamiltonian_float       = Hamiltonian<CRSStorage<SingleImpurityAndersonModel<float>>>;
+  using SRSSIAMHamiltonian             = Hamiltonian<SpinResolvedStorage<SingleImpurityAndersonModel<double>>>;
+  using SRSSIAMHamiltonian_float       = Hamiltonian<SpinResolvedStorage<SingleImpurityAndersonModel<float>>>;
 
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < double > > > SRSSIAMHamiltonian;
-  typedef Hamiltonian < Storage::SpinResolvedStorage < Model::SingleImpurityAndersonModel < float > > > SRSSIAMHamiltonian_float;
 }
-#endif //EDLIB_HAMILTONIAN_H
+
+#endif

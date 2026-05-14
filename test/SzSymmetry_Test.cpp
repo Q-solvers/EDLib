@@ -4,8 +4,8 @@
 
 #include "gtest/gtest.h"
 
-#include "edlib/SzSymmetry.h"
-#include "edlib/EDParams.h"
+#include "edlib/alpscore/SzSymmetry.h"
+#include "edlib/alpscore/EDParams.h"
 
 
 TEST(SzSymmetryTest, Combinatorics) {

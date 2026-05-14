@@ -1,24 +1,23 @@
-//
-// Created by iskakoff on 01/02/17.
-//
-
 #ifndef EDLIB_COMMONUTILS_H
 #define EDLIB_COMMONUTILS_H
 
+#include <cmath>
 #include <complex>
-#include <alps/gf/mesh.hpp>
 
+#include "edlib/Mesh.h"
 
-namespace EDLib {
-  namespace common {
-    std::complex<double> freq_point(int index, const alps::gf::matsubara_positive_mesh & mesh, double beta) {
-      return std::complex<double>(0.0, mesh.points()[index]);
-    };
+namespace edlib {
 
-    std::complex<double> freq_point(int index, const alps::gf::real_frequency_mesh& mesh, double beta) {
-      return std::complex<double>(mesh.points()[index], M_PI/beta);
-    };
+  inline std::complex<double>
+  freq_point(int index, const MatsubaraMesh& mesh, double /*beta*/) {
+    return std::complex<double>(0.0, mesh.points()[index]);
   }
+
+  inline std::complex<double>
+  freq_point(int index, const RealFreqMesh& mesh, double beta) {
+    return std::complex<double>(mesh.points()[index], M_PI / beta);
+  }
+
 }
 
-#endif //EDLIB_COMMONUTILS_H
+#endif

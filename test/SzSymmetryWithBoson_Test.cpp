@@ -5,9 +5,9 @@
 #include <gtest/gtest.h>
 
 #include <alps/params.hpp>
-#include <ext/HolsteinAndersonParameter.h>
-#include "edlib/EDParams.h"
-#include "ext/SzSymmetryWithBoson.h"
+#include <ext/alpscore/HolsteinAndersonParameter.h>
+#include "edlib/alpscore/EDParams.h"
+#include "ext/alpscore/SzSymmetryWithBoson.h"
 
 TEST(SzSymmetryWithBosonTest, Indexing) {
   alps::params p;

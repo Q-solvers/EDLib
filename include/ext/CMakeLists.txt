@@ -1,9 +1,5 @@
-
 project(extlib CXX)
 
-add_custom_target(extlib SOURCES
- HolsteinAndersonModel.h
- SzSymmetryWithBoson.h
- FermiBosonStorage.h
- HolsteinAndersonParameter.h
-)
+file(GLOB EXT_HEADERS *.h)
+
+add_custom_target(extlib SOURCES ${EXT_HEADERS})

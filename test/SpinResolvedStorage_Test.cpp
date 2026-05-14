@@ -3,12 +3,12 @@
 //
 
 #include <gtest/gtest.h>
-#include "edlib/HubbardModel.h"
+#include "edlib/alpscore/HubbardModel.h"
 
-#include "edlib/SpinResolvedStorage.h"
-#include "edlib/SingleImpurityAndersonModel.h"
-#include "edlib/CRSStorage.h"
-#include "edlib/EDParams.h"
+#include "edlib/alpscore/SpinResolvedStorage.h"
+#include "edlib/alpscore/SingleImpurityAndersonModel.h"
+#include "edlib/alpscore/CRSStorage.h"
+#include "edlib/alpscore/EDParams.h"
 #include <fstream>
 #include <iomanip>
 

@@ -3,14 +3,14 @@
 //
 
 #include <gtest/gtest.h>
-#include "edlib/Hamiltonian.h"
-#include "edlib/HubbardModel.h"
-#include "edlib/Storage.h"
-#include "edlib/EDParams.h"
-#include "edlib/StaticObservables.h"
-#include "edlib/GreensFunction.h"
-#include "edlib/ChiLoc.h"
-#include "edlib/MeshFactory.h"
+#include "edlib/alpscore/Hamiltonian.h"
+#include "edlib/alpscore/HubbardModel.h"
+#include "edlib/alpscore/Storage.h"
+#include "edlib/alpscore/EDParams.h"
+#include "edlib/alpscore/StaticObservables.h"
+#include "edlib/alpscore/GreensFunction.h"
+#include "edlib/alpscore/ChiLoc.h"
+#include "edlib/alpscore/MeshFactory.h"
 
 #ifdef USE_MPI
 
