@@ -79,7 +79,7 @@ target_link_libraries(${PROJECT_NAME} INTERFACE Eigen3::Eigen arnoldi::arnoldi)
 if(EDLIB_WITH_ALPSCORE)
     FetchContent_Declare(edlib_alpscore
         GIT_REPOSITORY https://github.com/Q-solvers/EDLib-alpscore.git
-        GIT_TAG        main)
+        GIT_TAG        master)
     FetchContent_MakeAvailable(edlib_alpscore)
     list(APPEND extlibs EDLib::Alpscore)
 
