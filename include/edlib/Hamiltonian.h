@@ -29,13 +29,13 @@ namespace edlib {
     using prec       = typename Model::precision;
 
 #ifdef USE_MPI
-    Hamiltonian(const Parameters& p, const typename Model::ModelData& bath, MPI_Comm comm)
+    Hamiltonian(const Parameters& p, const typename Model::ModelData& model_data, MPI_Comm comm)
         : _comm(comm),
-          _model(p, bath),
+          _model(p, model_data),
           _storage(p, _model, comm) {}
 #endif
-    Hamiltonian(const Parameters& p, const typename Model::ModelData& bath)
-        : _model(p, bath),
+    Hamiltonian(const Parameters& p, const typename Model::ModelData& model_data)
+        : _model(p, model_data),
           _storage(p, _model) {}
 
     void fill() { _storage.fill(); }

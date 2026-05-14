@@ -63,23 +63,23 @@ namespace edlib {
       std::vector<std::array<int,2>> sectors;         ///< optional sector restriction
     };
 
-    HubbardModel(const Parameters& p, const ModelData& bath)
+    HubbardModel(const Parameters& p, const ModelData& model_data)
         : FermionicModel(p),
-          _symmetry(p, bath.sectors),
-          _t(bath.hopping),
-          _U(bath.U),
-          _xmu(bath.mu),
-          _Hmag(bath.magnetic_field.empty()
+          _symmetry(p, model_data.sectors),
+          _t(model_data.hopping),
+          _U(model_data.U),
+          _xmu(model_data.mu),
+          _Hmag(model_data.magnetic_field.empty()
                 ? std::vector<Prec>(p.nsites, Prec(0))
-                : bath.magnetic_field),
-          _J(bath.exchange.empty()
+                : model_data.magnetic_field),
+          _J(model_data.exchange.empty()
              ? std::vector<std::vector<Prec>>(p.nsites,
                    std::vector<Prec>(p.nsites, Prec(0)))
-             : bath.exchange),
-          _Eps(bath.site_energy.empty()
+             : model_data.exchange),
+          _Eps(model_data.site_energy.empty()
                ? std::vector<std::vector<Prec>>(p.nsites,
                      std::vector<Prec>(p.nspins, Prec(0)))
-               : bath.site_energy) {
+               : model_data.site_energy) {
       validate_model_data(p);
       for (int ii = 0; ii < _Ns; ++ii) {
         for (int jj = 0; jj < _Ns; ++jj) {
