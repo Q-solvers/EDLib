@@ -2,6 +2,7 @@ add_executable(HubbardCoreTest    HubbardCore_Test.cpp)
 add_executable(LanczosCoreTest    LanczosCore_Test.cpp)
 add_executable(SzSymmetryCoreTest SzSymmetryCore_Test.cpp)
 add_executable(NSymmetryCoreTest  NSymmetryCore_Test.cpp)
+add_executable(MpiCoreTest         MpiCore_Test.cpp)
 
 set(core_test_libs
     EDLib
@@ -15,12 +16,14 @@ target_link_libraries(HubbardCoreTest    ${core_test_libs})
 target_link_libraries(LanczosCoreTest    ${core_test_libs})
 target_link_libraries(SzSymmetryCoreTest ${core_test_libs})
 target_link_libraries(NSymmetryCoreTest  ${core_test_libs})
+target_link_libraries(MpiCoreTest         ${core_test_libs})
 
 if(USE_MPI)
     target_link_libraries(HubbardCoreTest    ${parlibs})
     target_link_libraries(LanczosCoreTest    ${parlibs})
     target_link_libraries(SzSymmetryCoreTest ${parlibs})
     target_link_libraries(NSymmetryCoreTest  ${parlibs})
+    target_link_libraries(MpiCoreTest        ${parlibs})
 endif()
 
 # LanczosCoreTest reads test/input/GF_Chi/*.dat from CWD; copy it in.

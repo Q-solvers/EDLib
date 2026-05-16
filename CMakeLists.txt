@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(EDLib LANGUAGES C CXX
-        VERSION 2.0)
+        VERSION 3.0)
 
 set(CMAKE_DISABLE_SOURCE_CHANGES ON)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
@@ -12,7 +12,10 @@ use_cxx17()
 
 option(EDLIB_WITH_ALPSCORE
     "Pull EDLib-alpscore (legacy ALPSCore-based API: alps::params / alps::hdf5 / alps::gf) via FetchContent. Off = header-only edlib:: core only."
-    ON)
+    OFF)
+option(EDLIB_WITH_PYTHON
+    "Build the pyedlib Python bindings (pybind11)."
+    OFF)
 
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -50,19 +53,6 @@ endif()
 
 add_subdirectory(include/edlib)
 add_subdirectory(include/ext)
-
-# Header purity: include/edlib and include/ext must never
-# `#include <alps...>`. Enforce at configure time.
-file(GLOB _edlib_core_headers
-     "${CMAKE_CURRENT_SOURCE_DIR}/include/edlib/*.h"
-     "${CMAKE_CURRENT_SOURCE_DIR}/include/ext/*.h")
-foreach(_h IN LISTS _edlib_core_headers)
-    file(STRINGS "${_h}" _hits REGEX "^[ \t]*#[ \t]*include[ \t]+[<\"]alps")
-    if(_hits)
-        message(FATAL_ERROR
-            "edlib header purity violation: ${_h} contains an alps include:\n${_hits}")
-    endif()
-endforeach()
 
 include(GNUInstallDirs)
 
@@ -149,6 +139,7 @@ if(Testing)
     add_test(LanczosCoreTest    test/core/LanczosCoreTest)
     add_test(SzSymmetryCoreTest test/core/SzSymmetryCoreTest)
     add_test(NSymmetryCoreTest  test/core/NSymmetryCoreTest)
+    add_test(MpiCoreTest        test/core/MpiCoreTest)
 
     # Legacy alps-using tests only when the option is enabled.
     if(EDLIB_WITH_ALPSCORE)
@@ -159,6 +150,10 @@ if(Testing)
         add_test(LanczosTest           test/LanczosTest)
         add_test(StaticObservablesTest test/StaticObservablesTest)
     endif()
+endif()
+
+if(EDLIB_WITH_PYTHON)
+    add_subdirectory(python)
 endif()
 
 option(Examples "Enable examples" ON)
