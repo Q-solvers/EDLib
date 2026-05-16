@@ -134,9 +134,9 @@ jobs:
           MPIRUN="mpirun --oversubscribe --mca osc pt2pt --mca btl ^sm -np 2"
           ./build/test/SzSymmetryTest
           ./build/test/NSymmetryTest
-          $MPIRUN ./build/test/HubbardCoreTest
-          $MPIRUN ./build/test/LanczosCoreTest
-          $MPIRUN ./build/test/MpiCoreTest
+          $MPIRUN ./build/test/HubbardTest
+          $MPIRUN ./build/test/LanczosTest
+          $MPIRUN ./build/test/MpiTest
           if [ "${{ matrix.alps }}" = "ON" ]; then
             ./build/test/alpscore/SzSymmetryAlpsCoreTest
             ./build/test/alpscore/NSymmetryAlpsCoreTest
