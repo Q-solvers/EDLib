@@ -13,9 +13,6 @@ use_cxx17()
 option(EDLIB_WITH_ALPSCORE
     "Pull EDLib-alpscore (legacy ALPSCore-based API: alps::params / alps::hdf5 / alps::gf) via FetchContent. Off = header-only edlib:: core only."
     OFF)
-option(EDLIB_WITH_PYTHON
-    "Build the pyedlib Python bindings (pybind11)."
-    OFF)
 
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
@@ -150,10 +147,6 @@ if(Testing)
         add_test(LanczosTest           test/LanczosTest)
         add_test(StaticObservablesTest test/StaticObservablesTest)
     endif()
-endif()
-
-if(EDLIB_WITH_PYTHON)
-    add_subdirectory(python)
 endif()
 
 option(Examples "Enable examples" ON)
