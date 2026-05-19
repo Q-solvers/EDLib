@@ -271,7 +271,6 @@ namespace edlib {
       return finalize(info);
     }
 
-    // ---- sector lifecycle (serial, host enumeration) ----------------------
 
     void init() { _model.symmetry().init(); }
 
