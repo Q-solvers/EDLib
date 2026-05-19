@@ -33,8 +33,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include(FetchContent)
 FetchContent_Declare(cpp_arnoldi
     GIT_REPOSITORY https://github.com/Q-solvers/cpp-arnoldi.git
-    #GIT_TAG        444304d88d6029f717031ea5b45294a4bd2a3517)
-    GIT_TAG iskakov/cuda-kernel
+    GIT_TAG origin/main
 )
 FetchContent_MakeAvailable(cpp_arnoldi)
 
