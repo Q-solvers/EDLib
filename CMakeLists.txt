@@ -33,7 +33,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 include(FetchContent)
 FetchContent_Declare(cpp_arnoldi
     GIT_REPOSITORY https://github.com/Q-solvers/cpp-arnoldi.git
-    GIT_TAG origin/main
+    GIT_TAG v0.1.0a
 )
 FetchContent_MakeAvailable(cpp_arnoldi)
 
