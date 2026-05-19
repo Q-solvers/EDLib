@@ -34,9 +34,11 @@ namespace edlib {
     using Base = Lanczos<Hamiltonian, Mesh>;
     using Base::hamiltonian;
     using Base::lanczos;
+    using Base::kernel;
     using Base::compute_continued_fraction;
     using Base::suffix;
     using typename Base::precision;
+    using typename Base::KVector;
 
   public:
     using Base::beta;
@@ -156,15 +158,15 @@ namespace edlib {
     const GF_TYPE& G_ij()   const { return _G_ij; }
 
   private:
-    void local_contribution(const EigenPair<precision, typename ModelType::Sector>& pair,
-                            const EigenPair<precision, typename ModelType::Sector>& groundstate) {
+    void local_contribution(const typename Hamiltonian::EigenPairType& pair,
+                            const typename Hamiltonian::EigenPairType& groundstate) {
 #ifdef USE_MPI
       int rank; MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
       for (std::size_t io = 0; io < _g_orbs.size(); ++io) {
         for (int ispin = 0; ispin < _model.spins(); ++ispin) {
           int orb = _g_orbs[io];
-          std::vector<precision> outvec(1, precision(0));
+          KVector outvec = kernel().make_vector(1);
           precision expectation_value = 0;
           _model.symmetry().set_sector(pair.sector());
           if (create_particles(std::array<int, 1>{{orb}}, ispin,
@@ -204,15 +206,15 @@ namespace edlib {
       }
     }
 
-    void nonlocal_contribution(const EigenPair<precision, typename ModelType::Sector>& pair,
-                               const EigenPair<precision, typename ModelType::Sector>& groundstate) {
+    void nonlocal_contribution(const typename Hamiltonian::EigenPairType& pair,
+                               const typename Hamiltonian::EigenPairType& groundstate) {
 #ifdef USE_MPI
       int rank; MPI_Comm_rank(hamiltonian().storage().comm(), &rank);
 #endif
       for (std::size_t io = 0; io < _g_ij_orb_pairs.size(); ++io) {
         for (int ispin = 0; ispin < _model.spins(); ++ispin) {
           auto orbs = _g_ij_orb_pairs[io];
-          std::vector<precision> outvec(1, precision(0));
+          KVector outvec = kernel().make_vector(1);
           precision expectation_value = 0;
           _model.symmetry().set_sector(pair.sector());
           if (create_particles(std::array<int, 2>{{orbs[0], orbs[1]}}, ispin,
@@ -282,29 +284,24 @@ namespace edlib {
 
     template <std::size_t N>
     bool create_particles(std::array<int, N> orbitals, int spin,
-                          const std::vector<precision>& invec,
-                          std::vector<precision>& outvec,
+                          const KVector& invec,
+                          KVector& outvec,
                           precision& expectation_value) {
       if (!_model.symmetry().can_create_particle(spin)) return false;
       hamiltonian().storage().reset();
       auto next_sec = _model.symmetry().create_particle(spin);
-      outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0));
+      outvec = kernel().make_vector(hamiltonian().storage().vector_size(next_sec));
       edlib::statistics.registerEvent("adag");
       for (int orb : orbitals) {
         hamiltonian().storage().init();
-        std::vector<precision> tmp(outvec.size());
-        hamiltonian().storage().a_adag(orb + spin * _model.orbitals(),
-                                       invec, tmp, next_sec, /*a=*/false);
-        std::transform(tmp.begin(), tmp.end(), outvec.begin(), outvec.begin(),
-                       std::plus<precision>());
+        KVector tmp = kernel().make_vector(kernel().size(outvec));
+        kernel().a_adag(orb + spin * _model.orbitals(),
+                        invec, tmp, next_sec, /*annihilate=*/false);
+        kernel().add(outvec, tmp);
       }
       edlib::statistics.updateEvent("adag");
-      double norm = hamiltonian().storage().vv(outvec, outvec
-#ifdef USE_MPI
-          , hamiltonian().comm()
-#endif
-      );
-      for (auto& v : outvec) v /= std::sqrt(norm);
+      double norm = kernel().dot(outvec, outvec);
+      kernel().scale(outvec, precision(1) / std::sqrt(norm));
       _model.symmetry().set_sector(next_sec);
       expectation_value = static_cast<precision>(norm);
       return std::abs(norm) > 1e-10;
@@ -312,29 +309,24 @@ namespace edlib {
 
     template <std::size_t N>
     bool annihilate_particles(std::array<int, N> orbitals, int spin,
-                              const std::vector<precision>& invec,
-                              std::vector<precision>& outvec,
+                              const KVector& invec,
+                              KVector& outvec,
                               precision& expectation_value) {
       if (!_model.symmetry().can_destroy_particle(spin)) return false;
       hamiltonian().storage().reset();
       auto next_sec = _model.symmetry().destroy_particle(spin);
-      outvec.assign(hamiltonian().storage().vector_size(next_sec), precision(0));
+      outvec = kernel().make_vector(hamiltonian().storage().vector_size(next_sec));
       edlib::statistics.registerEvent("a");
       for (int orb : orbitals) {
         hamiltonian().storage().init();
-        std::vector<precision> tmp(outvec.size());
-        hamiltonian().storage().a_adag(orb + spin * _model.orbitals(),
-                                       invec, tmp, next_sec, /*a=*/true);
-        std::transform(tmp.begin(), tmp.end(), outvec.begin(), outvec.begin(),
-                       std::plus<precision>());
+        KVector tmp = kernel().make_vector(kernel().size(outvec));
+        kernel().a_adag(orb + spin * _model.orbitals(),
+                        invec, tmp, next_sec, /*annihilate=*/true);
+        kernel().add(outvec, tmp);
       }
       edlib::statistics.updateEvent("a");
-      double norm = hamiltonian().storage().vv(outvec, outvec
-#ifdef USE_MPI
-          , hamiltonian().comm()
-#endif
-      );
-      for (auto& v : outvec) v /= std::sqrt(norm);
+      double norm = kernel().dot(outvec, outvec);
+      kernel().scale(outvec, precision(1) / std::sqrt(norm));
       _model.symmetry().set_sector(next_sec);
       expectation_value = static_cast<precision>(norm);
       return std::abs(norm) > 1e-10;
