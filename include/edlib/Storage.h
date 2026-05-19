@@ -129,11 +129,7 @@ namespace edlib {
     const std::vector<std::vector<Prec>>& eigenvectors() const { return evecs; }
     std::vector<std::vector<Prec>>&       eigenvectors()       { return evecs; }
 
-    // Generic eigenpair accessors used by Hamiltonian to build the
-    // EigenPair set. Default (host) eigenvector type is std::vector<Prec>;
-    // device-resident storages shadow `eigenvector_type` and
-    // `eigenpair_vector(i)` to hand back a device buffer instead, so the
-    // eigenvectors never round-trip through host memory.
+    // Generic eigenpair accessors used by Hamiltonian to build the EigenPair set.
     using eigenvector_type = std::vector<Prec>;
     int  num_eigenpairs() const { return static_cast<int>(evals.size()); }
     const Prec& eigenpair_value(int i) const { return evals[i]; }
