@@ -14,25 +14,43 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: gcc / serial / Release
+          # ---- alpscore-free core (default build, no ALPSCore on the box) ----
+          - name: gcc / serial / Release / core
             cxx: g++
             mpi: OFF
             build_type: Release
+            alps: OFF
 
-          - name: gcc / MPI / Release
-            cxx: g++
-            mpi: ON
-            build_type: Release
-
-          - name: clang / serial / Release
+          - name: clang / serial / Release / core
             cxx: clang++
             mpi: OFF
             build_type: Release
+            alps: OFF
 
-          - name: gcc / serial / Debug
+          - name: gcc / serial / Debug / core
             cxx: g++
             mpi: OFF
             build_type: Debug
+            alps: OFF
+
+          - name: gcc / MPI / Release / core
+            cxx: g++
+            mpi: ON
+            build_type: Release
+            alps: OFF
+
+          # ---- legacy ALPSCore compat layer (EDLIB_WITH_ALPSCORE=ON) ----
+          - name: gcc / serial / Release / alpscore
+            cxx: g++
+            mpi: OFF
+            build_type: Release
+            alps: ON
+
+          - name: gcc / MPI / Release / alpscore
+            cxx: g++
+            mpi: ON
+            build_type: Release
+            alps: ON
 
     steps:
       - uses: actions/checkout@v4
@@ -53,9 +71,11 @@ jobs:
             clang
 
       # -----------------------------------------------------------------------
-      # ALPSCore (built from source, cached by commit hash)
+      # ALPSCore (only needed for the legacy compat layer; built from source,
+      # cached by commit hash)
       # -----------------------------------------------------------------------
       - name: Cache ALPSCore
+        if: matrix.alps == 'ON'
         id: cache-alpscore
         uses: actions/cache@v4
         with:
@@ -63,7 +83,7 @@ jobs:
           key: alpscore-v2.3.3-${{ matrix.cxx }}-MPI${{matrix.mpi}}-${{ runner.os }}
 
       - name: Build and install ALPSCore
-        if: steps.cache-alpscore.outputs.cache-hit != 'true'
+        if: matrix.alps == 'ON' && steps.cache-alpscore.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch v2.3.3 \
             https://github.com/ALPSCore/ALPSCore.git /tmp/alpscore-src
@@ -89,7 +109,8 @@ jobs:
             -G Ninja \
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
-            -DALPSCore_DIR=/opt/alpscore/share/ALPSCore \
+            -DEDLIB_WITH_ALPSCORE=${{ matrix.alps }} \
+            ${{ matrix.alps == 'ON' && '-DALPSCore_DIR=/opt/alpscore/share/ALPSCore' || '' }} \
             -DTesting=ON \
             -DExamples=OFF \
             -DUSE_MPI=${{ matrix.mpi }} \
@@ -98,10 +119,14 @@ jobs:
       - name: Build EDLib
         run: cmake --build build -j$(nproc)
 
+      # Serial jobs: ctest runs the core suite, plus the legacy alps suite
+      # when EDLIB_WITH_ALPSCORE=ON registered it.
       - name: Run tests (serial)
         if: matrix.mpi == 'OFF'
         run: ctest --test-dir build -V --output-on-failure
 
+      # Core tests always exist; the legacy alps suite only when alps=ON.
+      # Symmetry tests run single-process; parallel-path tests on 2 ranks.
       - name: Run tests (MPI, 2 ranks)
         if: matrix.mpi == 'ON'
         run: |
@@ -109,6 +134,13 @@ jobs:
           MPIRUN="mpirun --oversubscribe --mca osc pt2pt --mca btl ^sm -np 2"
           ./build/test/SzSymmetryTest
           ./build/test/NSymmetryTest
-          $MPIRUN ./build/test/HubbardModelTest
+          $MPIRUN ./build/test/HubbardTest
           $MPIRUN ./build/test/LanczosTest
-          $MPIRUN ./build/test/StaticObservablesTest
+          $MPIRUN ./build/test/MpiTest
+          if [ "${{ matrix.alps }}" = "ON" ]; then
+            ./build/test/alpscore/SzSymmetryAlpsCoreTest
+            ./build/test/alpscore/NSymmetryAlpsCoreTest
+            $MPIRUN ./build/test/alpscore/HubbardModelAlpsCoreTest
+            $MPIRUN ./build/test/alpscore/LanczosAlpsCoreTest
+            $MPIRUN ./build/test/alpscore/StaticObservablesAlpsCoreTest
+          fi

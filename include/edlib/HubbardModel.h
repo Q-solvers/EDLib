@@ -1,226 +1,212 @@
-//
-// Created by iskakoff on 29/07/16.
-//
-
 #ifndef EDLIB_HUBBARDMODEL_H
 #define EDLIB_HUBBARDMODEL_H
 
+#include <array>
+#include <cmath>
+#include <complex>
+#include <stdexcept>
+#include <utility>
 #include <vector>
 
-#include <alps/params.hpp>
-#include <alps/gf/mesh.hpp>
-#include <alps/gf/gf.hpp>
-#include "SzSymmetry.h"
-#include "FermionicModel.h"
-#include "CommonUtils.h"
-
 #include <Eigen/Core>
+#include <Eigen/LU>
 
-namespace EDLib {
-  namespace Model {
-    namespace Hubbard {
-      template<typename prec>
-      class InnerState {
-      public:
-        InnerState(int ii, int jj, int spin, prec val) : _indicies(ii, jj), _spin(spin), _value(val) {};
+#include "edlib/CommonUtils.h"
+#include "edlib/FermionicModel.h"
+#include "edlib/Gf.h"
+#include "edlib/Mesh.h"
+#include "edlib/Parameters.h"
+#include "edlib/SzSymmetry.h"
 
-        const inline std::pair < int, int > &indicies() const { return _indicies; }
+namespace edlib {
 
-        const inline prec &value() const { return _value; }
+  namespace hubbard {
 
-        inline int spin() const { return _spin; }
-
-      private:
-        std::pair < int, int > _indicies;
-        int _spin;
-        prec _value;
-      };
-    }
-
-    template<typename prcsn>
-    class HubbardModel: public FermionicModel {
+    template <class Prec>
+    class InnerState {
     public:
-      typedef prcsn precision;
-      typedef typename Symmetry::SzSymmetry SYMMETRY;
-      typedef typename Hubbard::InnerState < precision > St;
-      typedef typename Symmetry::SzSymmetry::Sector Sector;
+      InnerState(int ii, int jj, int spin, Prec val)
+          : _indicies(ii, jj), _spin(spin), _value(val) {}
 
-      HubbardModel(alps::params &p) : FermionicModel(p), _symmetry(p) {
-        _Eps.assign(p["NSITES"], std::vector < precision >(p["NSPINS"], precision(0.0)));
-        t.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
-        U.assign(p["NSITES"], precision(0.0));
-        J.assign(p["NSITES"], std::vector < precision >(p["NSITES"], precision(0.0)));
-        _xmu.assign(p["NSITES"], precision(0.0));
-        _Hmag.assign(p["NSITES"], precision(0.0));
-        std::string input = p["INPUT_FILE"];
-        alps::hdf5::archive input_data(input.c_str(), "r");
-        if(input_data.is_data("magnetic_field/values")) {
-          input_data >> alps::make_pvp("magnetic_field/values", _Hmag);
-        }
-
-        input_data >> alps::make_pvp("hopping/values", t);
-        input_data >> alps::make_pvp("interaction/values", U);
-        if(input_data.is_data("exchange/values")) {
-          input_data >> alps::make_pvp("exchange/values", J);
-        }
-        input_data >> alps::make_pvp("chemical_potential/values", _xmu);
-        input_data.close();
-        for (int ii = 0; ii < _Ns; ++ii) {
-          for (int jj = 0; jj < _Ns; ++jj) {
-            if (std::abs(t[ii][jj]) > 1e-10) {
-              for (int is = 0; is < _ms; ++is) {
-                _states.push_back(St(ii, jj, is, t[ii][jj]));
-              }
-            }
-          }
-        }
-      };
-
-      /**
-       * check that current basis vector get non-zero contribution
-       *
-       * @param state - electron state combination of spin and site indices
-       * @param nst - current basis state
-       * @return 1 if there is nonzero contribution, otherwise 0
-       */
-      inline int valid(const St &state, long long nst) {
-        return (checkState(nst, state.indicies().first + state.spin() * _Ns, _Ip) * (1 - checkState(nst, state.indicies().second + state.spin() * _Ns, _Ip)));
-      }
-
-      /**
-       * Compute off-diagonal term for transition from nst-state to k-state
-       *
-       * @param state - transition state
-       * @param nst - initial basis state
-       * @param k - resulting basis state
-       * @param sign - fermionic sign for transition
-       * @return contribution to off-diagonal element for transition state
-       */
-      inline precision set(const St &state, long long nst, long long &k, int &sign) {
-        long long k1, k2;
-        int isign1, isign2;
-        a(state.indicies().first + state.spin() * _Ns, nst, k1, isign1);
-        adag(state.indicies().second + state.spin() * _Ns, k1, k2, isign2);
-        k = k2;
-        // -t c^+ c
-        sign = -isign1 * isign2;
-        return state.value();
-      }
-
-      /**
-       * Computes diagonal contribution for state s: <s| H |s>
-       *
-       * @param state - current basis state
-       * @return value of <s| H |s>
-       */
-      inline precision diagonal(long long state) const {
-        precision xtemp = 0.0;
-        for (int im = 0; im < _Ns; ++im) {
-          for (int is = 0; is < _ms; ++is) {
-            xtemp += (_Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
-          }
-          xtemp += U[im] * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
-          xtemp += _Hmag[im] * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
-          for (int im2 = 0; im2 < _Ns; ++im2) {
-            xtemp +=
-              J[im][im2] *
-              (checkState(state, im, _Ip) - checkState(state, im + _Ns, _Ip)) *
-              (checkState(state, im2, _Ip) - checkState(state, im2 + _Ns, _Ip));
-          }
-        }
-        return xtemp;
-      }
-
-      /**
-       * @deprecated
-       */
-      inline long long interacting_states(long long nst) {
-        return nst;
-      }
-
-
-      /**
-       * @return hopping transitions
-       */
-      const std::vector < St > &T_states() const { return _states; };
-      // We have only diagonal interaction
-      /**
-       * @return off-diagonal interaction transitions
-       */
-      const std::vector < St > &V_states() const { return _V_states; };
-
-      /**
-       * For Hubbard model all orbitals are interacting
-       *
-       * @return total number of sites
-       */
-      int interacting_orbitals() const {
-        return _Ns;
-      }
-
-      /**
-       * For Hubbard model Hamiltonian comutes with spin-operator ([Sz, H] = 0)
-       * @return symmetry object
-       */
-      inline const Symmetry::SzSymmetry &symmetry() const {
-        return _symmetry;
-      }
-
-      inline Symmetry::SzSymmetry &symmetry() {
-        return _symmetry;
-      }
-
-      /**
-       * Compute bare Green's function for specific mesh
-       *
-       * @tparam Mesh - mesh-type
-       * @param bare_gf - bare Green's function container
-       * @param beta - inverse temperature
-       */
-      template<typename Mesh>
-      void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
-        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
-          typename Mesh::index_type w(iw);
-          for (int is : bare_gf.mesh3().points()) {
-            Eigen::MatrixXcd G_inv = Eigen::MatrixXcd::Zero(_Ns, _Ns);
-            for(int I = 0; I<_Ns; ++I) {
-              G_inv(I, I) = (common::freq_point(iw, bare_gf.mesh1(), beta) + _xmu[I] - _Eps[I][is]);
-              for(int J = 0; J<_Ns; ++J){
-                 int im = I*_Ns + J;
-                 G_inv(I, J) += t[I][J];
-              }
-            }
-            G_inv = G_inv.inverse().eval();
-            for (int im: bare_gf.mesh2().points()) {
-              int I = im / _Ns;
-              int J = im % _Ns;
-              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = G_inv(I, J);
-            }
-          }
-        }
-      }
+      const std::pair<int, int>& indicies() const { return _indicies; }
+      const Prec&                value()    const { return _value; }
+      int                        spin()     const { return _spin; }
 
     private:
-      /// Symmetry
-      Symmetry::SzSymmetry _symmetry;
-      /// Hopping
-      std::vector < std::vector < precision > > t;
-      /// Interaction
-      std::vector < precision > U;
-      /// Exchange
-      std::vector < std::vector < precision > > J;
-      /// Chemical potential
-      std::vector < precision > _xmu;
-      /// Magnetic field
-      std::vector < precision > _Hmag;
-      /// site energy shift
-      std::vector < std::vector < precision > > _Eps;
-
-      /// Non-diagonal states iterators
-      std::vector < St > _states;
-      std::vector < St > _V_states;
+      std::pair<int, int> _indicies;
+      int                 _spin;
+      Prec                _value;
     };
 
   }
+
+  template <class Prec>
+  class HubbardModel : public FermionicModel {
+  public:
+    using precision = Prec;
+    using SYMMETRY  = SzSymmetry;
+    using St        = hubbard::InnerState<Prec>;
+    using Sector    = typename SzSymmetry::Sector;
+
+    /**
+     * Per-instance Hubbard parameters. All arrays are caller-supplied; the
+     * model performs no file I/O. Sizes are validated against the Parameters
+     * passed to the constructor.
+     */
+    struct ModelData {
+      std::vector<std::vector<Prec>> hopping;         ///< [nsites][nsites] -- mandatory
+      std::vector<Prec>              U;               ///< [nsites]         -- mandatory
+      std::vector<Prec>              mu;              ///< [nsites]         -- mandatory
+      std::vector<Prec>              magnetic_field;  ///< [nsites]         -- optional (zeros)
+      std::vector<std::vector<Prec>> exchange;        ///< [nsites][nsites] -- optional (zeros)
+      std::vector<std::vector<Prec>> site_energy;     ///< [nsites][nspins] -- optional (zeros)
+      std::vector<std::array<int,2>> sectors;         ///< optional sector restriction
+    };
+
+    HubbardModel(const Parameters& p, const ModelData& model_data)
+        : FermionicModel(p),
+          _symmetry(p, model_data.sectors),
+          _t(model_data.hopping),
+          _U(model_data.U),
+          _xmu(model_data.mu),
+          _Hmag(model_data.magnetic_field.empty()
+                ? std::vector<Prec>(p.nsites, Prec(0))
+                : model_data.magnetic_field),
+          _J(model_data.exchange.empty()
+             ? std::vector<std::vector<Prec>>(p.nsites,
+                   std::vector<Prec>(p.nsites, Prec(0)))
+             : model_data.exchange),
+          _Eps(model_data.site_energy.empty()
+               ? std::vector<std::vector<Prec>>(p.nsites,
+                     std::vector<Prec>(p.nspins, Prec(0)))
+               : model_data.site_energy) {
+      validate_model_data(p);
+      for (int ii = 0; ii < _Ns; ++ii) {
+        for (int jj = 0; jj < _Ns; ++jj) {
+          if (std::abs(_t[ii][jj]) > 1e-10) {
+            for (int is = 0; is < _ms; ++is) {
+              _states.emplace_back(ii, jj, is, _t[ii][jj]);
+            }
+          }
+        }
+      }
+    }
+
+    inline int valid(const St& state, long long nst) const {
+      return checkState(nst, state.indicies().first  + state.spin() * _Ns, _Ip)
+           * (1 - checkState(nst, state.indicies().second + state.spin() * _Ns, _Ip));
+    }
+
+    inline Prec set(const St& state, long long nst, long long& k, int& sign) const {
+      long long k1, k2;
+      int isign1, isign2;
+      a   (state.indicies().first  + state.spin() * _Ns, nst, k1, isign1);
+      adag(state.indicies().second + state.spin() * _Ns, k1,  k2, isign2);
+      k    = k2;
+      sign = -isign1 * isign2;  // -t c^+ c
+      return state.value();
+    }
+
+    inline Prec diagonal(long long state) const {
+      Prec xtemp = Prec(0);
+      for (int im = 0; im < _Ns; ++im) {
+        for (int is = 0; is < _ms; ++is) {
+          xtemp += (_Eps[im][is] - _xmu[is]) * checkState(state, im + is * _Ns, _Ip);
+        }
+        xtemp += _U[im]    * checkState(state, im,       _Ip) * checkState(state, im + _Ns, _Ip);
+        xtemp += _Hmag[im] * (checkState(state, im + _Ns, _Ip) - checkState(state, im, _Ip));
+        for (int im2 = 0; im2 < _Ns; ++im2) {
+          xtemp += _J[im][im2]
+                 * (checkState(state, im,        _Ip) - checkState(state, im + _Ns, _Ip))
+                 * (checkState(state, im2,       _Ip) - checkState(state, im2 + _Ns, _Ip));
+        }
+      }
+      return xtemp;
+    }
+
+    /// @deprecated kept for API parity with legacy callers
+    inline long long interacting_states(long long nst) const { return nst; }
+
+    const std::vector<St>& T_states() const { return _states; }
+    const std::vector<St>& V_states() const { return _V_states; }
+
+    int  interacting_orbitals() const { return _Ns; }
+
+    const SzSymmetry& symmetry() const { return _symmetry; }
+    SzSymmetry&       symmetry()       { return _symmetry; }
+
+    /// Read-only accessors used by legacy shims. Stable but not part of the
+    /// recommended public API; use bare_greens_function for the standard path.
+    const std::vector<std::vector<Prec>>& hopping_matrix() const { return _t; }
+    const std::vector<Prec>&              interaction()    const { return _U; }
+    const std::vector<Prec>&              chem_potential() const { return _xmu; }
+    const std::vector<std::vector<Prec>>& site_energy()    const { return _Eps; }
+
+    /**
+     * Compute the non-interacting Green's function on the supplied frequency
+     * mesh and fill bare_gf with shape [n_omega, _Ns * _Ns, _ms].
+     */
+    template <class Mesh>
+    void bare_greens_function(Gf<std::complex<double>, 3>& bare_gf,
+                              const Mesh& mesh,
+                              double beta) const {
+      const int n_omega = bare_gf.shape(0);
+      const int n_orb   = bare_gf.shape(1);
+      const int n_spin  = bare_gf.shape(2);
+      if (n_orb != _Ns * _Ns) {
+        throw std::invalid_argument("bare_greens_function: shape(1) must equal nsites*nsites");
+      }
+      for (int iw = 0; iw < n_omega; ++iw) {
+        std::complex<double> z = freq_point(iw, mesh, beta);
+        for (int is = 0; is < n_spin; ++is) {
+          Eigen::MatrixXcd G_inv = Eigen::MatrixXcd::Zero(_Ns, _Ns);
+          for (int I = 0; I < _Ns; ++I) {
+            G_inv(I, I) = z + _xmu[I] - _Eps[I][is];
+            for (int J = 0; J < _Ns; ++J) {
+              G_inv(I, J) += _t[I][J];
+            }
+          }
+          Eigen::MatrixXcd G = G_inv.inverse();
+          for (int I = 0; I < _Ns; ++I) {
+            for (int J = 0; J < _Ns; ++J) {
+              bare_gf(iw, I * _Ns + J, is) = G(I, J);
+            }
+          }
+        }
+      }
+    }
+
+  private:
+    void validate_model_data(const Parameters& p) const {
+      const int N = p.nsites;
+      auto bad = [](const char* what) { throw std::invalid_argument(what); };
+
+      if (static_cast<int>(_t.size())   != N) bad("HubbardModel: hopping must be [nsites][nsites]");
+      for (const auto& row : _t)
+        if (static_cast<int>(row.size()) != N) bad("HubbardModel: hopping rows must have size nsites");
+      if (static_cast<int>(_U.size())   != N) bad("HubbardModel: U must have size nsites");
+      if (static_cast<int>(_xmu.size()) != N) bad("HubbardModel: mu must have size nsites");
+      if (static_cast<int>(_Hmag.size())!= N) bad("HubbardModel: magnetic_field size mismatch");
+      if (static_cast<int>(_J.size())   != N) bad("HubbardModel: exchange must be [nsites][nsites]");
+      for (const auto& row : _J)
+        if (static_cast<int>(row.size()) != N) bad("HubbardModel: exchange rows must have size nsites");
+      if (static_cast<int>(_Eps.size()) != N) bad("HubbardModel: site_energy must be [nsites][nspins]");
+      for (const auto& row : _Eps)
+        if (static_cast<int>(row.size()) != p.nspins) bad("HubbardModel: site_energy rows must have size nspins");
+    }
+
+    SzSymmetry                       _symmetry;
+    std::vector<std::vector<Prec>>   _t;
+    std::vector<Prec>                _U;
+    std::vector<Prec>                _xmu;
+    std::vector<Prec>                _Hmag;
+    std::vector<std::vector<Prec>>   _J;
+    std::vector<std::vector<Prec>>   _Eps;
+
+    std::vector<St>                  _states;
+    std::vector<St>                  _V_states;
+  };
+
 }
-#endif //EDLIB_HUBBARDMODEL_H
+
+#endif

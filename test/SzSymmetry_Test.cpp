@@ -1,35 +1,27 @@
-//
-// Created by iskakoff on 22/07/16.
-//
+// Core-only SzSymmetry parity tests.
 
-#include "gtest/gtest.h"
+#include <edlib/Parameters.h>
+#include <edlib/SzSymmetry.h>
 
-#include "edlib/SzSymmetry.h"
-#include "edlib/EDParams.h"
+#include <gtest/gtest.h>
 
-
-TEST(SzSymmetryTest, Combinatorics) {
-  alps::params p;
-  EDLib::define_parameters(p);
-  EDLib::Symmetry::SzSymmetry sym(p);
+TEST(SzSymmetryCore, Combinatorics) {
+  edlib::Parameters p;
+  edlib::SzSymmetry sym(p);
   sym.init();
-
   ASSERT_EQ(sym.comb().c_n_k(3, 2), 3);
 }
 
-
-TEST(SzSymmetryTest, States) {
-  alps::params p;
-  EDLib::define_parameters(p);
-  EDLib::Symmetry::SzSymmetry sym(p);
+TEST(SzSymmetryCore, Construct) {
+  edlib::Parameters p;
+  edlib::SzSymmetry sym(p);
   sym.init();
 }
 
-TEST(SzSymmetryTest, Initialization) {
-  alps::params p;
-  EDLib::define_parameters(p);
-  EDLib::Symmetry::SzSymmetry sym(p);
-  while(sym.next_sector()) {
+TEST(SzSymmetryCore, IndexMatchesIteration) {
+  edlib::Parameters p;
+  edlib::SzSymmetry sym(p);
+  while (sym.next_sector()) {
     sym.init();
     int i = 0;
     while (sym.next_state()) {

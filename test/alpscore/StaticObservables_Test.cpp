@@ -1,9 +1,9 @@
 #include <gtest/gtest.h>
-#include "edlib/Hamiltonian.h"
-#include "edlib/HubbardModel.h"
-#include "edlib/Storage.h"
-#include "edlib/EDParams.h"
-#include "edlib/StaticObservables.h"
+#include "edlib/alpscore/Hamiltonian.h"
+#include "edlib/alpscore/HubbardModel.h"
+#include "edlib/alpscore/Storage.h"
+#include "edlib/alpscore/EDParams.h"
+#include "edlib/alpscore/StaticObservables.h"
 
 
 #ifdef USE_MPI

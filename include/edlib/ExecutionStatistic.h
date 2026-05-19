@@ -1,88 +1,57 @@
-//
-// Created by iskakoff on 02/02/17.
-//
-
 #ifndef EDLIB_EXECUTIONSTATISTIC_H
 #define EDLIB_EXECUTIONSTATISTIC_H
-
 
 #ifdef USE_MPI
 #include <mpi.h>
 #endif
 
-#include <string>
-#include <map>
 #include <chrono>
+#include <iostream>
+#include <map>
+#include <string>
+#include <utility>
 
-namespace EDLib {
-  namespace common {
-/**
- * @brief ExecutionStatistic class
- *
- * @author iskakoff
- */
-    class ExecutionStatistic {
-    public:
+namespace edlib {
 
-      ExecutionStatistic() {}
+  class ExecutionStatistic {
+  public:
+    void updateEvent(const std::string& name) {
+      double t = time();
+      _events[name] = {_events[name].first + t - _events[name].second, t};
+    }
 
-      /**
-       * Update event time
-       * @param name - event name
-       */
-      void updateEvent(const std::string& name) {
-        double time1 = time();
-        _events[name] = std::make_pair(_events[name].first + time1 - _events[name].second, time1);
+    void registerEvent(const std::string& name) {
+      _events[name] = {_events[name].first, time()};
+    }
+
+    void print() const {
+      for (const auto& kv : _events) {
+        std::cout << "Event " << kv.first << " take " << kv.second.first << "s." << std::endl;
       }
+    }
 
-      /**
-       * register the start point of the event
-       *
-       * @param name - event name
-       */
-      void registerEvent(const std::string& name) {
-        _events[name] = std::make_pair(_events[name].first, time());
-      }
+    std::pair<double, double> event(const std::string& name) const {
+      auto it = _events.find(name);
+      if (it == _events.end()) return {0.0, 0.0};
+      return it->second;
+    }
 
-      /**
-       * Print all observed events
-       */
-      void print() {
-        for (auto& kv : _events) {
-          std::cout <<"Event "<< kv.first << " take " << kv.second.first << "s." << std::endl;
-        }
-      }
+  private:
+    std::map<std::string, std::pair<double, double>> _events;
 
-      /**
-       * Return event timing pair
-       * @param event_name - event name
-       * @return event timing
-       */
-      std::pair<double, double> event(const std::string & event_name) {
-        if(_events.find(event_name) != _events.end()) {
-          return _events[event_name];
-        }
-        return std::make_pair(0.0, 0.0);
-      };
-    private:
-      // registered events timing pairs
-      // pair.first corresponds to total event time
-      // pair.second corresponds to last time when event was happened
-      std::map<std::string, std::pair<double, double> > _events;
-
-      double time() const {
+    static double time() {
 #ifdef USE_MPI
-        return MPI_Wtime();
+      return MPI_Wtime();
 #else
-        return std::chrono::duration_cast<std::chrono::duration<double> >(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+      return std::chrono::duration_cast<std::chrono::duration<double>>(
+                 std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
 #endif
-      }
-    };
+    }
+  };
 
-    static EDLib::common::ExecutionStatistic statistics;
-  }
+  inline ExecutionStatistic statistics;
+
 }
 
-
-
-#endif //EDLIB_EXECUTIONSTATISTIC_H
+#endif

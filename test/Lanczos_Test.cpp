@@ -1,142 +1,147 @@
-//
-// Created by iskakoff on 22/08/16.
-//
+// Core-only Lanczos / GF / Chi test. Mirrors legacy LanczosTest's reference
+// comparison against test/input/GF_Chi/{gom1,xiats,xiatd}.dat using only the
+// new edlib:: API.
+
+#include <edlib/ChiLoc.h>
+#include <edlib/GreensFunction.h>
+#include <edlib/Hamiltonian.h>
+#include <edlib/Mesh.h>
+#include <edlib/StaticObservables.h>
 
 #include <gtest/gtest.h>
-#include "edlib/Hamiltonian.h"
-#include "edlib/HubbardModel.h"
-#include "edlib/Storage.h"
-#include "edlib/EDParams.h"
-#include "edlib/StaticObservables.h"
-#include "edlib/GreensFunction.h"
-#include "edlib/ChiLoc.h"
-#include "edlib/MeshFactory.h"
+
+#include <cmath>
+#include <complex>
+#include <fstream>
+#include <vector>
 
 #ifdef USE_MPI
-
-class HubbardModelTestEnv : public ::testing::Environment {
-  protected:
-
-  ~HubbardModelTestEnv(){};
-
-};
-
-::testing::Environment* const foo_env = AddGlobalTestEnvironment(new HubbardModelTestEnv);
-
+#include <mpi.h>
 #endif
 
+namespace {
 
-TEST(HubbardModelTest, ReferenceTest) {
-  alps::params p;
-  EDLib::define_parameters(p);
-  p["NSITES"]=4;
-  p["NSPINS"]=2;
-  p["INPUT_FILE"]="test/input/GF_Chi/input.h5";
-  p["arpack.SECTOR"]=false;
-  p["storage.MAX_SIZE"]=864;
-  p["storage.MAX_DIM"]=36;
-  p["storage.EIGENVALUES_ONLY"]=0;
-  p["storage.ORBITAL_NUMBER"]=1;
-  p["arpack.NEV"]=100;
-  p["lanc.BETA"]=20;
-  p["lanc.EMIN"]=-4.0;
-  p["lanc.EMAX"]=4.0;
-  p["lanc.NOMEGA"]=1000;
-
-#ifdef USE_MPI
-  typedef EDLib::SRSHubbardHamiltonian HamType;
-#else
-  typedef EDLib::CSRHubbardHamiltonian HamType;
-#endif
-  HamType ham(p
-#ifdef USE_MPI
-  , MPI_COMM_WORLD
-#endif
-  );
-
-  ham.diag();
-
-  // Compute our GFs for the reference model.
-  EDLib::gf::GreensFunction < HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> greensFunction(p, ham,alps::gf::statistics::statistics_type::FERMIONIC);
-  greensFunction.compute();
-  auto G = greensFunction.G();
-  EDLib::StaticObservables<HamType> so(p);
-  std::map<std::string, std::vector<double>> observables = so.calculate_static_observables(ham);
-#ifdef USE_MPI
-  // StaticObservables reduces to rank 0; broadcast so the averages below
-  // are identical on every rank before being fed into susc.compute().
-  for(auto& kv : observables){
-    MPI_Bcast(kv.second.data(), kv.second.size(), MPI_DOUBLE, 0, ham.comm());
+double frob_diff(const std::vector<std::complex<double>>& a,
+                 const std::vector<std::complex<double>>& b) {
+  double s = 0.0;
+  for (std::size_t i = 0; i < a.size(); ++i) {
+    auto d = a[i] - b[i];
+    s += d.real() * d.real() + d.imag() * d.imag();
   }
-#endif
-  EDLib::gf::ChiLoc<HamType, EDLib::MatsubaraMeshFactory, alps::gf::statistics::statistics_type> susc(p, ham, alps::gf::statistics::statistics_type::BOSONIC);
-  // compute average magnetic moment
-  double avg = 0.0;
-  for(auto x : observables[so._M_]) {
-    avg += x / (2.0*observables[so._M_].size());
-  }
-  // compute spin susceptibility
-  susc.compute<EDLib::gf::SzOperator<double>>(&avg);
-  auto ChiSz = susc.G();
-  // compute average occupancy moment
-  avg = 0.0;
-  for(auto x : observables[so._N_]) {
-    avg += x / double(observables[so._N_].size());
-  }
-  // Compute sharge susceptibility
-  susc.compute<EDLib::gf::NOperator<double>>(&avg);
-  auto ChiN = susc.G();
-
-  // Read in the reference GFs.
-  // FIXME Desperate kludges. Must take the indextypes from GFs instead.
-  auto G_file = G;
-  std::ifstream infile("test/input/GF_Chi/gom1.dat");
-  for(size_t ii = 0; ii < 200; ++ii){
-   double omega, real, imag;
-   infile >> omega >> real >> imag;
-   for(size_t is = 0; is < ham.model().spins(); ++is){
-    G_file(alps::gf::generic_index<alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>>(ii), alps::gf::generic_index<alps::gf::index_mesh>(0), alps::gf::generic_index<alps::gf::index_mesh>(is)) = std::complex<double>(real, imag);
-   }
-  }
-  infile.close();
-  auto ChiSz_file = ChiSz;
-  infile.open("test/input/GF_Chi/xiats.dat");
-  for(size_t ii = 0; ii < 200; ++ii){
-   double omega, real, imag;
-   infile >> omega >> real >> imag;
-   // S_z = 0.5 M, <S_z S_z> = 0.25 <M M>
-   ChiSz_file(alps::gf::generic_index<alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>>(ii), alps::gf::generic_index<alps::gf::index_mesh>(0)) = std::complex<double>(-0.25 * real, 0.0);
-  }
-  infile.close();
-  auto ChiN_file = ChiN;
-  infile.open("test/input/GF_Chi/xiatd.dat");
-  for(size_t ii = 0; ii < 200; ++ii){
-   double omega, real, imag;
-   infile >> omega >> real >> imag;
-   ChiN_file(alps::gf::generic_index<alps::gf::matsubara_mesh<alps::gf::mesh::POSITIVE_ONLY>>(ii), alps::gf::generic_index<alps::gf::index_mesh>(0)) = std::complex<double>(-real, 0.0);
-  }
-  infile.close();
-
-#ifdef USE_MPI
-  // GreensFunction / ChiLoc accumulate into _G only on rank 0
-  // (see GreensFunction.h::local_contribution etc.). Compare against the
-  // reference only there; other ranks would see zero-filled buffers.
-  int _rk = 0;
-  MPI_Comm_rank(ham.comm(), &_rk);
-  if(_rk == 0)
-#endif
-  {
-    // Subtract the reference GF from our result, the norm() is then the largest diff.
-    G -= G_file;
-    ASSERT_NEAR(G.norm(), 0.0, 1e-10);
-    ChiSz -= ChiSz_file;
-    ASSERT_NEAR(ChiSz.norm(), 0.0, 1e-9);
-    ChiN -= ChiN_file;
-    ASSERT_NEAR(ChiN.norm(), 0.0, 1e-9);
-  }
+  return std::sqrt(s);
 }
 
-int main(int argc, char **argv) {
+}
+
+TEST(LanczosCore, ReferenceGFAndChi) {
+  edlib::Parameters p;
+  p.nsites             = 4;
+  p.nspins             = 2;
+  p.arpack_nev         = 100;
+  p.storage_max_size   = 864;
+  p.storage_max_dim    = 36;
+  p.lanc_beta          = 20.0;
+  p.lanc_nomega        = 1000;
+  p.lanc_nlanc         = 100;
+  p.lanc_emin          = -4.0;
+  p.lanc_emax          =  4.0;
+  p.lanc_boltzmann_cutoff = 1e-12;
+
+  edlib::HubbardModel<double>::ModelData bath;
+  bath.hopping = {
+    { 0.0,  1.0,  1.0, -0.3},
+    { 1.0,  0.0, -0.3,  1.0},
+    { 1.0, -0.3,  0.0,  1.0},
+    {-0.3,  1.0,  1.0,  0.0}
+  };
+  bath.U  = {3.0, 3.0, 3.0, 3.0};
+  bath.mu = {1.0, 1.0, 1.0, 1.0};
+
+#ifdef USE_MPI
+  using HamType = edlib::SRSHubbardHamiltonian;
+  HamType ham(p, bath, MPI_COMM_WORLD);
+#else
+  using HamType = edlib::CSRHubbardHamiltonian;
+  HamType ham(p, bath);
+#endif
+  ham.diag();
+
+  // Single-particle GF on orbital 0
+  edlib::MatsubaraMesh fmesh(p.lanc_beta, p.lanc_nomega, edlib::Statistics::Fermionic);
+  edlib::GreensFunction<HamType, edlib::MatsubaraMesh> gf(p, ham, fmesh, {{0, 0}});
+  gf.compute();
+
+  edlib::StaticObservables<HamType> so(p);
+  auto obs = so.calculate_static_observables(ham);
+#ifdef USE_MPI
+  for (auto& kv : obs)
+    MPI_Bcast(kv.second.data(), kv.second.size(), MPI_DOUBLE, 0, ham.comm());
+#endif
+
+  double avg_M = 0;
+  for (double m : obs[edlib::StaticObservables<HamType>::_M_]) {
+    avg_M += m / (2.0 * obs[edlib::StaticObservables<HamType>::_M_].size());
+  }
+  double avg_N = 0;
+  for (double n : obs[edlib::StaticObservables<HamType>::_N_]) {
+    avg_N += n / obs[edlib::StaticObservables<HamType>::_N_].size();
+  }
+
+  edlib::MatsubaraMesh bmesh(p.lanc_beta, p.lanc_nomega, edlib::Statistics::Bosonic);
+  edlib::ChiLoc<HamType, edlib::MatsubaraMesh> susc(p, ham, bmesh, {{0, 0}});
+  susc.compute<edlib::SzOperator<double>>(&avg_M);
+  auto chiSz = susc.G();
+  susc.compute<edlib::NOperator<double>>(&avg_N);
+  auto chiN = susc.G();
+
+#ifdef USE_MPI
+  int rank; MPI_Comm_rank(ham.comm(), &rank);
+  if (rank != 0) return;
+#endif
+
+  const std::string root = "test/input/GF_Chi/";
+
+  // Compare 200 frequencies × 2 spins for G
+  std::vector<std::complex<double>> G_ours(200 * 2), G_ref(200 * 2);
+  {
+    std::ifstream f(root + "gom1.dat");
+    ASSERT_TRUE(f.is_open()) << "Cannot open " << root << "gom1.dat";
+    for (int ii = 0; ii < 200; ++ii) {
+      double w, r, i; f >> w >> r >> i;
+      for (int is = 0; is < 2; ++is) {
+        G_ref [ii * 2 + is] = {r, i};
+        G_ours[ii * 2 + is] = gf.G()(ii, 0, is);
+      }
+    }
+  }
+  EXPECT_LT(frob_diff(G_ours, G_ref), 5e-10);
+
+  std::vector<std::complex<double>> Cs_ours(200), Cs_ref(200);
+  {
+    std::ifstream f(root + "xiats.dat");
+    ASSERT_TRUE(f.is_open());
+    for (int ii = 0; ii < 200; ++ii) {
+      double w, r, i; f >> w >> r >> i;
+      Cs_ref [ii] = {-0.25 * r, 0.0};   // legacy convention <Sz Sz> = 0.25 <M M>
+      Cs_ours[ii] = chiSz(ii, 0);
+    }
+  }
+  EXPECT_LT(frob_diff(Cs_ours, Cs_ref), 1e-9);
+
+  std::vector<std::complex<double>> Cn_ours(200), Cn_ref(200);
+  {
+    std::ifstream f(root + "xiatd.dat");
+    ASSERT_TRUE(f.is_open());
+    for (int ii = 0; ii < 200; ++ii) {
+      double w, r, i; f >> w >> r >> i;
+      Cn_ref [ii] = {-r, 0.0};
+      Cn_ours[ii] = chiN(ii, 0);
+    }
+  }
+  EXPECT_LT(frob_diff(Cn_ours, Cn_ref), 1e-9);
+}
+
+int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
 #ifdef USE_MPI
   MPI_Init(&argc, &argv);

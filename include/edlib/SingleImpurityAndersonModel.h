@@ -1,271 +1,228 @@
-//
-// Created by iskakoff on 23/08/16.
-//
-
 #ifndef EDLIB_SINGLEIMPURITYANDERSONMODEL_H
 #define EDLIB_SINGLEIMPURITYANDERSONMODEL_H
 
-#include <alps/gf/mesh.hpp>
-#include <alps/gf/gf.hpp>
-#include "FermionicModel.h"
-#include "CommonUtils.h"
+#include <array>
+#include <cmath>
+#include <complex>
+#include <stdexcept>
+#include <utility>
+#include <vector>
 
-namespace EDLib {
-  namespace Model {
-    namespace SingleImpurityAnderson {
-      template<typename prec>
-      class InnerState {
-      public:
-        virtual int valid(long long, int) const {return 0;};
-        virtual void set(long long,long long&, int&, int) const {};
-        int inline checkState(long long nst, int im, int Ns) const {
-          return (int)((nst & (1ll << (2*Ns - 1 - im))) >> (2*Ns - 1 - im));
-        }
+#include "edlib/CommonUtils.h"
+#include "edlib/FermionicModel.h"
+#include "edlib/Gf.h"
+#include "edlib/Mesh.h"
+#include "edlib/Parameters.h"
+#include "edlib/SzSymmetry.h"
 
-        /**
-         * Anihilate particle
-         * \param i [in] - site to anihilate particle
-         * \param jold [in] - current state
-         * \param k [out] - resulting state
-         * \param isign [out] - fermionic sign
-         * \param Ip [in] - number of fermionic sites
-         */
-        void inline a(int i, long long jold, long long &k, int &isign, int Ip) const {
-          long long sign = 0;
-          for (int ll = 0; ll < i; ++ll) {
-            sign += ((jold & (1ll << (Ip - ll - 1))) != 0) ? 1 : 0;
-          }
-          isign = (sign % 2) == 0 ? 1 : -1;
-          k = jold - (1ll << (Ip - i - 1));
-        }
+namespace edlib {
 
-        /**
-         * Create particle
-         * \param i [in] - site to create particle
-         * \param jold [in] - current state
-         * \param k [out] - resulting state
-         * \param isign [out] - fermionic sign
-         * \param Ip [in] - number of fermionic sites
-         */
-        void inline adag(int i, long long jold, long long &k, int &isign, int Ip) const {
-          long long sign = 0;
-          for (int ll = 0; ll < i; ++ll) {
-            sign += ((jold & (1ll << (Ip - ll - 1))) != 0) ? 1 : 0;
-          }
-          isign = (sign % 2) == 0 ? 1 : -1;
-          k = jold + (1ll << (Ip - i - 1));
-        }
+  namespace siam {
 
-        virtual inline prec value() const { return 0.0; }
-      };
-      template<typename prec>
-      class InnerHybridizationState : public InnerState<prec> {
-        using InnerState<prec>::checkState;
-        using InnerState<prec>::a;
-        using InnerState<prec>::adag;
-      public:
-        InnerHybridizationState(int ii, int jj, int spin, prec val) : _indicies(ii, jj), _spin(spin), _value(val) {};
-
-        const inline std::pair < int, int > &indicies() const { return _indicies; }
-
-        virtual inline prec value() const { return _value; }
-
-        inline int spin() const { return _spin; }
-        virtual int valid(long long nst, int Ns) const {
-          return (checkState(nst, _indicies.first + _spin * Ns, Ns) * (1 - checkState(nst, _indicies.second + _spin * Ns, Ns)));
-        }
-        virtual void set(long long nst,long long&k, int&sign, int Ns) const {
-          long long k1, k2;
-          int isign1, isign2;
-          a(_indicies.first + _spin * Ns, nst, k1, isign1, 2*Ns);
-          adag(_indicies.second + _spin * Ns, k1, k2, isign2, 2*Ns);
-          k = k2;
-          sign = isign1 * isign2;
-        }
-
-      private:
-        std::pair < int, int > _indicies;
-        int _spin;
-        prec _value;
-      };
-      template<typename prec>
-      class InnerInteractionState : public InnerState<prec> {
-        using InnerState<prec>::checkState;
-        using InnerState<prec>::a;
-        using InnerState<prec>::adag;
-      public:
-        InnerInteractionState(int i, int j, int k, int l, int sigma, int sigmaprime, prec U) :
-          _i(i), _j(j), _k(k), _l(l), _sigma(sigma), _sigmaprime(sigmaprime), _U(U) {}
-
-        int i() const {
-          return _i;
-        }
-
-        int j() const {
-          return _j;
-        }
-
-        int k() const {
-          return _k;
-        }
-
-        int l() const {
-          return _l;
-        }
-
-        prec U() const {
-          return _U;
-        }
-        /**
-         * @brief Check the possible transition
-         *
-         * Evaluate the following four operators product:
-         * a^*_i a^*_j a_l a_k | nst>
-         *
-         * @param nst - current state
-         * @param Ns - number of fermionic sites
-         * @return One if transition is possible
-         */
-        virtual int valid(long long nst, int Ns) const {
-          int Ip = 2*Ns;
-          if(checkState(nst, _k + _sigma * Ns, Ns) != 0) {
-            long long k3 = nst - (1ll << (Ip - 1 - _k - _sigma * Ns));
-            if (checkState(k3, _l + _sigmaprime * Ns, Ns) != 0) {
-              long long k4 = k3 - (1ll << (Ip - 1 - _l - _sigmaprime * Ns));
-              if (checkState(k4, _j + _sigmaprime * Ns, Ns) == 0) {
-                long long k2 = k4 | (1ll << (Ip - 1 - _j - _sigmaprime * Ns));
-                return (1-checkState(k2, _i + _sigma * Ns, Ns));
-              }
-            }
-          }
-          return 0;
-        }
-        /**
-         * @brief Computes the new state for inter-orbital Coulomb transition
-         *
-         * |k> = a^*_i a^*_j a_l a_k | nst>
-         *
-         * @param nst - current state
-         * @param k - next state
-         * @param sign - sign of transition
-         * @param Ns - number of fermionic sites
-         */
-        virtual void set(long long nst,long long&k, int&sign, int Ns) const {
-          long long k1, k2, k3, k4;
-          int isign1, isign2, isign3, isign4;
-          a(_k + _sigma * Ns, nst, k3, isign1, 2*Ns);
-          a(_l + _sigmaprime * Ns, k3, k4, isign2, 2*Ns);
-          adag(_j + _sigmaprime * Ns, k4, k2, isign3, 2*Ns);
-          adag(_i + _sigma * Ns, k2, k1, isign4, 2*Ns);
-          k = k1;
-          sign = isign1 * isign2*isign3*isign4;
-        }
-
-        /**
-         * @brief Return the interaction strength for current spin-orbital combination
-         * @return U_{ijkl}
-         */
-        virtual inline prec value() const { return 0.5*_U; }
-
-      private:
-        int _i;
-        int _j;
-        int _k;
-        int _l;
-        int _sigma;
-        int _sigmaprime;
-        prec _U;
-      };
-    }
     /**
-     * Single multi-orbital Impurity Anderson Model class
-     *
-     * @tparam prec - floating point precision
+     * Base inner state. Concrete derived states encode either a hopping /
+     * hybridisation transition (HybridisationInnerState) or a 4-operator
+     * interaction term (InteractionInnerState).
      */
-    template<typename prec>
-    class SingleImpurityAndersonModel : public FermionicModel {
+    template <class Prec>
+    class InnerState {
     public:
-      typedef prec precision;
-      typedef typename Symmetry::SzSymmetry SYMMETRY;
-      typedef typename SingleImpurityAnderson::InnerState<precision> St;
-      typedef typename SingleImpurityAnderson::InnerHybridizationState<precision> HSt;
-      typedef typename SingleImpurityAnderson::InnerInteractionState<precision> USt;
-      typedef typename Symmetry::SzSymmetry::Sector Sector;
+      virtual ~InnerState() = default;
+      // Non-pure defaults to mirror legacy alpscore-based hierarchy. Concrete
+      // derived states (HybridisationInnerState / InteractionInnerState) override
+      // them; extensions that add their own dispatch (HolsteinAnderson etc.) can
+      // ignore the 4-arg form and provide additional overloads of their own.
+      virtual int  valid(long long, int)                       const { return 0; }
+      virtual void set  (long long, long long&, int&, int)     const {}
+      virtual Prec value()                                     const { return Prec(0); }
 
-      SingleImpurityAndersonModel(alps::params &p): FermionicModel(p), _symmetry(p), _ml(p["siam.NORBITALS"]),
-                                                    _Vk(p["siam.NORBITALS"], std::vector<std::vector<double> >()),
-                                                    _H0(p["siam.NORBITALS"], std::vector<std::vector<double> >(p["siam.NORBITALS"], std::vector<double>(_ms, 0.0))),
-                                                    _bath_ind(p["siam.NORBITALS"], 0) {
-        std::string input = p["INPUT_FILE"];
-        alps::hdf5::archive input_data(input.c_str(), "r");
-        if (_ml > _Ns) {
-          throw std::invalid_argument("Incorrect values for the total number of sites and the number of orbitals. Please check input file.");
-        }
-        if(_ms != 2) {
-          throw std::invalid_argument("Incorrect values for the number of spins. Please check input file.");
-        }
-        _Ip = _ms * _Ns;
-        input_data >> alps::make_pvp("Bath/Epsk/values", _Epsk);
-        if(_Epsk.size() != _Ns - _ml) {
-          throw std::invalid_argument("Total number of state does not equal to sum of the total number of bath levels and the number of impurity orbitals");
-        }
-        for (int im = 0; im < _ml; ++im) {
-          std::stringstream s;
-          s<<"Bath/Vk_"<<im<<"/values";
-          input_data >> alps::make_pvp(s.str().c_str(), _Vk[im]);
-          s.str("");
-          s<<"H0_"<<im<<"/values";
-          input_data >> alps::make_pvp(s.str().c_str(), _H0[im]);
-        }
-        input_data >> alps::make_pvp("mu", _xmu);
-        input_data >> alps::make_pvp("interaction/values", _U);
-        input_data.close();
-        if(_U.shape()[2] != _ml) {
-          throw std::invalid_argument("Incorrect number of orbitals. Please check input file.");
-        }
-        for(int im = 0; im< _ml; ++im ){
-          if(_H0[im].size()>_ml) {
-            throw std::invalid_argument("Inter orbital hoppings array dimension are bigger than number of impurity orbitals");
-          }
-        }
-        // interorbital hoppings
-        for (int im = 0; im < _ml; ++im) {
-          for (int jm = 0; jm < im; ++jm) {
-            if(im == jm) {continue;}
-            for (int is = 0; is < _ms; ++is) {
-              if (std::abs(_H0[im][jm][is]) > 1e-10) {
-                _T_states.push_back(HSt(im, jm, is, _H0[im][jm][is]));
-                _T_states.push_back(HSt(jm, im, is, _H0[im][jm][is]));
-              }
+    protected:
+      static int checkState(long long nst, int im, int Ns) {
+        return static_cast<int>((nst & (1ll << (2 * Ns - 1 - im))) >> (2 * Ns - 1 - im));
+      }
+      static void a(int i, long long jold, long long& k, int& isign, int Ip) {
+        long long sign = 0;
+        for (int ll = 0; ll < i; ++ll) sign += ((jold & (1ll << (Ip - ll - 1))) != 0) ? 1 : 0;
+        isign = (sign % 2) == 0 ? 1 : -1;
+        k = jold - (1ll << (Ip - i - 1));
+      }
+      static void adag(int i, long long jold, long long& k, int& isign, int Ip) {
+        long long sign = 0;
+        for (int ll = 0; ll < i; ++ll) sign += ((jold & (1ll << (Ip - ll - 1))) != 0) ? 1 : 0;
+        isign = (sign % 2) == 0 ? 1 : -1;
+        k = jold + (1ll << (Ip - i - 1));
+      }
+    };
+
+    template <class Prec>
+    class HybridisationInnerState : public InnerState<Prec> {
+    public:
+      HybridisationInnerState(int ii, int jj, int spin, Prec val)
+          : _indicies(ii, jj), _spin(spin), _value(val) {}
+
+      const std::pair<int, int>& indicies() const { return _indicies; }
+      int                        spin()     const { return _spin; }
+      Prec                       value()    const override { return _value; }
+
+      int valid(long long nst, int Ns) const override {
+        return InnerState<Prec>::checkState(nst, _indicies.first  + _spin * Ns, Ns)
+             * (1 - InnerState<Prec>::checkState(nst, _indicies.second + _spin * Ns, Ns));
+      }
+      using InnerState<Prec>::set;
+      void set(long long nst, long long& k, int& sign, int Ns) const override {
+        long long k1, k2;
+        int isign1, isign2;
+        InnerState<Prec>::a   (_indicies.first  + _spin * Ns, nst, k1, isign1, 2 * Ns);
+        InnerState<Prec>::adag(_indicies.second + _spin * Ns, k1,  k2, isign2, 2 * Ns);
+        k    = k2;
+        sign = isign1 * isign2;
+      }
+
+    private:
+      std::pair<int, int> _indicies;
+      int                 _spin;
+      Prec                _value;
+    };
+
+    template <class Prec>
+    class InteractionInnerState : public InnerState<Prec> {
+    public:
+      InteractionInnerState(int i, int j, int k, int l, int sigma, int sigma_prime, Prec U)
+          : _i(i), _j(j), _k(k), _l(l),
+            _sigma(sigma), _sigmaprime(sigma_prime), _U(U) {}
+
+      int  i() const { return _i; }
+      int  j() const { return _j; }
+      int  k() const { return _k; }
+      int  l() const { return _l; }
+      Prec U() const { return _U; }
+
+      Prec value() const override { return Prec(0.5) * _U; }
+
+      using InnerState<Prec>::set;
+      int valid(long long nst, int Ns) const override {
+        int Ip = 2 * Ns;
+        if (InnerState<Prec>::checkState(nst, _k + _sigma * Ns, Ns) != 0) {
+          long long k3 = nst - (1ll << (Ip - 1 - _k - _sigma * Ns));
+          if (InnerState<Prec>::checkState(k3, _l + _sigmaprime * Ns, Ns) != 0) {
+            long long k4 = k3 - (1ll << (Ip - 1 - _l - _sigmaprime * Ns));
+            if (InnerState<Prec>::checkState(k4, _j + _sigmaprime * Ns, Ns) == 0) {
+              long long k2 = k4 | (1ll << (Ip - 1 - _j - _sigmaprime * Ns));
+              return (1 - InnerState<Prec>::checkState(k2, _i + _sigma * Ns, Ns));
             }
           }
         }
-        // fill hybridization part
-        for (int im = 0; im < _ml; ++im) {
-          for (int ik = 0; ik < _Vk[im].size(); ++ik) {
-            for (int is = 0; is < _ms; ++is) {
-              if (std::abs(_Vk[im][ik][is]) > 1e-10) {
-                int imk = ik + _ml;
-                _T_states.push_back(HSt(im, imk, is, _Vk[im][ik][is]));
-                _T_states.push_back(HSt(imk, im, is, _Vk[im][ik][is]));
-              }
+        return 0;
+      }
+      void set(long long nst, long long& k, int& sign, int Ns) const override {
+        long long k1, k2, k3, k4;
+        int isign1, isign2, isign3, isign4;
+        InnerState<Prec>::a   (_k + _sigma      * Ns, nst, k3, isign1, 2 * Ns);
+        InnerState<Prec>::a   (_l + _sigmaprime * Ns, k3,  k4, isign2, 2 * Ns);
+        InnerState<Prec>::adag(_j + _sigmaprime * Ns, k4,  k2, isign3, 2 * Ns);
+        InnerState<Prec>::adag(_i + _sigma      * Ns, k2,  k1, isign4, 2 * Ns);
+        k    = k1;
+        sign = isign1 * isign2 * isign3 * isign4;
+      }
+
+    private:
+      int  _i, _j, _k, _l;
+      int  _sigma, _sigmaprime;
+      Prec _U;
+    };
+
+  }
+
+  template <class Prec>
+  class SingleImpurityAndersonModel : public FermionicModel {
+  public:
+    using precision = Prec;
+    using SYMMETRY  = SzSymmetry;
+    using St        = siam::InnerState<Prec>;
+    using HSt       = siam::HybridisationInnerState<Prec>;
+    using USt       = siam::InteractionInnerState<Prec>;
+    using Sector    = typename SzSymmetry::Sector;
+
+    /**
+     * Caller-supplied bath / model data. Dimensions checked against
+     * Parameters::nsites, ::nspins and ::siam_norbitals at construction.
+     *
+     *   ml = p.siam_norbitals          (number of impurity orbitals)
+     *   Nk = p.nsites - ml             (number of bath levels)
+     *
+     *   Vk   [ml][Nk][nspins]          impurity-bath hybridisation
+     *   H0   [ml][ml][nspins]          non-interacting impurity Hamiltonian
+     *   Epsk [Nk][nspins]              bath energies
+     *   U    Gf<Prec,6> shape {nspins, nspins, ml, ml, ml, ml}
+     */
+    struct ModelData {
+      std::vector<std::vector<std::vector<Prec>>> Vk;
+      std::vector<std::vector<std::vector<Prec>>> H0;
+      std::vector<std::vector<Prec>>              Epsk;
+      Prec                                         mu = Prec(0);
+      Gf<Prec, 6>                                  U;
+      std::vector<std::array<int,2>>              sectors;
+    };
+
+    SingleImpurityAndersonModel(const Parameters& p, const ModelData& bath)
+        : FermionicModel(p),
+          _symmetry(p, bath.sectors),
+          _ml(p.siam_norbitals),
+          _Vk(bath.Vk),
+          _H0(bath.H0),
+          _Epsk(bath.Epsk),
+          _xmu(bath.mu),
+          _U(bath.U) {
+      if (p.nspins != 2) {
+        throw std::invalid_argument("SingleImpurityAndersonModel: NSPINS must be 2");
+      }
+      if (_ml > _Ns) {
+        throw std::invalid_argument("SingleImpurityAndersonModel: siam.NORBITALS exceeds NSITES");
+      }
+      const int Nk = _Ns - _ml;
+      if (static_cast<int>(_Epsk.size()) != Nk) {
+        throw std::invalid_argument("SingleImpurityAndersonModel: Epsk size must equal nsites - siam.NORBITALS");
+      }
+      if (_U.shape(2) != _ml || _U.shape(3) != _ml || _U.shape(4) != _ml || _U.shape(5) != _ml
+          || _U.shape(0) != p.nspins || _U.shape(1) != p.nspins) {
+        throw std::invalid_argument("SingleImpurityAndersonModel: U must have shape [nspins,nspins,ml,ml,ml,ml]");
+      }
+
+      // Inter-orbital hoppings within the impurity cluster
+      for (int im = 0; im < _ml; ++im) {
+        for (int jm = 0; jm < im; ++jm) {
+          for (int is = 0; is < _ms; ++is) {
+            if (std::abs(_H0[im][jm][is]) > 1e-10) {
+              _T_states.emplace_back(im, jm, is, _H0[im][jm][is]);
+              _T_states.emplace_back(jm, im, is, _H0[im][jm][is]);
             }
           }
         }
-        // fill off-diagonal interaction term
-        for (int is1 = 0; is1 < _ms; ++is1) {
-          for (int is2 = 0; is2 < _ms; ++is2) {
-            for (int i = 0; i < _ml; ++i) {
-              for (int j = 0; j < _ml; ++j) {
-                for (int k = 0; k < _ml; ++k) {
-                  for (int l = 0; l < _ml; ++l) {
-                    // skip density-density contribution
-                    if ( ( (i == l) && (j == k) && (is1==is2) ) || ( (i == k) && (j == l) ) ) {
-                      continue;
-                    }
-                    if(std::abs(_U(is1,is2,i,j,k,l)) != 0.0) {
-                      _V_states.push_back(USt(i, j, k, l, is1, is2, _U(is1,is2,i,j,k,l)));
-                    }
+      }
+
+      // Impurity-bath hybridisation
+      for (int im = 0; im < _ml; ++im) {
+        for (int ik = 0; ik < static_cast<int>(_Vk[im].size()); ++ik) {
+          for (int is = 0; is < _ms; ++is) {
+            if (std::abs(_Vk[im][ik][is]) > 1e-10) {
+              int imk = ik + _ml;
+              _T_states.emplace_back(im,  imk, is, _Vk[im][ik][is]);
+              _T_states.emplace_back(imk, im,  is, _Vk[im][ik][is]);
+            }
+          }
+        }
+      }
+
+      // Off-diagonal interaction terms (skip density-density which is in diagonal)
+      for (int is1 = 0; is1 < _ms; ++is1) {
+        for (int is2 = 0; is2 < _ms; ++is2) {
+          for (int i = 0; i < _ml; ++i) {
+            for (int j = 0; j < _ml; ++j) {
+              for (int k = 0; k < _ml; ++k) {
+                for (int l = 0; l < _ml; ++l) {
+                  if (((i == l) && (j == k) && (is1 == is2)) || ((i == k) && (j == l))) continue;
+                  if (std::abs(_U(is1, is2, i, j, k, l)) != Prec(0)) {
+                    _V_states.emplace_back(i, j, k, l, is1, is2, _U(is1, is2, i, j, k, l));
                   }
                 }
               }
@@ -273,149 +230,101 @@ namespace EDLib {
           }
         }
       }
+    }
 
-      /**
-       * computes diagonal contribution for the specific occupation basis state
-       * @param state - occupation basis state
-       * @return <state | H | state>
-       */
-      inline const precision diagonal(long long state) const {
-        precision xtemp = 0.0;
+    inline Prec diagonal(long long state) const {
+      Prec xtemp = Prec(0);
+      for (int is = 0; is < _ms; ++is) {
+        for (int ik = 0; ik < static_cast<int>(_Epsk.size()); ++ik) {
+          int ikm = ik + _ml;
+          xtemp += _Epsk[ik][is] * checkState(state, ikm + is * _Ns, _Ip);
+        }
+      }
+      for (int im = 0; im < _ml; ++im) {
         for (int is = 0; is < _ms; ++is) {
-          for (int ik = 0; ik < _Epsk.size(); ++ik) {
-            int ikm = ik + _ml;
-            xtemp+=(_Epsk[ik][is] * checkState(state, ikm + is * _Ns, _Ip));
-          }
+          xtemp += (_H0[im][im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
         }
-        for (int im = 0; im < _ml; ++im) {
-          for (int is = 0; is < _ms; ++is) {
-            xtemp += (_H0[im][im][is] - _xmu) * checkState(state, im + is * _Ns, _Ip);
-          }
-          for (int is = 0; is < _ms; ++is) {
-            xtemp += 0.5*_U(is,is,im,im,im,im) * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
-          }
-          for(int jm = 0; jm < _ml; ++jm) {
-            for(int is = 0; is< _ms; ++is)
-            if(im!=jm) {
-              xtemp += 0.5 * (_U(is,is,im,jm,im,jm) - _U(is,is,im,jm,jm,im)) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + is*_Ns, _Ip);
-              xtemp += 0.5 * (_U(is,1-is,im,jm,im,jm)) * checkState(state, im + is*_Ns, _Ip) * checkState(state, jm + (1-is)*_Ns, _Ip);
-            }
-          }
-        }
-        return xtemp;
-      }
-
-      /**
-       * @deprecated
-       */
-      inline long long interacting_states(long long nst) {
-        long long up = 0;
         for (int is = 0; is < _ms; ++is) {
-          up = nst >> (_Ip - _ml);
+          xtemp += Prec(0.5) * _U(is, is, im, im, im, im)
+                 * checkState(state, im, _Ip) * checkState(state, im + _Ns, _Ip);
         }
-        long long down = (nst & ((1ll<<_Ns) - 1))>>(_Ns-_ml);
-        return (up<<_ml) + down;
-      }
-
-      /**
-       * Check that state describes valid transition for basis vector |nst>
-       * @param state - transition state
-       * @param nst - occupation basis vector
-       * @return 1 or 0 wheater the transition is possible or not respectively
-       */
-      inline int valid(const St &state, long long nst) {
-        return state.valid(nst, _Ns);
-      }
-
-      /**
-       * Perform transition "state" from state |nst> to |k>
-       * @param state
-       * @param nst
-       * @param k
-       * @param sign
-       * @return contribution to off-diagonal Hamilonian element
-       */
-      inline precision set(const St &state, long long nst, long long &k, int &sign) {
-        state.set(nst, k, sign, _Ns);
-        return state.value();
-      }
-
-      /**
-       * Model symmetry type
-       */
-      SYMMETRY &symmetry() {
-        return _symmetry;
-      }
-
-      /**
-       * @return Hybridization transitions
-       */
-      inline const std::vector<HSt>& T_states() const {
-        return _T_states;
-      }
-      /**
-       * @return Off-diagonal Coulomb transitions
-       */
-      inline const std::vector<USt>& V_states() const {
-        return _V_states;
-      }
-
-      /**
-       * Only impurity orbitals have Coulomb interaction. Bath is non-interacting.
-       * @return number of impurity orbitals
-       */
-      int interacting_orbitals() const {
-        return _ml;
-      }
-
-      /**
-       * Computes bare Green's function
-       * @tparam Mesh - Green's function frequency mesh
-       * @param bare_gf - Bare Green's function container
-       * @param beta - inverse temperature
-       */
-      template<typename Mesh>
-      void bare_greens_function(alps::gf::three_index_gf<std::complex<double>, Mesh, alps::gf::index_mesh, alps::gf::index_mesh >& bare_gf, double beta) {
-        for(int iw = 0; iw< bare_gf.mesh1().points().size(); ++iw) {
-          typename Mesh::index_type w(iw);
-          for (int im: bare_gf.mesh2().points()) {
-            for (int is : bare_gf.mesh3().points()) {
-              std::complex<double> delta = 0;
-              for(int ik = 0; ik< _Epsk.size(); ++ik) {
-                delta += _Vk[im][ik][is]*_Vk[im][ik][is]/(common::freq_point(iw, bare_gf.mesh1(), beta) - _Epsk[ik][is]);
-              }
-              bare_gf(w, alps::gf::index_mesh::index_type(im), alps::gf::index_mesh::index_type(is)) = 1.0/(common::freq_point(iw, bare_gf.mesh1(), beta) - _H0[im][im][is] - delta);
+        for (int jm = 0; jm < _ml; ++jm) {
+          for (int is = 0; is < _ms; ++is) {
+            if (im != jm) {
+              xtemp += Prec(0.5) * (_U(is, is, im, jm, im, jm) - _U(is, is, im, jm, jm, im))
+                     * checkState(state, im + is * _Ns, _Ip) * checkState(state, jm + is * _Ns, _Ip);
+              xtemp += Prec(0.5) * _U(is, 1 - is, im, jm, im, jm)
+                     * checkState(state, im + is * _Ns, _Ip) * checkState(state, jm + (1 - is) * _Ns, _Ip);
             }
           }
         }
       }
+      return xtemp;
+    }
 
-    private:
-      /// model symmetry
-      SYMMETRY _symmetry;
-      /// number of impurity orbitals
-      int _ml;
-      /// Coulomb interaction matrix
-      alps::numerics::tensor<precision, 6> _U;
-      /// chemical potential
-      precision _xmu;
-      /// number of bath states
-      int _Nk;
-      /// Non-interacting impurity Hamiltonian
-      std::vector < std::vector < std::vector < precision > > > _H0;
-      /// Hybridization with bath
-      std::vector < std::vector < std::vector < precision > > > _Vk;
-      /// Bath energy levels
-      std::vector < std::vector < precision > > _Epsk;
-      /// indices for bath
-      std::vector<int> _bath_ind;
+    inline int  valid(const St& state, long long nst) const { return state.valid(nst, _Ns); }
+    inline Prec set  (const St& state, long long nst, long long& k, int& sign) const {
+      state.set(nst, k, sign, _Ns);
+      return state.value();
+    }
 
-      /// Kinetic part of the off-diagonal Hamiltonian elements
-      std::vector < HSt > _T_states;
-      /// Interaction part of the off-diagonal Hamiltonian elements
-      std::vector < USt > _V_states;
-    };
+    /// @deprecated kept for API parity
+    inline long long interacting_states(long long nst) const {
+      long long up   = nst >> (_Ip - _ml);
+      long long down = (nst & ((1ll << _Ns) - 1)) >> (_Ns - _ml);
+      return (up << _ml) + down;
+    }
 
-  }
+    SzSymmetry&       symmetry()       { return _symmetry; }
+    const SzSymmetry& symmetry() const { return _symmetry; }
+
+    int  interacting_orbitals() const { return _ml; }
+
+    const std::vector<HSt>& T_states() const { return _T_states; }
+    const std::vector<USt>& V_states() const { return _V_states; }
+
+    /// Read-only accessors used by legacy shims.
+    const std::vector<std::vector<std::vector<Prec>>>& hybridisation() const { return _Vk; }
+    const std::vector<std::vector<std::vector<Prec>>>& H0()            const { return _H0; }
+    const std::vector<std::vector<Prec>>&              bath_energies() const { return _Epsk; }
+    Prec                                               chem_potential() const { return _xmu; }
+
+    template <class Mesh>
+    void bare_greens_function(Gf<std::complex<double>, 3>& bare_gf,
+                              const Mesh& mesh,
+                              double beta) const {
+      const int n_omega = bare_gf.shape(0);
+      const int n_orb   = bare_gf.shape(1);
+      const int n_spin  = bare_gf.shape(2);
+      for (int iw = 0; iw < n_omega; ++iw) {
+        std::complex<double> z = freq_point(iw, mesh, beta);
+        for (int im = 0; im < n_orb; ++im) {
+          for (int is = 0; is < n_spin; ++is) {
+            std::complex<double> delta(0.0, 0.0);
+            for (int ik = 0; ik < static_cast<int>(_Epsk.size()); ++ik) {
+              delta += static_cast<double>(_Vk[im][ik][is]) * static_cast<double>(_Vk[im][ik][is])
+                     / (z - static_cast<double>(_Epsk[ik][is]));
+            }
+            bare_gf(iw, im, is) = 1.0
+                / (z - static_cast<double>(_H0[im][im][is]) - delta);
+          }
+        }
+      }
+    }
+
+  private:
+    SzSymmetry                                    _symmetry;
+    int                                           _ml;
+    std::vector<std::vector<std::vector<Prec>>>   _Vk;
+    std::vector<std::vector<std::vector<Prec>>>   _H0;
+    std::vector<std::vector<Prec>>                _Epsk;
+    Prec                                          _xmu;
+    Gf<Prec, 6>                                   _U;
+
+    std::vector<HSt>                              _T_states;
+    std::vector<USt>                              _V_states;
+  };
+
 }
-#endif //EDLIB_SINGLEIMPURITYANDERSONMODEL_H
+
+#endif

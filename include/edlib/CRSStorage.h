@@ -1,229 +1,203 @@
-//
-// Created by iskakoff on 20/07/16.
-//
-
 #ifndef EDLIB_CRSSTORAGE_H
 #define EDLIB_CRSSTORAGE_H
 
-
-#include <vector>
+#include <cstddef>
 #include <iomanip>
-#include "Storage.h"
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <vector>
 
-namespace EDLib {
-  namespace Storage {
-    template<class ModelType>
-    class CRSStorage : public Storage < typename ModelType::precision > {
-      typedef typename ModelType::precision prec;
-      using Storage < prec >::n;
-      using Storage < prec >::ntot;
-    public:
-      typedef ModelType Model;
+#include "edlib/Parameters.h"
+#include "edlib/Storage.h"
+
+namespace edlib {
+
+  template <class ModelType>
+  class CRSStorage : public Storage<typename ModelType::precision> {
+  public:
+    using Model = ModelType;
+    using prec  = typename ModelType::precision;
+    using Storage<prec>::n;
+    using Storage<prec>::ntot;
+
 #ifdef USE_MPI
-      CRSStorage(alps::params &p, Model &s, MPI_Comm comm) : Storage < prec >(p, comm),
+    CRSStorage(const Parameters& p, Model& m, MPI_Comm comm)
+        : Storage<prec>(p, comm),
+          _max_size(p.storage_max_size),
+          _max_dim(p.storage_max_dim),
+          _model(m) {}
 #else
-      CRSStorage(alps::params &p, Model &s) : Storage < prec >(p),
+    CRSStorage(const Parameters& p, Model& m)
+        : Storage<prec>(p),
+          _max_size(p.storage_max_size),
+          _max_dim(p.storage_max_dim),
+          _model(m) {}
 #endif
-                                          _vind(0), _model(s) {
-        _max_size = p["storage.MAX_SIZE"];
-        _max_dim = p["storage.MAX_DIM"];
-        // init what you need from parameters
-      };
 
-      void init() {
-        _model.symmetry().init();
+    void init() { _model.symmetry().init(); }
+
+    void reset() {
+      _model.symmetry().init();
+      const std::size_t sector_size = _model.symmetry().sector().size();
+      if (sector_size > _max_dim) {
+        std::stringstream s;
+        s << "CRSStorage: sector requests more memory than allocated. "
+             "Increase storage.MAX_DIM. Requested " << sector_size
+          << ", allocated " << _max_dim << ".";
+        throw std::runtime_error(s.str());
       }
+      _vind = 0;
+      row_ptr.assign(_max_dim + 1, 0);
+      col_ind.assign(_max_size, 0);
+      values .assign(_max_size, prec(0));
+      n()    = 0;
+      ntot() = 0;
+    }
 
-      void reset() {
-        _model.symmetry().init();
-        size_t sector_size = _model.symmetry().sector().size();
-        if (sector_size > _max_dim) {
-          std::stringstream s;
-          s << "Current sector request more memory than allocated. Increase MAX_DIM parameter. Requested " << sector_size << ", allocated " << _max_dim << ".";
-          throw std::runtime_error(s.str().c_str());
-        }
-        _vind = 0;
-        row_ptr.assign(_max_dim + 1, 0);
-        col_ind.assign(_max_size, 0);
-        values.assign(_max_size, prec(0.0));
-        n() = 0;
-        ntot() = 0;
-      }
-
-      /**
-       * Simple Compressed-Row-Storage Matrix-Vector product
-       */
-      virtual void av(prec *v, prec *w, int n, bool clear = true) {
-        for (int i = 0; i < n; ++i) {
-          w[i] = clear ? 0.0 : w[i];
-          for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
-            w[i] = w[i] + values[j] * v[col_ind[j]];
-          }
+    void av(prec* v, prec* w, int n_local, bool clear = true) override {
+      for (int i = 0; i < n_local; ++i) {
+        w[i] = clear ? prec(0) : w[i];
+        for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
+          w[i] += values[j] * v[col_ind[j]];
         }
       }
+    }
 
-      void fill() {
-        reset();
-        int i = 0;
-        long long k = 0;
-        int isign = 0;
-        while (_model.symmetry().next_state()) {
-          long long nst = _model.symmetry().state();
-          // Compute diagonal element for current i state
-          addDiagonal(i, _model.diagonal(nst));
-          // non-diagonal terms calculation
-          // hoppings
-          off_diagonal<decltype(_model.T_states())>(nst, i, _model.T_states());
-          // interactions
-          off_diagonal<decltype(_model.V_states())>(nst, i, _model.V_states());
-          i++;
-        }
-        endMatrix();
+    void fill() {
+      reset();
+      int i = 0;
+      while (_model.symmetry().next_state()) {
+        long long nst = _model.symmetry().state();
+        addDiagonal(i, _model.diagonal(nst));
+        off_diagonal(nst, i, _model.T_states());
+        off_diagonal(nst, i, _model.V_states());
+        ++i;
       }
+      endMatrix();
+    }
 
-      void print() {
-        std::cout << std::setprecision(2) << std::fixed;
+    void print() const {
+      std::cout << std::setprecision(2) << std::fixed << "{";
+      for (int i = 0; i < n(); ++i) {
         std::cout << "{";
-        for (int i = 0; i < n(); ++i) {
-          std::cout << "{";
-          for (int j = 0; j < n(); ++j) {
-            bool f = true;
-            for (int k = row_ptr[i]; k < row_ptr[i + 1]; ++k) {
-              if ((col_ind[k]) == j) {
-                std::cout << std::setw(6) << values[k] << (j == n() - 1 ? "" : ", ");
-                f = false;
-              } /*else {
-            std::cout<<"0.0 ";
-          }*/
-            }
-            if (f) {
-              std::cout << std::setw(6) << 0.0 << (j == n() - 1 ? "" : ", ");
+        for (int j = 0; j < n(); ++j) {
+          bool f = true;
+          for (int k = row_ptr[i]; k < row_ptr[i + 1]; ++k) {
+            if (col_ind[k] == j) {
+              std::cout << std::setw(6) << values[k] << (j == n() - 1 ? "" : ", ");
+              f = false;
             }
           }
-          std::cout << "}" << (i == n() - 1 ? "" : ", \n");
+          if (f) std::cout << std::setw(6) << 0.0 << (j == n() - 1 ? "" : ", ");
         }
-        std::cout << "}" << std::endl;
+        std::cout << "}" << (i == n() - 1 ? "" : ", \n");
       }
+      std::cout << "}" << std::endl;
+    }
 
-      virtual void zero_eigenapair() {
-        Storage < prec >::eigenvalues().resize(1);
-        Storage < prec >::eigenvalues()[0] = values[0];
-        Storage < prec >::eigenvectors().assign(1, std::vector < prec >(1, prec(1.0)));
-      }
-      size_t vector_size(typename Model::Sector sector) {
-        return sector.size();
-      }
+    void zero_eigenapair() override {
+      this->eigenvalues().resize(1);
+      this->eigenvalues()[0] = values[0];
+      this->eigenvectors().assign(1, std::vector<prec>(1, prec(1)));
+    }
+
+    std::size_t vector_size(typename Model::Sector sector) const {
+      return sector.size();
+    }
 
 #ifdef USE_MPI
-      prec vv(const std::vector<prec> & v, const std::vector<prec> & w, MPI_Comm com) {
-        return vv(v, w);
-      }
+    prec vv(const std::vector<prec>& v, const std::vector<prec>& w, MPI_Comm /*com*/) const {
+      return vv(v, w);
+    }
 #endif
-      prec vv(const std::vector<prec> & v, const std::vector<prec> & w) {
-        prec alf = prec(0.0);
-        for (int k = 0; k < v.size(); ++k) {
-          alf += w[k] * v[k];
+    prec vv(const std::vector<prec>& v, const std::vector<prec>& w) const {
+      prec alf = prec(0);
+      for (std::size_t k = 0; k < v.size(); ++k) alf += w[k] * v[k];
+      return alf;
+    }
+
+    void a_adag(int iii, const std::vector<prec>& invec, std::vector<prec>& outvec,
+                const typename Model::Sector& next_sec, bool a) {
+      long long k;
+      int sign;
+      int i = 0;
+      while (_model.symmetry().next_state()) {
+        long long nst = _model.symmetry().state();
+        if (_model.checkState(nst, iii, _model.max_total_electrons()) == (a ? 1 : 0)) {
+          if (a) _model.a   (iii, nst, k, sign);
+          else   _model.adag(iii, nst, k, sign);
+          int i1 = _model.symmetry().index(k, next_sec);
+          outvec[i1] = sign * invec[i];
         }
-        return alf;
+        ++i;
       }
+    }
 
-      void a_adag(int iii, const std::vector < prec > &invec, std::vector < prec > &outvec, const typename Model::Sector& next_sec, bool a) {
-        long long k;
-        int sign;
-        int i = 0;
-        while (_model.symmetry().next_state()) {
-          long long nst = _model.symmetry().state();
-          if (_model.checkState(nst, iii, _model.max_total_electrons()) == (a ? 1 : 0)) {
-            if(a) _model.a(iii, nst, k, sign);
-            else _model.adag(iii, nst, k, sign);
-            int i1 = _model.symmetry().index(k, next_sec);
-            outvec[i1] = sign * invec[i];
-          }
-          ++i;
-        };
-      }
-
-      void constant_shift(prec shift) {
-        for (int i = 0; i < n; ++i) {
-          for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
-            if(col_ind[j] == i) {
-              values[j] += shift;
-            }
-          }
+    void constant_shift(prec shift) {
+      for (int i = 0; i < n(); ++i) {
+        for (int j = row_ptr[i]; j < row_ptr[i + 1]; ++j) {
+          if (col_ind[j] == i) values[j] += shift;
         }
       }
+    }
 
-    private:
-      std::vector < prec > values;
-      std::vector < int > row_ptr;
-      std::vector < int > col_ind;
-      size_t _max_size;
-      size_t _max_dim;
+  private:
+    void addDiagonal(int i, prec v) {
+      row_ptr[i]    = static_cast<int>(_vind);
+      col_ind[_vind] = i;
+      values [_vind] = v;
+      ++_vind;
+      ++n();
+      ++ntot();
+    }
 
-
-      size_t _vind;
-
-      Model &_model;
-
-      void inline addDiagonal(const int &i, prec v) {
-        row_ptr[i] = _vind;
-        col_ind[_vind] = i;
-        values[_vind] = v;
+    void addElement(int i, int j, prec t, int sign) {
+      bool        hasstate = false;
+      std::size_t foundstate = 0;
+      for (std::size_t k = row_ptr[i]; k < _vind; ++k) {
+        if (col_ind[k] == j) { hasstate = true; foundstate = k; }
+      }
+      if (hasstate) {
+        values[foundstate] += static_cast<prec>(sign) * t;
+      } else {
+        col_ind[_vind] = j;
+        values [_vind] = static_cast<prec>(sign) * t;
         ++_vind;
-        ++n();
-        ++ntot();
       }
+      if (_vind > _max_size) {
+        std::stringstream s;
+        s << "CRSStorage: sector requests more memory than allocated. "
+             "Increase storage.MAX_SIZE. Requested " << _vind
+          << ", allocated " << _max_size << ".";
+        throw std::runtime_error(s.str());
+      }
+    }
 
-      /**
-       * Add off-diagonal H(i,j) element
-       */
-      void inline addElement(int i, int j, prec t, int sign) {
-        bool hasstate = false;
-        size_t foundstate = 0;
-        // check that there is no any data on the k state
-        for (size_t iii = row_ptr[i]; iii < _vind; ++iii) {
-          if (col_ind[iii] == j) {
-            hasstate = true;
-            foundstate = iii;
-          }
-        }
-        // In case of multi-orbital Coulomb interaction we can have contribution from different Coulomb interactions
-        if(hasstate) {
-          values[foundstate] += sign * t;
-        } else {
-          // create new element in CRS arrays
-          col_ind[_vind] = j;
-          values[_vind] = sign * t;
-          ++_vind;
-        }
-        if (_vind > _max_size) {
-          std::stringstream s;
-          s << "Current sector request more memory than allocated. Increase MAX_SIZE parameter. Requested " << _vind << ", allocated " << _max_size << ".";
-          throw std::runtime_error(s.str().c_str());
+    template <class TStates>
+    void off_diagonal(long long nst, int i, const TStates& states) {
+      long long k = 0;
+      int isign = 0;
+      for (std::size_t kkk = 0; kkk < states.size(); ++kkk) {
+        if (_model.valid(states[kkk], nst)) {
+          prec val = _model.set(states[kkk], nst, k, isign);
+          int  k_index = _model.symmetry().index(k);
+          addElement(i, k_index, val, isign);
         }
       }
+    }
 
-      template<typename T_states>
-      inline void off_diagonal(long long nst, int i, T_states states) {
-        long long k = 0;
-        int isign = 0;
-        for (int kkk = 0; kkk < states.size(); ++kkk) {
-          // check that there is transition for current state
-          if (_model.valid(states[kkk], nst)) {
-            // set new state
-            prec val = _model.set(states[kkk], nst, k, isign);
-            int k_index = _model.symmetry().index(k);
-            addElement(i, k_index, val, isign);
-          }
-        }
-      };
+    void endMatrix() { row_ptr[n()] = static_cast<int>(_vind); }
 
-      // update the reference to the matrix end
-      void endMatrix() {
-        row_ptr[n()] = _vind;
-      }
-    };
+    std::vector<prec> values;
+    std::vector<int>  row_ptr;
+    std::vector<int>  col_ind;
+    std::size_t       _max_size;
+    std::size_t       _max_dim;
+    std::size_t       _vind = 0;
+    Model&            _model;
+  };
 
-  }
 }
-#endif //EDLIB_CRSSTORAGE_H
+
+#endif
