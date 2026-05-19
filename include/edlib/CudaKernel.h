@@ -6,15 +6,7 @@
 // This is the GPU counterpart of HostKernel.h. A storage exposes
 // `using kernel_type = CudaKernel<ThatStorage>;` and Lanczos pulls it from
 // there (no template parameter is threaded through Lanczos / GreensFunction
-// / ChiLoc). CudaKernel is generic over the storage: it only uses the
-// storage's public device interface (device_matvec, build_adag_map) plus
-// the shared types here, so it does not depend on any concrete storage
-// header and there is no circular include.
-//
-// Compilation contract (same as cpp-arnoldi's cuda.hpp): only active when
-// EDLIB_USE_CUDA is set AND the current TU is compiled by nvcc
-// (__CUDACC__). Plain .cpp TUs that pull this in transitively see an empty
-// file.
+// / ChiLoc).
 
 #if defined(EDLIB_USE_CUDA) && defined(__CUDACC__)
 
