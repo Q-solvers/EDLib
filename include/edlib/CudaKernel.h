@@ -103,21 +103,11 @@ namespace edlib {
   /**
    * Fully device-resident Lanczos kernel.
    *
-   * Krylov vectors, the c/c+ start vector, and the eigenvector all live in
-   * cuda::DeviceVec (GPU). There is NO per-iteration host<->device staging:
+   * All n-size vectors live in cuda::DeviceVec (GPU). There is NO per-iteration host<->device staging:
    * av is the storage device matvec on a private stream, vv is cuBLAS dot,
-   * the three-term recurrence / axpy / scale are device kernels, and a_adag
-   * is a device scatter driven by a host-built (index, sign) map (the only
-   * O(N) host work, identical in cost to the host a_adag traversal).
+   * the three-term recurrence / axpy / scale are device kernels.
    * The stream is synchronised only when a host scalar is actually needed
    * (inside dot), i.e. ~twice per Lanczos iteration instead of every av.
-   *
-   * Storage contract used here (all public on the storage):
-   *   using prec; using Model;  Model::Sector;
-   *   void device_matvec(const prec* dv, prec* dw, bool clear, cudaStream_t);
-   *   void build_adag_map(int op, const Sector& next, bool a,
-   *                       std::size_t loc, std::vector<int>& idx,
-   *                       std::vector<int>& sgn);
    */
   template <class Storage>
   class CudaKernel {
