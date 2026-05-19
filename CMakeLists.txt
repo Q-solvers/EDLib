@@ -83,7 +83,7 @@ endif()
 if(EDLIB_WITH_ALPSCORE)
     FetchContent_Declare(edlib_alpscore
         GIT_REPOSITORY https://github.com/Q-solvers/EDLib-alpscore.git
-        GIT_TAG        master)
+        GIT_TAG        v3.0.0a)
     FetchContent_MakeAvailable(edlib_alpscore)
     list(APPEND extlibs EDLib::Alpscore)
 
