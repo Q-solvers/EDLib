@@ -9,20 +9,13 @@ namespace edlib {
   /**
    * Host (CPU) Lanczos kernel.
    *
-   * A kernel owns the residency of the Lanczos working vectors and
-   * implements every vector-level operation the Lanczos / Green's-function
-   * path needs: allocation, the three-term recurrence, dot products, the
-   * matrix-vector product, and the c / c+ application that builds the start
-   * vector. The default kernel simply forwards to the storage's existing
-   * host methods so behaviour is byte-identical to the pre-kernel code.
+   * A kernel owns the Lanczos working vectors and implements every
+   * vector-level operation the Lanczos / Green's-function needs.
    *
    * Storages expose their kernel via `using kernel_type = ...;` and Lanczos
    * pulls it from there -- no template parameter is threaded through
    * Lanczos / GreensFunction / ChiLoc.
    *
-   * Vector == Storage::eigenvector_type so the eigenvector handed to
-   * a_adag, the start vector, and the Krylov vectors all live in the same
-   * space (host std::vector here; a device buffer for a device kernel).
    */
   template <class Storage>
   class HostKernel {
