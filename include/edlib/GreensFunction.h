@@ -300,7 +300,11 @@ namespace edlib {
         kernel().add(outvec, tmp);
       }
       edlib::statistics.updateEvent("adag");
-      double norm = kernel().dot(outvec, outvec);
+      double norm = kernel().dot(outvec, outvec
+#ifdef USE_MPI
+       , hamiltonian().comm()
+#endif
+      );
       kernel().scale(outvec, precision(1) / std::sqrt(norm));
       _model.symmetry().set_sector(next_sec);
       expectation_value = static_cast<precision>(norm);
@@ -325,7 +329,11 @@ namespace edlib {
         kernel().add(outvec, tmp);
       }
       edlib::statistics.updateEvent("a");
-      double norm = kernel().dot(outvec, outvec);
+      double norm = kernel().dot(outvec, outvec
+#ifdef USE_MPI
+       , hamiltonian().comm()
+#endif
+      );
       kernel().scale(outvec, precision(1) / std::sqrt(norm));
       _model.symmetry().set_sector(next_sec);
       expectation_value = static_cast<precision>(norm);

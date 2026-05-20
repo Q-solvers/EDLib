@@ -4,6 +4,10 @@
 #include <cstddef>
 #include <vector>
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 namespace edlib {
 
   /**
@@ -38,6 +42,12 @@ namespace edlib {
     }
 
     prec dot(const Vector& a, const Vector& b) const { return _s.vv(a, b); }
+
+#ifdef USE_MPI
+    prec dot(const Vector& a, const Vector& b, MPI_Comm comm) const {
+      return _s.vv(a, b, comm);
+    }
+#endif
 
     // Lanczos three-term recurrence vector swap:
     //   dummy = v;  v = w / bet;  w = -bet * dummy

@@ -19,6 +19,10 @@
 
 #include <cuda_runtime.h>
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 #include <arnoldi/arnoldi.hpp>
 #include <arnoldi/cuda.hpp>
 
@@ -160,6 +164,12 @@ namespace edlib {
       cuda_detail::ck(cudaStreamSynchronize(_stream), "dot sync");
       return r;
     }
+
+#ifdef USE_MPI
+    prec dot(const Vector& a, const Vector& b, MPI_Comm /*comm*/) {
+      return dot(a, b);
+    }
+#endif
 
     void recurrence(Vector& v, Vector& w, prec bet) {
       const std::size_t n = v.size();
