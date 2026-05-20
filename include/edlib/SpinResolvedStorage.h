@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "edlib/CRSMatrix.h"
+#include "edlib/HostKernel.h"
 #include "edlib/MpiTypes.h"
 #include "edlib/NSymmetry.h"
 #include "edlib/Parameters.h"
@@ -30,6 +31,7 @@ namespace edlib {
   public:
     using Model = ModelType;
     using prec  = typename ModelType::precision;
+    using kernel_type = HostKernel<SpinResolvedStorage>;
     using Matrix = CRSMatrix<prec>;
     using Storage<prec>::n;
     using Storage<prec>::ntot;

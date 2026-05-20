@@ -12,6 +12,7 @@
 #include "edlib/SOCRSStorage.h"
 #include "edlib/SingleImpurityAndersonModel.h"
 #include "edlib/SpinResolvedStorage.h"
+#include "edlib/SpinResolvedStorageCuda.h"
 
 namespace edlib {
 
@@ -27,6 +28,8 @@ namespace edlib {
     using ModelType  = typename Storage::Model;
     using StorageType = Storage;
     using prec       = typename Model::precision;
+    using EvecType   = typename Storage::eigenvector_type;
+    using EigenPairType = EigenPair<prec, typename Model::Sector, EvecType>;
 
 #ifdef USE_MPI
     Hamiltonian(const Parameters& p, const typename Model::ModelData& model_data, MPI_Comm comm)
@@ -58,11 +61,11 @@ namespace edlib {
 #endif
             std::cerr << "Eigenvalue have not been computed." << std::endl;
         } else {
-          const auto& evals = _storage.eigenvalues();
-          const auto& evecs = _storage.eigenvectors();
-          for (std::size_t i = 0; i < evals.size(); ++i, ++k) {
-            _eigenpairs.insert(EigenPair<prec, typename Model::Sector>(
-                evals[i], evecs[i], k, _model.symmetry().sector()));
+          const int np = _storage.num_eigenpairs();
+          for (int i = 0; i < np; ++i, ++k) {
+            _eigenpairs.insert(EigenPairType(
+                _storage.eigenpair_value(i), _storage.eigenpair_vector(i),
+                k, _model.symmetry().sector()));
           }
         }
       }
@@ -86,7 +89,7 @@ namespace edlib {
     Storage&       storage()       { return _storage; }
     Model&         model()         { return _model;   }
 
-    const std::set<EigenPair<prec, typename Model::Sector>>& eigenpairs() const {
+    const std::set<EigenPairType>& eigenpairs() const {
       return _eigenpairs;
     }
 
@@ -104,7 +107,7 @@ namespace edlib {
 #endif
     Model   _model;
     Storage _storage;
-    std::set<EigenPair<prec, typename Model::Sector>> _eigenpairs;
+    std::set<EigenPairType> _eigenpairs;
   };
 
   using CSRHubbardHamiltonian          = Hamiltonian<CRSStorage<HubbardModel<double>>>;
@@ -119,6 +122,13 @@ namespace edlib {
   using CSRSIAMHamiltonian_float       = Hamiltonian<CRSStorage<SingleImpurityAndersonModel<float>>>;
   using SRSSIAMHamiltonian             = Hamiltonian<SpinResolvedStorage<SingleImpurityAndersonModel<double>>>;
   using SRSSIAMHamiltonian_float       = Hamiltonian<SpinResolvedStorage<SingleImpurityAndersonModel<float>>>;
+
+#if defined(EDLIB_USE_CUDA) && defined(__CUDACC__)
+  using SRSCudaHubbardHamiltonian        = Hamiltonian<SpinResolvedStorageCuda<HubbardModel<double>>>;
+  using SRSCudaHubbardHamiltonian_float  = Hamiltonian<SpinResolvedStorageCuda<HubbardModel<float>>>;
+  using SRSCudaSIAMHamiltonian           = Hamiltonian<SpinResolvedStorageCuda<SingleImpurityAndersonModel<double>>>;
+  using SRSCudaSIAMHamiltonian_float     = Hamiltonian<SpinResolvedStorageCuda<SingleImpurityAndersonModel<float>>>;
+#endif
 
 }
 

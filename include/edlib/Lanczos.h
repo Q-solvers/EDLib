@@ -25,8 +25,17 @@ namespace edlib {
     using precision = typename Hamiltonian::ModelType::precision;
 
   public:
+    // The Lanczos kernel is pulled from the storage (Storage::kernel_type);
+    // it owns the residency of the Krylov vectors. KVector is the vector
+    // type the kernel works on (host std::vector for the default
+    // HostKernel; a device buffer for a device kernel).
+    using StorageType = typename Hamiltonian::StorageType;
+    using Kernel      = typename StorageType::kernel_type;
+    using KVector     = typename Kernel::Vector;
+
     Lanczos(const Parameters& p, Hamiltonian& h, Mesh omega)
         : ham(h),
+          _kernel(h.storage()),
           _omega(std::move(omega)),
           _beta(static_cast<precision>(p.lanc_beta)),
           _Nl(p.lanc_nlanc),
@@ -38,30 +47,26 @@ namespace edlib {
     const Mesh& omega() const { return _omega; }
 
   protected:
-    int lanczos(std::vector<precision>& v) {
+    int lanczos(KVector& v) {
       int nlanc = 0;
-      const std::size_t size = v.size();
-      std::vector<precision> w(size, precision(0));
+      const std::size_t size = _kernel.size(v);
+      KVector w = _kernel.make_vector(size);
       precision alf = 0, bet = 0;
       ham.fill();
       if (size != 0) {
-        ham.storage().prepare_work_arrays(v.data());
+        _kernel.prepare(v);
         for (int iter = 1; iter <= _Nl; ++iter) {
           ++nlanc;
           if (iter != 1) {
-            for (std::size_t j = 0; j < size; ++j) {
-              precision dummy = v[j];
-              v[j] = w[j] / bet;
-              w[j] = -bet * dummy;
-            }
+            _kernel.recurrence(v, w, bet);
           }
           alf = 0;
           bet = 0;
-          ham.storage().av(v.data(), w.data(), size, false);
-          alf = ham.storage().vv(v, w);
+          _kernel.av(v, w);                 // w <- w + H v
+          alf = _kernel.dot(v, w);
           alfalanc[iter - 1] = alf;
-          for (std::size_t j = 0; j < size; ++j) w[j] -= alf * v[j];
-          bet = ham.storage().vv(w, w);
+          _kernel.axpy(-alf, v, w);         // w <- w - alf v
+          bet = _kernel.dot(w, w);
           bet = std::sqrt(bet);
           if (iter != _Nl) betalanc[iter] = bet;
           if (std::abs(bet) < precision(1e-10)) break;
@@ -112,6 +117,8 @@ namespace edlib {
           Hamiltonian& hamiltonian()       { return ham; }
     const Hamiltonian& hamiltonian() const { return ham; }
 
+    Kernel& kernel() { return _kernel; }
+
   public:
     /// Inverse temperature used by the spectral evaluation.
     precision beta() const { return _beta; }
@@ -144,6 +151,7 @@ namespace edlib {
 
   private:
     Hamiltonian& ham;
+    Kernel       _kernel;
     Mesh         _omega;
     precision    _beta;
     int          _Nl;

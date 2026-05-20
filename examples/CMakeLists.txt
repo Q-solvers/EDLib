@@ -22,3 +22,16 @@ target_link_libraries(hubbard-core-example EDLib ${Boost_LIBRARIES} arnoldi::arn
 if(USE_MPI)
     target_link_libraries(hubbard-core-example ${parlibs})
 endif(USE_MPI)
+
+# CUDA storage example: built by nvcc, links cuBLAS/cudart via arnoldi.
+if(EDLIB_USE_CUDA)
+    add_executable(hubbard-cuda-example HubbardCuda.cu)
+    target_link_libraries(hubbard-cuda-example EDLib ${Boost_LIBRARIES} arnoldi::arnoldi
+                                               ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+    set_target_properties(hubbard-cuda-example PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+
+    add_executable(anderson-cuda-bench AndersonCudaBench.cu)
+    target_link_libraries(anderson-cuda-bench EDLib ${Boost_LIBRARIES} arnoldi::arnoldi
+                                              ${BLAS_LIBRARIES} ${LAPACK_LIBRARIES})
+    set_target_properties(anderson-cuda-bench PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+endif()

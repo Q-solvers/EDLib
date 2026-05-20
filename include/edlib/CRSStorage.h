@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <vector>
 
+#include "edlib/HostKernel.h"
 #include "edlib/Parameters.h"
 #include "edlib/Storage.h"
 
@@ -18,6 +19,7 @@ namespace edlib {
   public:
     using Model = ModelType;
     using prec  = typename ModelType::precision;
+    using kernel_type = HostKernel<CRSStorage>;
     using Storage<prec>::n;
     using Storage<prec>::ntot;
 

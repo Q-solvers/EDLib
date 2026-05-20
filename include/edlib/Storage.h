@@ -129,6 +129,12 @@ namespace edlib {
     const std::vector<std::vector<Prec>>& eigenvectors() const { return evecs; }
     std::vector<std::vector<Prec>>&       eigenvectors()       { return evecs; }
 
+    // Generic eigenpair accessors used by Hamiltonian to build the EigenPair set.
+    using eigenvector_type = std::vector<Prec>;
+    int  num_eigenpairs() const { return static_cast<int>(evals.size()); }
+    const Prec& eigenpair_value(int i) const { return evals[i]; }
+    const eigenvector_type& eigenpair_vector(int i) const { return evecs[i]; }
+
 #ifdef USE_MPI
     virtual MPI_Comm comm() { return _comm; }
 #endif

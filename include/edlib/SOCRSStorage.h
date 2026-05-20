@@ -13,6 +13,7 @@
 #include <omp.h>
 #endif
 
+#include "edlib/HostKernel.h"
 #include "edlib/Parameters.h"
 #include "edlib/Storage.h"
 
@@ -28,6 +29,7 @@ namespace edlib {
   public:
     using Model = ModelType;
     using prec  = typename ModelType::precision;
+    using kernel_type = HostKernel<SOCRSStorage>;
     using Storage<prec>::n;
     using Storage<prec>::ntot;
 

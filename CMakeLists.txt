@@ -14,6 +14,16 @@ option(EDLIB_WITH_ALPSCORE
     "Pull EDLib-alpscore (legacy ALPSCore-based API: alps::params / alps::hdf5 / alps::gf) via FetchContent. Off = header-only edlib:: core only."
     OFF)
 
+option(EDLIB_USE_CUDA
+    "Enable the CUDA spin-resolved storage (SpinResolvedStorageCuda) and the cpp-arnoldi CudaBackend. Requires CUDAToolkit; TUs using it must be compiled by nvcc."
+    OFF)
+
+if(EDLIB_USE_CUDA)
+    enable_language(CUDA)
+    # Build cpp-arnoldi with its CUDA + cuBLAS backend.
+    set(ARNOLDI_USE_CUDA ON CACHE BOOL "" FORCE)
+endif()
+
 find_package(BLAS REQUIRED)
 find_package(LAPACK REQUIRED)
 find_package(Eigen3 REQUIRED NO_MODULE)
@@ -23,7 +33,8 @@ include_directories(${Boost_INCLUDE_DIRS})
 include(FetchContent)
 FetchContent_Declare(cpp_arnoldi
     GIT_REPOSITORY https://github.com/Q-solvers/cpp-arnoldi.git
-    GIT_TAG        444304d88d6029f717031ea5b45294a4bd2a3517)
+    GIT_TAG v0.1.0a
+)
 FetchContent_MakeAvailable(cpp_arnoldi)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -60,13 +71,19 @@ target_include_directories(${PROJECT_NAME}
               $<INSTALL_INTERFACE:include>)
 target_link_libraries(${PROJECT_NAME} INTERFACE Eigen3::Eigen arnoldi::arnoldi)
 
+# CUDA storage: arnoldi::arnoldi already carries ARNOLDI_USE_CUDA and the
+# CUDA::cudart/cublas links transitively; add the EDLib-side switch.
+if(EDLIB_USE_CUDA)
+    target_compile_definitions(${PROJECT_NAME} INTERFACE EDLIB_USE_CUDA)
+endif()
+
 # Legacy ALPSCore-based shim layer lives in the separate EDLib-alpscore
 # project, fetched here on demand. It defines the EDLib::Alpscore INTERFACE
 # target and the EDLIB_WITH_ALPSCORE compile definition.
 if(EDLIB_WITH_ALPSCORE)
     FetchContent_Declare(edlib_alpscore
         GIT_REPOSITORY https://github.com/Q-solvers/EDLib-alpscore.git
-        GIT_TAG        master)
+        GIT_TAG        v3.0.0a)
     FetchContent_MakeAvailable(edlib_alpscore)
     list(APPEND extlibs EDLib::Alpscore)
 
